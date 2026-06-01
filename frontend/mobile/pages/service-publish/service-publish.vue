@@ -53,6 +53,10 @@
           <view class="card-title">需求描述</view>
           <textarea class="form-textarea" placeholder="补充快递相关信息，如：快递公司、包裹内容等…" v-model="description" />
         </view>
+        <view class="form-card">
+          <view class="card-title">备注（仅接单员可见）</view>
+          <textarea class="form-textarea" placeholder="接单成功后对方可见的私密信息，如：门牌号、联系方式…" v-model="privateExpressNote" />
+        </view>
       </template>
 
       <!-- ===== 代拿餐食 type=2 ===== -->
@@ -114,7 +118,7 @@
             </view>
           </view>
         </view>
-        <view v-if="subType === 22" class="form-card">
+        <view v-if="subType === 21 || subType === 22" class="form-card">
           <view class="card-title">备注（仅接单员可见）</view>
           <textarea class="form-textarea" placeholder="接单成功后对方可见的私密信息，如：口味偏好、门牌号…" v-model="privateFoodNote" />
         </view>
@@ -487,6 +491,7 @@ const minTime = computed(() => {
 })
 const itemWeight = ref('< 1kg')
 const bookCount = ref(1)
+const privateExpressNote = ref('')
 const privateFoodNote = ref('')
 const estimatedProductFee = ref(0)
 const productItems = ref([{ name: '', qty: 1 }])
@@ -814,7 +819,7 @@ async function onSubmit() {
     let publicDesc, privateNote
     if (taskType.value === 1) {
       publicDesc = description.value || ''
-      privateNote = undefined
+      privateNote = privateExpressNote.value || undefined
     } else if (taskType.value === 3 && subType.value === 33) {
       publicDesc = remark.value || ''
       privateNote = privateRemark.value || undefined
@@ -832,7 +837,7 @@ async function onSubmit() {
       privateNote = privateFoodNote.value || undefined
     } else if (taskType.value === 2 && subType.value === 21) {
       publicDesc = merchantInfo.value ? `商家：${merchantInfo.value}；${description.value || ''}` : (description.value || '')
-      privateNote = undefined
+      privateNote = privateFoodNote.value || undefined
     } else {
       publicDesc = description.value || ''
       privateNote = undefined
