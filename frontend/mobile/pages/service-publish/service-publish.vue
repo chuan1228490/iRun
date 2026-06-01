@@ -656,13 +656,83 @@ function increaseProductQty(index) {
 }
 
 async function onSubmit() {
-  // 校验
+  // ===== 校验 =====
+
+  // 配送地址（图书馆还书/帮扔杂物/办事代排 不需要配送地址）
+  if (!skipDelivery.value && !deliveryAddressId.value) {
+    uni.showToast({ title: '请选择配送地址', icon: 'none' })
+    return
+  }
+
+  // --- type=1 代取快递 ---
   if (taskType.value === 1) {
     if (totalPackageQty.value === 0) {
       uni.showToast({ title: '至少选1件快递', icon: 'none' })
       return
     }
+    if (!pickupAddress.value) {
+      uni.showToast({ title: '请选择取件驿站', icon: 'none' })
+      return
+    }
   }
+
+  // --- type=2 代拿餐食 ---
+  if (taskType.value === 2) {
+    if (subType.value === 21 && !pickupAddress.value) {
+      uni.showToast({ title: '请选择取餐餐厅', icon: 'none' })
+      return
+    }
+    if (subType.value === 22) {
+      if (!pickupAddress.value || (pickupAddress.value === '自定义' && !customPickupAddress.value)) {
+        uni.showToast({ title: '请选择取餐地点', icon: 'none' })
+        return
+      }
+    }
+  }
+
+  // --- type=3 校内代办 ---
+  if (taskType.value === 3) {
+    if (subType.value === 33) {
+      if (!description.value) {
+        uni.showToast({ title: '请填写物品名称', icon: 'none' })
+        return
+      }
+      if (!pickupAddress.value) {
+        uni.showToast({ title: '请填写取件地址', icon: 'none' })
+        return
+      }
+    }
+    if (subType.value === 32 && !pickupAddress.value) {
+      uni.showToast({ title: '请填写取件地点', icon: 'none' })
+      return
+    }
+    if (subType.value === 34 && !pickupAddress.value) {
+      uni.showToast({ title: '请填写取件地点', icon: 'none' })
+      return
+    }
+    if (subType.value === 35) {
+      if (!description.value) {
+        uni.showToast({ title: '请填写任务描述', icon: 'none' })
+        return
+      }
+      if (!pickupAddress.value) {
+        uni.showToast({ title: '请填写服务地点', icon: 'none' })
+        return
+      }
+    }
+    if (subType.value === null) {
+      if (!description.value && !privateDescription.value) {
+        uni.showToast({ title: '请填写任务描述', icon: 'none' })
+        return
+      }
+      if (!pickupAddress.value) {
+        uni.showToast({ title: '请填写取件地址', icon: 'none' })
+        return
+      }
+    }
+  }
+
+  // --- type=4 代购物品 ---
   if (taskType.value === 4) {
     const validProducts = productItems.value.filter(p => p.name.trim())
     if (validProducts.length === 0) {
@@ -671,22 +741,6 @@ async function onSubmit() {
     }
     if (!pickupAddress.value) {
       uni.showToast({ title: '请填写购买地址', icon: 'none' })
-      return
-    }
-  }
-  if (taskType.value === 3) {
-    if (subType.value === 33 && !description.value) {
-      uni.showToast({ title: '请填写物品名称', icon: 'none' })
-      return
-    }
-    if (subType.value === 35 && !description.value) {
-      uni.showToast({ title: '请填写任务描述', icon: 'none' })
-      return
-    }
-  }
-  if (taskType.value === 2 && subType.value === 22) {
-    if (!pickupAddress.value || pickupAddress.value === '自定义' && !customPickupAddress.value) {
-      uni.showToast({ title: '请选择取餐地点', icon: 'none' })
       return
     }
   }

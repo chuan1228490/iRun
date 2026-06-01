@@ -179,6 +179,11 @@ function onDeadlineTimeChange(e) {
 }
 
 async function onSubmit() {
+  if (!deliveryAddressId.value) {
+    uni.showToast({ title: '请选择配送地址', icon: 'none' })
+    return
+  }
+
   const pw = await promptPayPassword('支付赏金')
   if (!pw) return
   submitting.value = true

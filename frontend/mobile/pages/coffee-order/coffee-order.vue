@@ -153,6 +153,19 @@ onUnmounted(() => {
 })
 
 async function onSubmit() {
+  if (!pickupAddress.value) {
+    uni.showToast({ title: '请选择取餐地点', icon: 'none' })
+    return
+  }
+  if (pickupAddress.value === '自定义地点' && !customPickupAddress.value) {
+    uni.showToast({ title: '请输入取餐地点', icon: 'none' })
+    return
+  }
+  if (!deliveryAddressId.value) {
+    uni.showToast({ title: '请选择配送地址', icon: 'none' })
+    return
+  }
+
   const pw = await promptPayPassword('支付赏金')
   if (!pw) return
   submitting.value = true
@@ -160,11 +173,6 @@ async function onSubmit() {
     let actualPickup = pickupAddress.value
     if (pickupAddress.value === '自定义地点') {
       actualPickup = customPickupAddress.value
-      if (!actualPickup) {
-        uni.showToast({ title: '请输入取餐地点', icon: 'none' })
-        submitting.value = false
-        return
-      }
     }
 
     const taskSpecsObj = {}
