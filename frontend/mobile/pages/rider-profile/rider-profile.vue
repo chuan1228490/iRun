@@ -17,7 +17,8 @@
               <text class="profile-name">{{ info.nickname || '骑手' }}</text>
               <text v-if="genderSymbol" class="profile-gender" :style="{ color: genderColor, background: genderBg }">{{ genderSymbol }}</text>
             </view>
-            <text class="profile-stat">信用分 {{ info.creditScore || 100 }} · 接单 {{ info.totalOrders || 0 }} 次</text>
+            <text class="profile-stat">信用分 {{ info.creditScore || 100 }} · 接单 {{ info.totalOrders || 0 }} · 完成 {{ info.successOrders || 0 }}</text>
+            <text class="profile-rate" v-if="info.completionRate">完成率 {{ Number(info.completionRate).toFixed(1) }}%</text>
           </view>
         </view>
 
@@ -183,6 +184,7 @@ function onBack() { uni.navigateBack() }
 .profile-name{font-size:32rpx;font-weight:600;color:var(--text-primary)}
 .profile-gender{font-size:26rpx;border-radius:50%;width:44rpx;height:44rpx;display:flex;align-items:center;justify-content:center}
 .profile-stat{font-size:24rpx;color:var(--text-secondary);margin-top:6rpx;display:block}
+.profile-rate{font-size:22rpx;color:var(--primary);margin-top:4rpx;display:block}
 
 .rating-overview{display:flex;align-items:center;gap:16rpx;background:var(--surface-raised);border-radius:20rpx;padding:28rpx;margin-top:16rpx;box-shadow:var(--shadow-sm)}
 .rating-big{font-size:52rpx;font-weight:700;color:var(--text-primary)}

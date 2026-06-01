@@ -77,6 +77,10 @@ export const useStore = defineStore('main', {
     certifyStatusLabel: (state) => {
       const map = { 0: '未认证', 1: '审核中', 2: '已认证', 3: '已驳回' }
       return map[state.userInfo.isCertify] || '未认证'
+    },
+    runnerCertStatusLabel: (state) => {
+      const map = { 0: '未认证', 1: '审核中', 2: '已认证', 3: '已驳回' }
+      return map[state.userInfo.verifyStatus] || '未认证'
     }
   },
 

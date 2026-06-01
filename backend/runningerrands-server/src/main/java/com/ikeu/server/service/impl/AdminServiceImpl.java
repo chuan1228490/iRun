@@ -629,6 +629,16 @@ public class AdminServiceImpl extends ServiceImpl<AdminMapper, Admin> implements
         List<User> users = userMapper.selectBatchIds(userIds);
         Map<Long, User> userMap = users.stream().collect(Collectors.toMap(User::getId, u -> u));
 
+        // 批量查询累计收入（type=2）
+        Map<Long, BigDecimal> incomeMap = transactionRecordMapper.selectList(
+                new LambdaQueryWrapper<TransactionRecord>()
+                        .in(TransactionRecord::getUserId, userIds)
+                        .eq(TransactionRecord::getType, 2))
+                .stream()
+                .collect(Collectors.groupingBy(
+                        TransactionRecord::getUserId,
+                        Collectors.reducing(BigDecimal.ZERO, TransactionRecord::getAmount, BigDecimal::add)));
+
         List<RunnerManageVO> records = p.getRecords().stream().map(rp -> {
             User u = userMap.get(rp.getUserId());
             return RunnerManageVO.builder()
@@ -646,6 +656,7 @@ public class AdminServiceImpl extends ServiceImpl<AdminMapper, Admin> implements
                     .currentOrders(rp.getCurrentOrders())
                     .isBanned(rp.getIsBanned())
                     .maxConcurrentOrders(rp.getMaxConcurrentOrders())
+                    .totalIncome(incomeMap.getOrDefault(rp.getUserId(), BigDecimal.ZERO))
                     .build();
         }).collect(Collectors.toList());
 

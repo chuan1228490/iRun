@@ -28,6 +28,14 @@
           <template #default="{ row }"><el-tag :type="certTag(row.verifyStatus)" size="small">{{ certLabel(row.verifyStatus) }}</el-tag></template>
         </el-table-column>
         <el-table-column prop="creditScore" label="信用分" width="80" />
+        <el-table-column label="评分" width="70">
+          <template #default="{ row }">{{ row.avgRating != null ? Number(row.avgRating).toFixed(1) : '-' }}</template>
+        </el-table-column>
+        <el-table-column prop="totalOrders" label="历史接单" width="80" />
+        <el-table-column prop="successOrders" label="成功完成" width="80" />
+        <el-table-column label="累计收入" width="100">
+          <template #default="{ row }">¥{{ (row.totalIncome ?? 0).toFixed(2) }}</template>
+        </el-table-column>
         <el-table-column prop="currentOrders" label="当前接单" width="80" />
         <el-table-column label="状态" width="80">
           <template #default="{ row }">

@@ -36,6 +36,12 @@ public class RunnerInfoVO implements Serializable {
     @Schema(description = "平均评分")
     private Double avgRating;
 
+    @Schema(description = "信用分")
+    private Integer creditScore;
+
+    @Schema(description = "是否被禁止接单：0-未禁止 1-已禁止")
+    private Integer isBanned;
+
     @Schema(description = "是否在线接单：0-离线 1-在线")
     private Integer isOnline;
 

@@ -24,7 +24,7 @@
         <view class="info-card">
           <view class="info-row">
             <text class="info-label">实名状态</text>
-            <text class="info-value info-value--warn">{{ store.certifyStatusLabel }}</text>
+            <text class="info-value info-value--warn">{{ store.runnerCertStatusLabel }}</text>
           </view>
         </view>
 
@@ -56,7 +56,7 @@
             </view>
             <view class="info-row">
               <text class="info-label">实名状态</text>
-              <text class="info-value info-value--done">{{ store.certifyStatusLabel }}</text>
+              <text class="info-value info-value--done">{{ store.runnerCertStatusLabel }}</text>
             </view>
           </view>
 

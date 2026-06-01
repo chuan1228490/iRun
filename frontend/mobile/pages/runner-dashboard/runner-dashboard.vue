@@ -153,9 +153,7 @@ const capacityPercent = computed(() => {
 })
 
 const completionRate = computed(() => {
-  const total = profile.value.totalOrders || 0
-  const success = profile.value.successOrders || 0
-  return total ? (success / total * 100).toFixed(1) : '0.0'
+  return perf.value.completionRate ? Number(perf.value.completionRate).toFixed(1) : '0.0'
 })
 
 const onTimeRate = computed(() => {

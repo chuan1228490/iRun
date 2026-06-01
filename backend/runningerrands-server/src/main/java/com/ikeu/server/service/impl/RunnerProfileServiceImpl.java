@@ -11,11 +11,14 @@ import com.ikeu.common.exception.NotFoundException;
 import com.ikeu.common.exception.ForbiddenException;
 import com.ikeu.model.dto.SetMaxOrdersDTO;
 import com.ikeu.model.entity.RunnerProfile;
+import com.ikeu.model.entity.TaskOrder;
+import com.ikeu.model.entity.TransactionRecord;
 import com.ikeu.model.entity.User;
 import com.ikeu.model.vo.RunnerInfoVO;
 import com.ikeu.model.vo.RunnerRankingVO;
 import com.ikeu.model.vo.RunnerPerformanceVO;
 import com.ikeu.server.mapper.RunnerProfileMapper;
+import com.ikeu.server.mapper.TaskOrderMapper;
 import com.ikeu.server.mapper.TransactionRecordMapper;
 import com.ikeu.server.mapper.UserMapper;
 import com.ikeu.server.service.RunnerProfileService;
@@ -43,6 +46,7 @@ public class RunnerProfileServiceImpl extends ServiceImpl<RunnerProfileMapper, R
     private final RunnerProfileMapper runnerProfileMapper;
     private final UserMapper userMapper;
     private final TransactionRecordMapper transactionRecordMapper;
+    private final TaskOrderMapper taskOrderMapper;
 
     /**
      * 根据用户ID获取配送员信息方法
@@ -220,6 +224,16 @@ public class RunnerProfileServiceImpl extends ServiceImpl<RunnerProfileMapper, R
         List<User> users = userMapper.selectBatchIds(userIds);
         Map<Long, User> userMap = users.stream().collect(Collectors.toMap(User::getId, u -> u));
 
+        // 批量查询所有骑手的累计跑腿收入（type=2）
+        Map<Long, BigDecimal> incomeMap = transactionRecordMapper.selectList(
+                new LambdaQueryWrapper<TransactionRecord>()
+                        .in(TransactionRecord::getUserId, userIds)
+                        .eq(TransactionRecord::getType, 2))
+                .stream()
+                .collect(Collectors.groupingBy(
+                        TransactionRecord::getUserId,
+                        Collectors.reducing(BigDecimal.ZERO, TransactionRecord::getAmount, BigDecimal::add)));
+
         List<RunnerRankingVO> list = new ArrayList<>();
         int rank = 1;
         for (RunnerProfile p : profiles) {
@@ -236,7 +250,7 @@ public class RunnerProfileServiceImpl extends ServiceImpl<RunnerProfileMapper, R
                     .successOrders(p.getSuccessOrders())
                     .completionRate(Math.round(completionRate * 10.0) / 10.0)
                     .avgRating(p.getAvgRating() != null ? p.getAvgRating().doubleValue() : 5.0)
-                    .totalEarnings(BigDecimal.ZERO)
+                    .totalEarnings(incomeMap.getOrDefault(p.getUserId(), BigDecimal.ZERO))
                     .build());
         }
 
@@ -268,16 +282,40 @@ public class RunnerProfileServiceImpl extends ServiceImpl<RunnerProfileMapper, R
 
         User user = userMapper.selectById(runnerId);
 
+        // 累计跑腿收入（type=2）
+        BigDecimal totalEarnings = transactionRecordMapper.selectList(
+                new LambdaQueryWrapper<TransactionRecord>()
+                        .eq(TransactionRecord::getUserId, runnerId)
+                        .eq(TransactionRecord::getType, 2))
+                .stream()
+                .map(TransactionRecord::getAmount)
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
+
+        // 准时率：已完成订单中 confirmTime <= expectFinishTime 的比例
+        List<TaskOrder> completedOrders = taskOrderMapper.selectList(
+                new LambdaQueryWrapper<TaskOrder>()
+                        .eq(TaskOrder::getRunnerId, runnerId)
+                        .eq(TaskOrder::getStatus, 4)
+                        .eq(TaskOrder::getIsDeleted, 0));
+        double onTimeRate = 0;
+        if (!completedOrders.isEmpty()) {
+            long onTimeCount = completedOrders.stream()
+                    .filter(o -> o.getConfirmTime() != null && o.getExpectFinishTime() != null
+                            && !o.getConfirmTime().isAfter(o.getExpectFinishTime()))
+                    .count();
+            onTimeRate = (double) onTimeCount / completedOrders.size() * 100;
+        }
+
         return RunnerPerformanceVO.builder()
                 .userId(runnerId)
                 .totalOrders(profile.getTotalOrders())
                 .successOrders(profile.getSuccessOrders())
                 .completionRate(Math.round(completionRate * 10.0) / 10.0)
-                .onTimeRate(0)
+                .onTimeRate(Math.round(onTimeRate * 10.0) / 10.0)
                 .currentOrders(profile.getCurrentOrders())
                 .avgRating(profile.getAvgRating() != null ? profile.getAvgRating().doubleValue() : 5.0)
                 .creditScore(profile.getCreditScore())
-                .totalEarnings(BigDecimal.ZERO)
+                .totalEarnings(totalEarnings)
                 .nickname(user != null ? user.getNickname() : "")
                 .avatarUrl(user != null ? user.getAvatarUrl() : "")
                 .sex(user != null ? user.getSex() : "")
