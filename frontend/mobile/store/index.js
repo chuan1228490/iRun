@@ -56,10 +56,6 @@ export const useStore = defineStore('main', {
     // 支付密码是否已设置（本地持久化以跨会话记忆）
     hasPayPassword: getPersistedPayPassword(),
 
-    // 跑腿员状态
-    runnerOnline: false,
-    runnerMaxOrders: 3,
-
     // 全局就绪标识
     ready: false
   }),
@@ -155,15 +151,6 @@ export const useStore = defineStore('main', {
       this.userInfo.balance = balance
     },
 
-    // ---------- 跑腿员 ----------
-    setRunnerOnline(val) {
-      this.runnerOnline = val
-    },
-
-    setRunnerMaxOrders(n) {
-      this.runnerMaxOrders = n
-    },
-
     // ---------- 退出 ----------
     async logout() {
       try { await userApi.logout() } catch (e) { /* ignore */ }
@@ -184,7 +171,6 @@ export const useStore = defineStore('main', {
         realName: '', studentId: '', balance: 0, isCertify: 0, verifyStatus: 0, registerType: 1,
         campus: '', signature: '', sex: '', certifyImg: '', certifyRemark: ''
       }
-      this.runnerOnline = false
       this.hasPayPassword = false
       persistPayPassword(false)
       removeToken()

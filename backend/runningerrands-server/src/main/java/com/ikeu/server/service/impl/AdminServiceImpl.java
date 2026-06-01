@@ -258,15 +258,6 @@ public class AdminServiceImpl extends ServiceImpl<AdminMapper, Admin> implements
         profile.setUpdatedAt(LocalDateTime.now());
         runnerProfileMapper.updateById(profile);
 
-        // 审批通过时同步更新 user.is_certify，保持两列数据一致
-        if (StatusConstant.CERTIFY_APPROVED.equals(verifyStatus)) {
-            User runnerUser = userMapper.selectById(profile.getUserId());
-            if (runnerUser != null) {
-                runnerUser.setIsCertify(StatusConstant.CERTIFY_APPROVED);
-                userMapper.updateById(runnerUser);
-            }
-        }
-
         log.info("管理员审核跑腿员 {} 结果为 {}", runnerProfileId, verifyStatus);
     }
 
@@ -332,7 +323,7 @@ public class AdminServiceImpl extends ServiceImpl<AdminMapper, Admin> implements
                 .currentOrders(rp.getCurrentOrders())
                 .maxConcurrentOrders(rp.getMaxConcurrentOrders())
                 .isBanned(rp.getIsBanned())
-                .totalIncome(totalIncome)
+                .totalEarnings(totalIncome)
                 .build();
     }
 
@@ -656,7 +647,7 @@ public class AdminServiceImpl extends ServiceImpl<AdminMapper, Admin> implements
                     .currentOrders(rp.getCurrentOrders())
                     .isBanned(rp.getIsBanned())
                     .maxConcurrentOrders(rp.getMaxConcurrentOrders())
-                    .totalIncome(incomeMap.getOrDefault(rp.getUserId(), BigDecimal.ZERO))
+                    .totalEarnings(incomeMap.getOrDefault(rp.getUserId(), BigDecimal.ZERO))
                     .build();
         }).collect(Collectors.toList());
 

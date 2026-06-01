@@ -34,7 +34,7 @@
         <el-table-column prop="totalOrders" label="历史接单" width="80" />
         <el-table-column prop="successOrders" label="成功完成" width="80" />
         <el-table-column label="累计收入" width="100">
-          <template #default="{ row }">¥{{ (row.totalIncome ?? 0).toFixed(2) }}</template>
+          <template #default="{ row }">¥{{ (row.totalEarnings ?? 0).toFixed(2) }}</template>
         </el-table-column>
         <el-table-column prop="currentOrders" label="当前接单" width="80" />
         <el-table-column label="状态" width="80">
@@ -87,7 +87,7 @@
           <el-tag :type="detail.isBanned ? 'danger' : 'success'" size="small">{{ detail.isBanned ? '已禁止' : '正常' }}</el-tag>
         </el-descriptions-item>
         <el-descriptions-item label="累计收入" :span="2">
-          <span class="income">¥{{ (detail.totalIncome ?? 0).toFixed(2) }}</span>
+          <span class="income">¥{{ (detail.totalEarnings ?? 0).toFixed(2) }}</span>
         </el-descriptions-item>
       </el-descriptions>
     </el-dialog>
