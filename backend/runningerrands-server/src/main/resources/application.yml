@@ -1,0 +1,111 @@
+server:
+  port: 8080
+  servlet:
+    # 设置接口路径前缀
+    context-path: /api
+
+# Spring 公共配置
+spring:
+  profiles:
+    active: dev
+  application:
+    name: runningerrands-server
+  jackson:
+    date-format: yyyy-MM-dd HH:mm:ss
+    time-zone: GMT+8
+  servlet:
+    multipart:
+      max-file-size: 10MB
+      max-request-size: 20MB
+  mvc:
+    pathmatch:
+      matching-strategy: ant_path_matcher
+
+
+# MyBatis-Plus 配置
+mybatis-plus:
+  mapper-locations: classpath:mapper/*.xml
+  type-aliases-package: com.ikeu.model.entity
+  configuration:
+    map-underscore-to-camel-case: true
+  global-config:
+    db-config:
+      id-type: auto
+      logic-delete-field: isDeleted   # 全局逻辑删除字段名
+      logic-delete-value: 1           # 已删除
+      logic-not-delete-value: 0       # 未删除
+
+# 日志级别
+logging:
+  level:
+    com.ikeu: DEBUG
+
+# 通过knife4j生成接口文档
+springdoc:
+  api-docs:
+    enabled: true
+    path: /v3/api-docs
+  swagger-ui:
+    enabled: true
+    path: /swagger-ui.html
+knife4j:
+  enable: true
+  setting:
+    language: zh_cn
+
+runningerrands:
+  admin:
+    init:
+      username: admin
+      password: admin20260510
+      name: 系统管理员
+
+  jwt:
+    # 设置admin jwt签名加密时使用的秘钥
+    admin-secret-key: ${runningerrands.jwt.admin-secret-key}
+    # 设置admin access token过期时间（2小时）
+    admin-access-ttl: 7200000
+    # 设置admin refresh token过期时间（7天）
+    admin-refresh-ttl: 604800000
+    # 设置前端传递过来的管理端令牌名称
+    admin-token-name: token
+    # 设置user jwt签名加密时使用的秘钥
+    user-secret-key: ${runningerrands.jwt.user-secret-key}
+    # 设置user access token过期时间（2小时）
+    user-access-ttl: 7200000
+    # 设置user refresh token过期时间（7天）
+    user-refresh-ttl: 604800000
+    # 设置前端传递过来的用户端令牌名称
+    user-token-name: authentication
+
+  alioss:
+    # 设置OSS地域节点
+    endpoint: ${runningerrands.alioss.endpoint}
+    # 设置OSS访问密钥ID
+    access-key-id: ${runningerrands.alioss.access-key-id}
+    # 设置OSS访问密钥Secret
+    access-key-secret: ${runningerrands.alioss.access-key-secret}
+    # 设置OSS存储空间名称
+    bucket-name: ${runningerrands.alioss.bucket-name}
+
+  wechat:
+    # 设置微信小程序AppID
+    app-id: ${runningerrands.wechat.app-id:}
+    # 设置微信小程序AppSecret
+    app-secret: ${runningerrands.wechat.app-secret:}
+
+  map:
+    # 配置地图供应商
+    provider: ${runningerrands.map.provider}
+    # 配置地图供应商的API密钥
+    api-key: ${runningerrands.map.api-key}
+    # 配置地理编码API地址
+    geocode-url: ${runningerrands.map.geocode-url}
+    # 配置逆地理编码API地址
+    reGeocode-url: ${runningerrands.map.reGeocode-url}
+    # 配置距离计算API地址
+    distance-url: ${runningerrands.map.distance-url}
+    # 配置默认搜索半径（公里）
+    default-radius-Km: ${runningerrands.map.default-radius-Km}
+    # 配置坐标系
+    coordinate-system: ${runningerrands.map.coordinate-system}

@@ -1,0 +1,60 @@
+package com.ikeu.model.entity;
+
+import com.baomidou.mybatisplus.annotation.*;
+import lombok.AllArgsConstructor;
+import lombok.Builder;
+import lombok.Data;
+import lombok.NoArgsConstructor;
+
+import java.io.Serial;
+import java.io.Serializable;
+import java.math.BigDecimal;
+
+/**
+ * 用户地址簿实体类
+ */
+@Data
+@Builder
+@NoArgsConstructor
+@AllArgsConstructor
+@TableName("user_address")
+public class UserAddress implements Serializable {
+
+    @Serial
+    private static final long serialVersionUID = 1L;
+
+    @TableId(type = IdType.AUTO)
+    private Long id;
+
+    /** 关联的用户ID */
+    @TableField("user_id")
+    private Long userId;
+
+    /** 联系人 */
+    @TableField("contact_name")
+    private String contactName;
+
+    /** 联系电话 */
+    @TableField("contact_phone")
+    private String contactPhone;
+
+    /** 性别 */
+    @TableField("sex")
+    private String sex;
+
+    /** 详细地址，如：XX宿舍楼XXX室 */
+    @TableField("detail")
+    private String detail;
+
+    /** 地址经度 */
+    @TableField("lng")
+    private BigDecimal lng;
+
+    /** 地址纬度 */
+    @TableField("lat")
+    private BigDecimal lat;
+
+    /** 是否默认地址 */
+    @TableField("is_default")
+    private Integer isDefault;
+}

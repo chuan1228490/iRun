@@ -1,0 +1,62 @@
+# Spring数据库与Redis相关自配置
+spring:
+  # MySQL数据库连接池
+  datasource:
+    driver-class-name: com.mysql.cj.jdbc.Driver
+    url: jdbc:mysql://localhost:3306/dorm2dorm?useUnicode=true&characterEncoding=UTF-8&serverTimezone=GMT%2B8
+    username: <your-db-username>
+    password: <your-db-password>
+    hikari:
+      maximum-pool-size: 10
+      minimum-idle: 5
+  # Redis数据库连接池
+  data:
+    redis:
+      host: localhost
+      port: 6379
+      database: 1
+      timeout: 3000ms
+      lettuce:
+        pool:
+          max-active: 8
+          max-idle: 8
+          min-idle: 0
+
+  # 热部署
+  devtools:
+    restart:
+      enabled: true
+      additional-paths: src/main/java
+
+# 项目自定义配置
+dorm2dorm:
+  # 阿里云OSS
+  alioss:
+    access-key-id: <your-aliyun-access-key-id>
+    access-key-secret: <your-aliyun-access-key-secret>
+    bucket-name: <your-oss-bucket-name>
+    endpoint: <your-oss-endpoint>
+
+  # 阿里云短信验证服务
+  sms:
+    access-key-id: <your-aliyun-access-key-id>
+    access-key-secret: <your-aliyun-access-key-secret>
+    sign-name: <your-sms-sign-name>
+    template-code: <your-sms-template-code>
+    region-id: <your-sms-region-id>
+    endpoint: dypnsapi.aliyuncs.com
+
+  # 微信小程序
+  wechat:
+    app-id: <your-wechat-app-id>
+    app-secret: <your-wechat-app-secret>
+
+  # 腾讯地图服务
+  map:
+    provider: tencent
+    api-key: <your-map-api-key>
+    geocode-url: https://apis.map.qq.com/ws/geocoder/v1
+    reGeocode-url: https://apis.map.qq.com/ws/geocoder/v1
+    distance-url: https://apis.map.qq.com/ws/distance/v1/matrix
+    default-radius-Km: 5.0
+    coordinate-system: gcj02
