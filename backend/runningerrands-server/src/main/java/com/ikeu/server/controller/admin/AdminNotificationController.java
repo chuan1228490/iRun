@@ -36,8 +36,15 @@ public class AdminNotificationController {
     public Result<Void> send(@Valid @RequestBody NotificationSendDTO dto) {
         int success = 0;
         int fail = 0;
+        int notFound = 0;
         for (Long userId : dto.getUserIds()) {
             try {
+                User user = userMapper.selectById(userId);
+                if (user == null || !user.getStatus().equals(1)) {
+                    log.warn("用户 {} 不存在或已禁用，跳过发送通知", userId);
+                    notFound++;
+                    continue;
+                }
                 notificationService.sendNotification(userId, dto.getType(), dto.getTitle(), dto.getContent(), null);
                 success++;
             } catch (Exception e) {
@@ -45,7 +52,7 @@ public class AdminNotificationController {
                 fail++;
             }
         }
-        log.info("管理员向 {} 个用户发送了通知：成功={}, 失败={}", dto.getUserIds().size(), success, fail);
+        log.info("管理员向 {} 个用户发送了通知：成功={}, 失败={}, 不存在={}", dto.getUserIds().size(), success, fail, notFound);
         return Result.success(MessageConstant.SUCCESS);
     }
 
