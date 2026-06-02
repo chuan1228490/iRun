@@ -193,7 +193,7 @@
 
 <script setup>
 import { ref, computed } from 'vue'
-import { onLoad } from '@dcloudio/uni-app'
+import { onLoad, onUnload } from '@dcloudio/uni-app'
 import { orderApi } from '@/api'
 import { TASK_TYPES, TASK_TYPE_META, TYPE_FROM_API, isQueueWaitType } from '@/utils/constants.js'
 import { parseTaskSpecs, parseExpressPackagesFromSpecs, parseShoppingItemsFromSpecs, parseBookCountFromSpecs, parsePrintSpecsFromSpecs, parseMerchantInfoFromSpecs } from '@/utils/campus-data.js'
@@ -496,19 +496,19 @@ async function onConfirm() {
   }
 }
 
-async function onCancel() {
-  const res = await new Promise(r => {
-    uni.showModal({ title: '取消订单', content: '确定要取消此订单吗？接单后5分钟内可取消，取消后任务将重新进入大厅等待接单。', success: r2 => r(r2.confirm) })
+function onCancel() {
+  uni.$on('cancelReasonSelected', async (reason) => {
+    uni.$off('cancelReasonSelected')
+    if (!actionLock()) return
+    try {
+      await orderApi.cancelOrder(orderId.value, reason)
+      uni.showToast({ title: '已取消', icon: 'success' })
+      loadData()
+    } catch (e) { /* handled */ } finally {
+      actionUnlock()
+    }
   })
-  if (!res) return
-  if (!actionLock()) return
-  try {
-    await orderApi.cancelOrder(orderId.value, '配送员主动取消')
-    uni.showToast({ title: '已取消', icon: 'success' })
-    loadData()
-  } catch (e) { /* handled */ } finally {
-    actionUnlock()
-  }
+  uni.navigateTo({ url: '/pages/cancel-reason/cancel-reason?type=order' })
 }
 
 function onChat() {
@@ -545,6 +545,10 @@ function previewImage(url) {
 }
 
 function onBack() { uni.navigateBack() }
+
+onUnload(() => {
+  uni.$off('cancelReasonSelected')
+})
 
 function copyOrderNo(no) {
   uni.setClipboardData({ data: no, success: () => uni.showToast({ title: '已复制', icon: 'success' }) })

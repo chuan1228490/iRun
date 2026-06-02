@@ -1,11 +1,11 @@
 <template>
   <view class="page">
-    <uni-nav-bar title="取消任务" backgroundColor="#FAFAF8" :border="false" statusBar fixed leftIcon="left" @clickLeft="onBack" color="#1C1B1A" />
+    <uni-nav-bar :title="navTitle" backgroundColor="#FAFAF8" :border="false" statusBar fixed leftIcon="left" @clickLeft="onBack" color="#1C1B1A" />
 
     <scroll-view class="main-scroll" :style="{ height: scrollHeight + 'px' }" scroll-y enhanced :show-scrollbar="false">
       <view class="page-header">
         <text class="page-title">取消原因</text>
-        <text class="page-subtitle">请选择取消任务的原因，帮助我们改进服务</text>
+        <text class="page-subtitle">{{ subtitle }}</text>
       </view>
 
       <view class="form-card">
@@ -46,11 +46,14 @@
 
 <script setup>
 import { ref, computed } from 'vue'
+import { onLoad } from '@dcloudio/uni-app'
 
 const sysInfo = uni.getSystemInfoSync()
 const scrollHeight = sysInfo.windowHeight - sysInfo.statusBarHeight - 44
 
-const reasons = [
+const cancelType = ref('task') // 'task' | 'order'
+
+const taskReasons = [
   { value: 'info_error', label: '信息填写有误' },
   { value: 'no_need', label: '不需要此服务了' },
   { value: 'duplicate', label: '重复发布了' },
@@ -59,13 +62,38 @@ const reasons = [
   { value: 'custom', label: '其他原因' }
 ]
 
-const reasonLabels = {
+const taskReasonLabels = {
   info_error: '信息填写有误',
   no_need: '不需要此服务了',
   duplicate: '重复发布了',
   time_error: '时间设置有误',
   address_error: '配送地址选错了'
 }
+
+const orderReasons = [
+  { value: 'time_conflict', label: '时间冲突无法配送' },
+  { value: 'distance_far', label: '配送距离太远' },
+  { value: 'contact_fail', label: '联系不上发布者' },
+  { value: 'item_issue', label: '物品无法配送' },
+  { value: 'personal_reason', label: '个人原因' },
+  { value: 'custom', label: '其他原因' }
+]
+
+const orderReasonLabels = {
+  time_conflict: '时间冲突无法配送',
+  distance_far: '配送距离太远',
+  contact_fail: '联系不上发布者',
+  item_issue: '物品无法配送',
+  personal_reason: '个人原因'
+}
+
+const reasons = computed(() => cancelType.value === 'order' ? orderReasons : taskReasons)
+const reasonLabels = computed(() => cancelType.value === 'order' ? orderReasonLabels : taskReasonLabels)
+
+const navTitle = computed(() => cancelType.value === 'order' ? '取消订单' : '取消任务')
+const subtitle = computed(() => cancelType.value === 'order'
+  ? '请选择取消订单的原因，接单后5分钟内可取消'
+  : '请选择取消任务的原因，帮助我们改进服务')
 
 const selectedReason = ref('')
 const customReason = ref('')
@@ -76,6 +104,10 @@ const canSubmit = computed(() => {
   return true
 })
 
+onLoad((options) => {
+  if (options?.type === 'order') cancelType.value = 'order'
+})
+
 function selectReason(val) {
   selectedReason.value = val
 }
@@ -84,7 +116,7 @@ function onConfirm() {
   if (!canSubmit.value) return
   const reason = selectedReason.value === 'custom'
     ? customReason.value.trim()
-    : reasonLabels[selectedReason.value]
+    : reasonLabels.value[selectedReason.value]
   uni.$emit('cancelReasonSelected', reason)
   uni.navigateBack()
 }
