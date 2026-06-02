@@ -64,6 +64,12 @@ const router = createRouter({
           meta: { title: '订单管理', icon: 'Document' }
         },
         {
+          path: 'orders/:id',
+          name: 'OrderDetail',
+          component: () => import('@/views/orders/OrderDetailView.vue'),
+          meta: { title: '订单详情', hidden: true }
+        },
+        {
           path: 'transactions',
           name: 'Transactions',
           component: () => import('@/views/transactions/TransactionListView.vue'),

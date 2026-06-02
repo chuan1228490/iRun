@@ -35,6 +35,12 @@ public interface AdminService {
     /** 分页查询所有订单列表，支持按状态筛选。 */
     PageResult<OrderManageVO> listAllOrders(Integer status, int page, int size);
 
+    /** 根据订单ID查询订单详情。 */
+    OrderDetailVO getOrderDetail(Long orderId);
+
+    /** 强制更新订单状态（状态机校验）。 */
+    void updateOrderStatus(Long orderId, Integer status);
+
     /** 分页查询配送员管理列表，支持按认证状态和关键词筛选。 */
     PageResult<RunnerManageVO> listRunners(Integer verifyStatus, String keyword, int page, int size);
 

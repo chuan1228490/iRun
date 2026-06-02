@@ -11,6 +11,7 @@ import com.ikeu.common.constant.RedisConstant;
 import com.ikeu.common.constant.StatusConstant;
 import com.ikeu.common.exception.BusinessException;
 import com.ikeu.common.exception.NotFoundException;
+import com.ikeu.common.enums.OrderStateMachine;
 import com.ikeu.common.exception.UnauthorizedException;
 import com.ikeu.common.properties.JwtProperties;
 import com.ikeu.common.result.PageResult;
@@ -608,6 +609,110 @@ public class AdminServiceImpl extends ServiceImpl<AdminMapper, Admin> implements
         }).collect(Collectors.toList());
 
         return new PageResult<>(p.getTotal(), records);
+    }
+
+    /**
+     * 获取订单详情方法
+     *  逻辑：查询订单及关联的任务、发布者、跑腿员信息，构建完整的 OrderDetailVO
+     *
+     * @param orderId 订单ID
+     * @return OrderDetailVO 订单详情
+     */
+    @Override
+    public OrderDetailVO getOrderDetail(Long orderId) {
+        TaskOrder order = taskOrderMapper.selectById(orderId);
+        if (order == null) throw new NotFoundException(MessageConstant.ORDER_NOT_EXIST);
+
+        Task task = taskMapper.selectById(order.getTaskId());
+        if (task == null) throw new NotFoundException(MessageConstant.TASK_NOT_EXIST);
+
+        User publisher = userMapper.selectById(task.getPublisherId());
+        User runner = userMapper.selectById(order.getRunnerId());
+
+        return OrderDetailVO.builder()
+                .orderId(order.getId())
+                .taskId(task.getId())
+                .taskNo(task.getTaskNo())
+                .type(task.getType())
+                .subType(task.getSubType())
+                .taskSpecs(task.getTaskSpecs())
+                .publicDesc(task.getPublicDesc())
+                .privateNote(task.getPrivateNote())
+                .reward(task.getReward())
+                .orderStatus(order.getStatus())
+                .pickupAddress(task.getPickupAddress())
+                .deliveryAddress(task.getDeliveryAddress())
+                .pickupCode(task.getPickupCode())
+                .imageUrls(task.getImageUrls() != null
+                        ? JSONUtil.toList(task.getImageUrls(), String.class) : Collections.emptyList())
+                .publisherId(task.getPublisherId())
+                .runnerId(order.getRunnerId())
+                .contactName(task.getContactName())
+                .contactPhone(task.getContactPhone())
+                .publisherPhone(publisher != null ? publisher.getPhone() : "")
+                .runnerPhone(runner != null ? runner.getPhone() : "")
+                .publisherAvatar(publisher != null ? publisher.getAvatarUrl() : "")
+                .runnerAvatar(runner != null ? runner.getAvatarUrl() : "")
+                .publisherNickname(publisher != null ? publisher.getNickname() : "")
+                .runnerNickname(runner != null ? runner.getNickname() : "")
+                .acceptTime(order.getAcceptTime())
+                .pickupTime(order.getPickupTime())
+                .deliverTime(order.getDeliverTime())
+                .confirmTime(order.getConfirmTime())
+                .expectFinishTime(order.getExpectFinishTime())
+                .pickupProofImgs(order.getPickupProofImgs() != null
+                        ? JSONUtil.toList(order.getPickupProofImgs(), String.class) : Collections.emptyList())
+                .deliverProofImgs(order.getDeliverProofImgs() != null
+                        ? JSONUtil.toList(order.getDeliverProofImgs(), String.class) : Collections.emptyList())
+                .cancelReason(order.getCancelReason())
+                .cancelTime(order.getStatus().equals(StatusConstant.ORDER_CANCELLED) ? order.getConfirmTime() : null)
+                .build();
+    }
+
+    /**
+     * 强制更新订单状态方法
+     *  逻辑：使用 OrderStateMachine 校验状态转换合法性后更新订单状态，
+     *  同时同步更新关联任务状态，清除仪表盘缓存
+     *
+     * @param orderId 订单ID
+     * @param status 新状态值
+     */
+    @Override
+    @Transactional
+    @CacheEvict(value = RedisConstant.CACHE_DASHBOARD, allEntries = true)
+    public void updateOrderStatus(Long orderId, Integer status) {
+        TaskOrder order = taskOrderMapper.selectById(orderId);
+        if (order == null) throw new NotFoundException(MessageConstant.ORDER_NOT_EXIST);
+        Task task = taskMapper.selectById(order.getTaskId());
+
+        OrderStateMachine.validate(order.getStatus(), status, "订单");
+
+        LocalDateTime now = LocalDateTime.now();
+        order.setStatus(status);
+        if (status.equals(StatusConstant.ORDER_COMPLETED)) order.setConfirmTime(now);
+        if (status.equals(StatusConstant.ORDER_CANCELLED)) order.setConfirmTime(now);
+        taskOrderMapper.updateById(order);
+
+        // 同步任务状态
+        if (task != null) {
+            Integer taskStatus = mapOrderStatusToTaskStatus(status);
+            if (taskStatus != null) {
+                task.setStatus(taskStatus);
+                task.setUpdatedAt(now);
+                taskMapper.updateById(task);
+            }
+        }
+
+        log.info("管理员强制更新订单 {} 状态为 {} → {}", orderId, order.getStatus(), status);
+    }
+
+    private Integer mapOrderStatusToTaskStatus(Integer orderStatus) {
+        if (orderStatus.equals(StatusConstant.ORDER_WAIT_PICKUP)) return StatusConstant.TASK_ACCEPTED;
+        if (orderStatus.equals(StatusConstant.ORDER_DELIVERING)) return StatusConstant.TASK_DELIVERING;
+        if (orderStatus.equals(StatusConstant.ORDER_WAIT_CONFIRM)) return StatusConstant.TASK_WAIT_CONFIRM;
+        if (orderStatus.equals(StatusConstant.ORDER_COMPLETED)) return StatusConstant.TASK_COMPLETED;
+        if (orderStatus.equals(StatusConstant.ORDER_CANCELLED)) return StatusConstant.TASK_CANCELLED;
+        return null;
     }
 
     /**

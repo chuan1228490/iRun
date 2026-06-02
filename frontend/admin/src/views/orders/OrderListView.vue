@@ -25,8 +25,12 @@
             <el-tag :type="statusTag(row.status)" size="small">{{ ORDER_STATUS[row.status as keyof typeof ORDER_STATUS] }}</el-tag>
           </template>
         </el-table-column>
-        <el-table-column prop="acceptTime" label="接单时间" width="180" />
-        <el-table-column prop="confirmTime" label="完成时间" width="180" />
+        <el-table-column prop="acceptTime" label="接单时间" width="170" />
+        <el-table-column label="操作" width="80">
+          <template #default="{ row }">
+            <el-button type="primary" link @click="$router.push(`/orders/${row.orderId}`)">详情</el-button>
+          </template>
+        </el-table-column>
       </el-table>
 
       <el-pagination
