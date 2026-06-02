@@ -58,7 +58,7 @@ public class AdminEmployeeController {
         return Result.success(MessageConstant.ADMIN_UPDATE_SUCCESS);
     }
 
-    @OperationLog(module = "员工管理", action = "封禁/解封", description = "切换管理员 #id 状态为 #enabled")
+    @OperationLog(module = "员工管理", action = "封禁/解封", description = "切换管理员 #id 状态")
     @Operation(summary = "启用/停用管理员")
     @PutMapping("/employees/{id}/status")
     @RequireRole({1})

@@ -18,10 +18,13 @@ import org.springframework.stereotype.Component;
 import org.springframework.web.context.request.RequestContextHolder;
 import org.springframework.web.context.request.ServletRequestAttributes;
 
+import java.lang.reflect.Field;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Set;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 /**
  * 操作日志切面，拦截标注 @OperationLog 的管理端方法，自动记录操作日志。
@@ -64,7 +67,24 @@ public class OperationLogAspect {
             if (paramNames != null && description != null && !description.isEmpty()) {
                 for (int i = 0; i < paramNames.length; i++) {
                     if (args[i] != null) {
-                        description = description.replace("#" + paramNames[i], args[i].toString());
+                        String placeholder = "#" + paramNames[i];
+                        // 先处理 #param.field 语法
+                        Pattern p = Pattern.compile(Pattern.quote(placeholder) + "\\.(\\w+)");
+                        Matcher m = p.matcher(description);
+                        StringBuffer sb = new StringBuffer();
+                        while (m.find()) {
+                            String fieldName = m.group(1);
+                            m.appendReplacement(sb, Matcher.quoteReplacement(getFieldValue(args[i], fieldName)));
+                        }
+                        m.appendTail(sb);
+                        description = sb.toString();
+                        // 再处理裸 #paramName（替换为 toString，但过滤 DTO 类名前缀）
+                        String strValue = args[i].toString();
+                        // DTO 的 toString() 形如 "ClassName(field=value, ...)"，截取括号内容
+                        if (strValue.contains("(") && strValue.endsWith(")")) {
+                            strValue = strValue.substring(strValue.indexOf('(') + 1, strValue.length() - 1);
+                        }
+                        description = description.replace(placeholder, strValue);
                     }
                 }
             }
@@ -144,6 +164,25 @@ public class OperationLogAspect {
         } catch (Exception e) {
             return null;
         }
+    }
+
+    private String getFieldValue(Object obj, String fieldName) {
+        try {
+            Field field = findField(obj.getClass(), fieldName);
+            if (field != null) {
+                field.setAccessible(true);
+                Object value = field.get(obj);
+                return value != null ? value.toString() : "";
+            }
+        } catch (Exception ignored) {}
+        return "";
+    }
+
+    private Field findField(Class<?> clazz, String name) {
+        while (clazz != null) {
+            try { return clazz.getDeclaredField(name); } catch (NoSuchFieldException e) { clazz = clazz.getSuperclass(); }
+        }
+        return null;
     }
 
     private String getClientIp(HttpServletRequest request) {
