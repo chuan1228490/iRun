@@ -19,13 +19,16 @@
         <el-table-column prop="publicDesc" label="任务描述" min-width="200" show-overflow-tooltip />
         <el-table-column prop="publisherNickname" label="发布者" width="120" />
         <el-table-column prop="runnerNickname" label="跑腿员" width="120" />
-        <el-table-column prop="reward" label="报酬" width="100" />
+        <el-table-column label="报酬" width="100">
+          <template #default="{ row }">¥{{ Number(row.reward ?? 0).toFixed(2) }}</template>
+        </el-table-column>
         <el-table-column label="状态" width="100">
           <template #default="{ row }">
             <el-tag :type="statusTag(row.status)" size="small">{{ ORDER_STATUS[row.status as keyof typeof ORDER_STATUS] }}</el-tag>
           </template>
         </el-table-column>
         <el-table-column prop="acceptTime" label="接单时间" width="170" />
+        <el-table-column prop="expectFinishTime" label="预计送达" width="170" />
         <el-table-column label="操作" width="80">
           <template #default="{ row }">
             <el-button type="primary" link @click="$router.push(`/orders/${row.orderId}`)">详情</el-button>

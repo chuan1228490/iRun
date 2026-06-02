@@ -605,6 +605,7 @@ public class AdminServiceImpl extends ServiceImpl<AdminMapper, Admin> implements
                     .pickupTime(order.getPickupTime())
                     .deliverTime(order.getDeliverTime())
                     .confirmTime(order.getConfirmTime())
+                    .expectFinishTime(order.getExpectFinishTime())
                     .build();
         }).collect(Collectors.toList());
 
@@ -654,7 +655,9 @@ public class AdminServiceImpl extends ServiceImpl<AdminMapper, Admin> implements
                 .publisherAvatar(publisher != null ? publisher.getAvatarUrl() : "")
                 .runnerAvatar(runner != null ? runner.getAvatarUrl() : "")
                 .publisherNickname(publisher != null ? publisher.getNickname() : "")
+                .publisherUsername(publisher != null ? publisher.getUsername() : "")
                 .runnerNickname(runner != null ? runner.getNickname() : "")
+                .runnerUsername(runner != null ? runner.getUsername() : "")
                 .acceptTime(order.getAcceptTime())
                 .pickupTime(order.getPickupTime())
                 .deliverTime(order.getDeliverTime())

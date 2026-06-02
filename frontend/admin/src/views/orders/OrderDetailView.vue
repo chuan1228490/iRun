@@ -36,6 +36,8 @@
       <el-descriptions :column="2" border style="margin-top: 16px" title="人员信息">
         <el-descriptions-item label="发布者昵称">{{ detail.publisherNickname || '-' }}</el-descriptions-item>
         <el-descriptions-item label="跑腿员昵称">{{ detail.runnerNickname || '-' }}</el-descriptions-item>
+        <el-descriptions-item label="发布者用户名">{{ detail.publisherUsername || '-' }}</el-descriptions-item>
+        <el-descriptions-item label="跑腿员用户名">{{ detail.runnerUsername || '-' }}</el-descriptions-item>
         <el-descriptions-item label="发布者手机">{{ detail.publisherPhone || '-' }}</el-descriptions-item>
         <el-descriptions-item label="跑腿员手机">{{ detail.runnerPhone || '-' }}</el-descriptions-item>
       </el-descriptions>
