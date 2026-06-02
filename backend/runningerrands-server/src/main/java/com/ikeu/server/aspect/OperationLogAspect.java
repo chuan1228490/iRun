@@ -5,6 +5,7 @@ import com.ikeu.model.entity.Admin;
 import com.ikeu.model.entity.OperationLog;
 import com.ikeu.server.mapper.AdminMapper;
 import com.ikeu.server.service.OperationLogService;
+import cn.hutool.json.JSONUtil;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -17,6 +18,8 @@ import org.springframework.web.context.request.RequestContextHolder;
 import org.springframework.web.context.request.ServletRequestAttributes;
 
 import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.List;
 
 /**
  * 操作日志切面，拦截标注 @OperationLog 的管理端方法，自动记录操作日志。
@@ -60,6 +63,24 @@ public class OperationLogAspect {
             log.setModule(anno.module());
             log.setAction(anno.action());
             log.setDescription(description);
+
+            // 提取请求参数（将 DTO 序列化为 JSON，过滤掉 MultipartFile 等不可序列化类型）
+            List<Object> paramList = new ArrayList<>();
+            if (args != null) {
+                for (Object arg : args) {
+                    if (arg != null && !(arg instanceof org.springframework.web.multipart.MultipartFile)
+                            && !(arg instanceof HttpServletRequest)) {
+                        try {
+                            paramList.add(arg);
+                        } catch (Exception ignored) {}
+                    }
+                }
+            }
+            if (!paramList.isEmpty()) {
+                try {
+                    log.setRequestParams(JSONUtil.toJsonStr(paramList.size() == 1 ? paramList.get(0) : paramList));
+                } catch (Exception ignored) {}
+            }
 
             HttpServletRequest request = getCurrentRequest();
             if (request != null) {

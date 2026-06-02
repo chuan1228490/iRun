@@ -34,10 +34,18 @@ public class AdminNotificationController {
     @Operation(summary = "向指定用户发送通知")
     @PostMapping("/notifications/send")
     public Result<Void> send(@Valid @RequestBody NotificationSendDTO dto) {
+        int success = 0;
+        int fail = 0;
         for (Long userId : dto.getUserIds()) {
-            notificationService.sendNotification(userId, dto.getType(), dto.getTitle(), dto.getContent(), null);
+            try {
+                notificationService.sendNotification(userId, dto.getType(), dto.getTitle(), dto.getContent(), null);
+                success++;
+            } catch (Exception e) {
+                log.error("向用户 {} 发送通知失败", userId, e);
+                fail++;
+            }
         }
-        log.info("管理员向 {} 个用户发送了通知", dto.getUserIds().size());
+        log.info("管理员向 {} 个用户发送了通知：成功={}, 失败={}", dto.getUserIds().size(), success, fail);
         return Result.success(MessageConstant.SUCCESS);
     }
 
@@ -48,12 +56,18 @@ public class AdminNotificationController {
     public Result<Void> broadcast(@Valid @RequestBody NotificationBroadcastDTO dto) {
         List<User> users = userMapper.selectList(
                 new LambdaQueryWrapper<User>().eq(User::getStatus, 1));
-        int count = 0;
+        int success = 0;
+        int fail = 0;
         for (User user : users) {
-            notificationService.sendNotification(user.getId(), dto.getType(), dto.getTitle(), dto.getContent(), null);
-            count++;
+            try {
+                notificationService.sendNotification(user.getId(), dto.getType(), dto.getTitle(), dto.getContent(), null);
+                success++;
+            } catch (Exception e) {
+                log.error("向用户 {} 广播通知失败", user.getId(), e);
+                fail++;
+            }
         }
-        log.info("管理员向 {} 个用户广播了通知", count);
+        log.info("管理员向 {} 个用户广播了通知：成功={}, 失败={}", users.size(), success, fail);
         return Result.success(MessageConstant.SUCCESS);
     }
 }

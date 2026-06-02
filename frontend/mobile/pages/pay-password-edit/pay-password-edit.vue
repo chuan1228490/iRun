@@ -12,11 +12,26 @@
         <!-- 首次设置支付密码：需登录密码验证 -->
         <template v-if="mode === 'set'">
           <view class="section-card">
-            <view class="form-field">
-              <text class="field-label">登录密码</text>
-              <input class="field-input" name="password" v-model="loginPassword" placeholder="请输入登录密码验证身份" />
-              <text class="field-tip" v-if="store.userInfo?.registerType === 2">您是微信注册用户，初始登录密码为 123456</text>
-            </view>
+            <!-- 微信注册用户：短信验证 -->
+            <template v-if="isWeChatUser">
+              <view class="form-field">
+                <text class="field-label">短信验证码</text>
+                <view class="code-row">
+                  <input class="field-input code-input" name="number" type="number" v-model="verifyCode" placeholder="请输入验证码" maxlength="6" />
+                  <view class="code-send-btn" :class="{ 'code-send-btn--counting': counting }" @click="onSendCode">
+                    <text>{{ counting ? countdown + 's' : '获取验证码' }}</text>
+                  </view>
+                </view>
+                <text class="field-tip">您通过微信注册，请用短信验证替代登录密码</text>
+              </view>
+            </template>
+            <!-- 非微信用户：登录密码验证 -->
+            <template v-else>
+              <view class="form-field">
+                <text class="field-label">登录密码</text>
+                <input class="field-input" name="password" v-model="loginPassword" placeholder="请输入登录密码验证身份" />
+              </view>
+            </template>
             <view class="form-field">
               <text class="field-label">新支付密码</text>
               <input class="field-input" name="number" password v-model="newPayPassword" placeholder="请输入6位数字支付密码" maxlength="6" />
@@ -96,8 +111,13 @@ const mode = ref('')
 const { lock, unlock, locked: saving } = useSubmitLock()
 const loading = ref(true)
 
+const isWeChatUser = computed(() => store.userInfo?.registerType === 2)
+
 // 首次设置支付密码
 const loginPassword = ref('')
+const verifyCode = ref('')
+const counting = ref(false)
+const countdown = ref(60)
 const newPayPassword = ref('')
 const confirmPayPassword = ref('')
 
@@ -143,8 +163,40 @@ async function checkPayPasswordStatus() {
   loading.value = false
 }
 
+async function onSendCode() {
+  if (counting.value) return
+  const phone = store.userInfo?.phone
+  if (!phone) {
+    uni.showToast({ title: '请先绑定手机号', icon: 'none' })
+    return
+  }
+  try {
+    await userApi.sendCode(phone)
+    counting.value = true
+    countdown.value = 60
+    const timer = setInterval(() => {
+      countdown.value--
+      if (countdown.value <= 0) {
+        clearInterval(timer)
+        counting.value = false
+      }
+    }, 1000)
+  } catch (e) { /* handled */ }
+}
+
 async function onSetPayPassword() {
-  if (!loginPassword.value || !newPayPassword.value || !confirmPayPassword.value) {
+  if (isWeChatUser.value) {
+    if (!verifyCode.value) {
+      uni.showToast({ title: '请输入验证码', icon: 'none' })
+      return
+    }
+  } else {
+    if (!loginPassword.value) {
+      uni.showToast({ title: '请输入登录密码', icon: 'none' })
+      return
+    }
+  }
+  if (!newPayPassword.value || !confirmPayPassword.value) {
     uni.showToast({ title: '请填写完整', icon: 'none' })
     return
   }
@@ -162,7 +214,7 @@ async function onSetPayPassword() {
   }
   if (!lock()) return
   try {
-    await userApi.setPayPassword(loginPassword.value, newPayPassword.value)
+    await userApi.setPayPassword(loginPassword.value, newPayPassword.value, verifyCode.value)
     store.markPayPasswordSet()
     uni.showToast({ title: '设置成功', icon: 'success' })
     setTimeout(() => uni.navigateBack(), 1000)
@@ -238,6 +290,11 @@ function onBack() { uni.navigateBack() }
 .form-field--last{border-bottom:none}
 .field-label{font-size:26rpx;color:var(--text-secondary);display:block;margin-bottom:12rpx}
 .field-input{width:100%;height:84rpx;background:var(--surface);border-radius:14rpx;padding:0 22rpx;font-size:28rpx;color:var(--text-primary);box-sizing:border-box}
+.code-row{display:flex;align-items:center;gap:16rpx}
+.code-input{flex:1}
+.code-send-btn{height:84rpx;padding:0 24rpx;background:var(--surface);border-radius:14rpx;display:flex;align-items:center;justify-content:center;white-space:nowrap;font-size:24rpx;color:var(--primary);border:2rpx solid var(--primary)}
+.code-send-btn:active{opacity:.7}
+.code-send-btn--counting{border-color:var(--outline);color:var(--text-tertiary);pointer-events:none}
 .field-tip{font-size:22rpx;color:var(--text-tertiary);margin-top:8rpx;display:block}
 
 .form-hint{display:flex;align-items:flex-start;gap:8rpx;padding:20rpx 8rpx 0;opacity:.7}

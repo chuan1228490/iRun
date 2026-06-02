@@ -34,8 +34,8 @@ public class WeChatAuthUtil {
 
         try {
             String response = HttpClientUtil.doGet(weChatProperties.getLoginUrl(), params);
-            log.debug("微信 code2Session 返回: {}", response);
             JSONObject json = JSONUtil.parseObj(response);
+            log.debug("微信 code2Session 成功, openid={}", json.getStr("openid"));
 
             if (json.containsKey("errcode") && json.getInt("errcode") != 0) {
                 log.warn("微信登录失败: errcode={}, errmsg={}",

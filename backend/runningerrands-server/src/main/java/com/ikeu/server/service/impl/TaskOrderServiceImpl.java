@@ -196,10 +196,10 @@ public class TaskOrderServiceImpl extends ServiceImpl<TaskOrderMapper, TaskOrder
             taskOrderMapper.insert(order);
 
             // 5. 状态校验并更新任务为"已接单"
-            TaskStateMachine.validate(task.getStatus(), StatusConstant.TASK_ACCEPTED, "Task");
-            task.setStatus(StatusConstant.TASK_ACCEPTED);
-            task.setUpdatedAt(LocalDateTime.now());
-            taskMapper.updateById(task);
+            TaskStateMachine.validate(latestTask.getStatus(), StatusConstant.TASK_ACCEPTED, "Task");
+            latestTask.setStatus(StatusConstant.TASK_ACCEPTED);
+            latestTask.setUpdatedAt(LocalDateTime.now());
+            taskMapper.updateById(latestTask);
 
             // 6. 原子更新跑腿员当前接单数 +1
             runnerProfileMapper.incrementCurrentOrders(runnerId);
@@ -381,7 +381,18 @@ public class TaskOrderServiceImpl extends ServiceImpl<TaskOrderMapper, TaskOrder
     public void confirmComplete(Long publisherId, Long orderId) {
         TaskOrder order = getById(orderId);
         if (order == null) throw new NotFoundException(MessageConstant.ORDER_NOT_EXIST);
-        OrderStateMachine.validate(order.getStatus(), StatusConstant.ORDER_COMPLETED, "Order");
+
+        // 分布式锁防止与 OrderAutoCompleteChecker 并发处理同一订单
+        String lockKey = RedisConstant.ORDER_LOCK_KEY + order.getTaskId();
+        RLock lock = redissonClient.getLock(lockKey);
+        try {
+            if (!lock.tryLock(RedisConstant.LOCK_WAIT_TIME, RedisConstant.LOCK_EXPIRE, TimeUnit.SECONDS)) {
+                throw new BusinessException(MessageConstant.SYSTEM_BUSY);
+            }
+            // 锁内重查，防止状态已被自动结算修改
+            order = getById(orderId);
+            if (order == null) throw new NotFoundException(MessageConstant.ORDER_NOT_EXIST);
+            OrderStateMachine.validate(order.getStatus(), StatusConstant.ORDER_COMPLETED, "Order");
         Task task = taskMapper.selectById(order.getTaskId());
         if (task == null) throw new NotFoundException(MessageConstant.TASK_NOT_EXIST);
         if (!task.getPublisherId().equals(publisherId)) {
@@ -415,6 +426,14 @@ public class TaskOrderServiceImpl extends ServiceImpl<TaskOrderMapper, TaskOrder
         // 任务完成影响排行榜和仪表盘，清除相关缓存
         Objects.requireNonNull(cacheManager.getCache(RedisConstant.CACHE_LEADERBOARD)).clear();
         Objects.requireNonNull(cacheManager.getCache(RedisConstant.CACHE_DASHBOARD)).clear();
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            throw new BusinessException(MessageConstant.ERROR);
+        } finally {
+            if (lock.isHeldByCurrentThread()) {
+                lock.unlock();
+            }
+        }
     }
 
     /**

@@ -91,7 +91,7 @@ public class WebMvcConfiguration implements WebMvcConfigurer {
     public OpenAPI customOpenAPI() {
         return new OpenAPI()
                 .info(new Info()
-                        .title("Dorm2Dorm 接口文档")
+                        .title("小i跑腿接口文档")
                         .version("1.0")
                         .description("校园跑腿互助平台 API"));
     }

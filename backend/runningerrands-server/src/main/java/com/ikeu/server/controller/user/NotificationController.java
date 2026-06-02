@@ -78,6 +78,18 @@ public class NotificationController {
     }
 
     /**
+     * 获取当前用户的未读通知数量。
+     *
+     * @return 未读通知数量
+     */
+    @Operation(summary = "获取未读通知数量")
+    @GetMapping("/unread-count")
+    public Result<Long> unreadCount() {
+        Long userId = BaseContext.getCurrentId();
+        return Result.success(notificationService.getUnreadCount(userId));
+    }
+
+    /**
      * 删除指定通知。
      *
      * <p>委托 {@link NotificationService#deleteNotification} 校验通知归属当前用户后

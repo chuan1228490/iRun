@@ -33,6 +33,7 @@ import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
+import java.util.concurrent.TimeUnit;
 import java.time.format.DateTimeFormatter;
 import java.util.*;
 import java.util.stream.Collectors;
@@ -70,10 +71,22 @@ public class AdminServiceImpl extends ServiceImpl<AdminMapper, Admin> implements
     @Override
     @Transactional
     public AdminLoginVO login(AdminLoginDTO dto) {
+        // 登录失败次数检查（防暴力破解）
+        String failKey = RedisConstant.ADMIN_LOGIN_FAIL_PREFIX + dto.getUsername();
+        String failCount = redisTemplate.opsForValue().get(failKey);
+        if (failCount != null && Integer.parseInt(failCount) >= RedisConstant.LOGIN_MAX_FAIL_COUNT) {
+            throw new BusinessException("登录失败次数过多，请15分钟后再试");
+        }
+
         Admin admin = lambdaQuery().eq(Admin::getUsername, dto.getUsername()).one();
         if (admin == null || !passwordEncoder.matches(dto.getPassword(), admin.getPassword())) {
+            redisTemplate.opsForValue().increment(failKey);
+            redisTemplate.expire(failKey, RedisConstant.LOGIN_LOCK_SECONDS, TimeUnit.SECONDS);
             throw new BusinessException(MessageConstant.ADMIN_LOGIN_FAILED);
         }
+
+        // 登录成功后清除失败计数
+        redisTemplate.delete(failKey);
         if (Objects.equals(admin.getStatus(), StatusConstant.DISABLE)) {
             throw new BusinessException(MessageConstant.ADMIN_DISABLED);
         }

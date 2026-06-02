@@ -40,19 +40,6 @@ logging:
   level:
     com.ikeu: DEBUG
 
-# 通过knife4j生成接口文档
-springdoc:
-  api-docs:
-    enabled: true
-    path: /v3/api-docs
-  swagger-ui:
-    enabled: true
-    path: /swagger-ui.html
-knife4j:
-  enable: true
-  setting:
-    language: zh_cn
-
 # 项目配置
 runningerrands:
   admin:

@@ -44,18 +44,26 @@ public class JwtHandshakeInterceptor implements HandshakeInterceptor {
         if (request instanceof ServletServerHttpRequest servletRequest) {
             HttpServletRequest httpReq = servletRequest.getServletRequest();
             String token = httpReq.getParameter("token");
-            if (token != null && !token.isEmpty()) {
-                try {
-                    var claims = jwtUtil.parseUserAccessToken(token);
-                    Long userId = jwtUtil.getUserIdFromClaims(claims);
-                    attributes.put("userId", userId);
-                    log.info("WebSocket handshake authenticated: userId={}", userId);
-                } catch (Exception e) {
-                    log.warn("WebSocket handshake auth failed: {}", e.getMessage());
-                }
+            if (token == null || token.isEmpty()) {
+                log.warn("WebSocket handshake rejected: missing token");
+                response.setStatusCode(org.springframework.http.HttpStatus.UNAUTHORIZED);
+                return false;
+            }
+            try {
+                var claims = jwtUtil.parseUserAccessToken(token);
+                Long userId = jwtUtil.getUserIdFromClaims(claims);
+                attributes.put("userId", userId);
+                log.info("WebSocket handshake authenticated: userId={}", userId);
+                return true;
+            } catch (Exception e) {
+                log.warn("WebSocket handshake rejected: invalid token: {}", e.getMessage());
+                response.setStatusCode(org.springframework.http.HttpStatus.UNAUTHORIZED);
+                return false;
             }
         }
-        return true;
+        log.warn("WebSocket handshake rejected: unsupported request type");
+        response.setStatusCode(org.springframework.http.HttpStatus.UNAUTHORIZED);
+        return false;
     }
 
     /**

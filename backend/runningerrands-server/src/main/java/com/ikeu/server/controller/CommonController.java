@@ -15,6 +15,7 @@ import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
+import java.util.Set;
 import java.util.UUID;
 
 /**
@@ -28,6 +29,11 @@ import java.util.UUID;
 @RequiredArgsConstructor
 public class CommonController {
     private final AliOssUtil aliOssUtil;
+
+    private static final Set<String> ALLOWED_EXTENSIONS = Set.of(
+            ".jpg", ".jpeg", ".png", ".gif", ".webp",
+            ".pdf", ".doc", ".docx", ".xls", ".xlsx", ".ppt", ".pptx", ".txt"
+    );
 
     /**
      * 文件上传至阿里云OSS。
@@ -51,6 +57,9 @@ public class CommonController {
         String suffix = null;
         if (originalFileName != null) {
             suffix = originalFileName.substring(originalFileName.lastIndexOf("."));
+        }
+        if (suffix == null || !ALLOWED_EXTENSIONS.contains(suffix.toLowerCase())) {
+            return Result.error("不支持的文件类型，允许的类型：" + String.join(", ", ALLOWED_EXTENSIONS));
         }
         String fileName = UUID.randomUUID() + suffix;
 

@@ -532,7 +532,16 @@ function goRiderProfile() {
 }
 
 function previewImage(url) {
-  uni.previewImage({ urls: [url], current: url })
+  const ext = (url || '').split('.').pop()?.toLowerCase()
+  if (ext && ['jpg', 'jpeg', 'png', 'gif', 'webp'].includes(ext)) {
+    uni.previewImage({ urls: [url], current: url })
+  } else {
+    uni.downloadFile({
+      url,
+      success: (res) => uni.openDocument({ filePath: res.tempFilePath, showMenu: true }),
+      fail: () => uni.showToast({ title: '文件打开失败', icon: 'none' })
+    })
+  }
 }
 
 function onBack() { uni.navigateBack() }

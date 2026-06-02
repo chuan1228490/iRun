@@ -28,4 +28,7 @@ public interface NotificationService {
     /** 分批清理过期通知，返回当次删除行数。 */
     int cleanupExpiredNotifications(int batchSize);
 
+    /** 获取当前用户的未读通知数量。 */
+    long getUnreadCount(Long userId);
+
 }

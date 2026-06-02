@@ -83,9 +83,15 @@ public class OrderTimeoutChecker {
 
             for (TaskOrder order : timeoutPickupOrders) {
                 try {
-                    order.setStatus(StatusConstant.ORDER_CANCELLED);
-                    order.setCancelReason(MessageConstant.ORDER_PICKUP_TIMEOUT);
-                    orderMapper.updateById(order);
+                    // 条件UPDATE防止与confirmPickup并发：仅当订单仍为待取货状态时才更新
+                    int affected = orderMapper.updateStatusIf(order.getId(),
+                            StatusConstant.ORDER_WAIT_PICKUP,
+                            StatusConstant.ORDER_CANCELLED,
+                            MessageConstant.ORDER_PICKUP_TIMEOUT);
+                    if (affected == 0) {
+                        log.info("订单 {} 状态已变更，跳过超时取消", order.getId());
+                        continue;
+                    }
 
                     Task task = taskMapper.selectById(order.getTaskId());
                     if (task != null && !Objects.equals(task.getStatus(), StatusConstant.TASK_WAITING)) {

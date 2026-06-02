@@ -26,6 +26,7 @@
           <template #default="{ row }">¥{{ Number(row.reward).toFixed(2) }}</template>
         </el-table-column>
         <el-table-column prop="pickupAddress" label="取件地址" width="140" show-overflow-tooltip />
+        <el-table-column prop="deliveryAddress" label="送达地址" width="140" show-overflow-tooltip />
         <el-table-column label="状态" width="90">
           <template #default="{ row }">
             <el-tag :type="statusTag(row.status)" size="small">{{ TASK_STATUS[row.status as keyof typeof TASK_STATUS] }}</el-tag>

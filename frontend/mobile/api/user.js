@@ -48,9 +48,11 @@ export function updatePassword(oldPassword, newPassword) {
   return put('/user/password', { oldPassword, newPassword })
 }
 
-/** 设置支付密码（首次，需验证登录密码） */
-export function setPayPassword(loginPassword, payPassword) {
-  return put('/user/pay-password', { loginPassword, payPassword })
+/** 设置支付密码（首次，需验证登录密码；微信用户可传code走短信验证） */
+export function setPayPassword(loginPassword, payPassword, code) {
+  const payload = { loginPassword, payPassword }
+  if (code) payload.code = code
+  return put('/user/pay-password', payload)
 }
 
 /** 修改支付密码 */

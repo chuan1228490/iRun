@@ -23,8 +23,8 @@
 import { reactive, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
-import axios from 'axios'
 import { useAuthStore } from '@/stores/auth'
+import { login as loginApi } from '@/api/auth'
 
 const router = useRouter()
 const authStore = useAuthStore()
@@ -41,8 +41,7 @@ async function handleLogin() {
   if (!valid) return
   loading.value = true
   try {
-    const res = await axios.post('/api/admin/login', form)
-    const data = res.data.data
+    const data = await loginApi(form)
     authStore.setAuth(data.token, data.refreshToken, {
       adminId: data.adminId,
       username: data.username,
@@ -52,7 +51,7 @@ async function handleLogin() {
     ElMessage.success('登录成功')
     router.replace('/dashboard')
   } catch {
-    ElMessage.error('登录失败')
+    ElMessage.error('登录失败，请检查用户名和密码')
   } finally {
     loading.value = false
   }

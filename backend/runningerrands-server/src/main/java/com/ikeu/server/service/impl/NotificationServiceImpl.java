@@ -165,4 +165,12 @@ public class NotificationServiceImpl extends ServiceImpl<NotificationMapper, Not
         }
         return deleted;
     }
+
+    @Override
+    public long getUnreadCount(Long userId) {
+        return lambdaQuery()
+                .eq(Notification::getUserId, userId)
+                .eq(Notification::getIsRead, StatusConstant.UNREAD)
+                .count();
+    }
 }
