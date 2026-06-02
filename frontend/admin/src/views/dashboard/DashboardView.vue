@@ -102,7 +102,7 @@ const orderStatusOption = computed(() => ({
   xAxis: { type: 'category', data: data.value?.orderStatusDistribution?.map(d => d.name) ?? [] },
   yAxis: { type: 'value', minInterval: 1 },
   series: [{
-    data: data.value?.orderStatusDistribution?.map(d => ({ value: d.value, itemStyle: statusColor(d.name) })) ?? [],
+    data: data.value?.orderStatusDistribution?.map(d => ({ value: d.value, itemStyle: { color: statusColor(d.name) } })) ?? [],
     type: 'bar', barWidth: '50%',
     label: { show: true, position: 'top' }
   }]
