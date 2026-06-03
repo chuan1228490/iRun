@@ -19,7 +19,7 @@ import jakarta.validation.constraints.NotNull;
 /**
  * 全局响应处理器，统一包装 Controller 返回结果为 {@link Result} 格式。
  * @author ikeu
- * @date 2026/05/14
+ * @since 2026/05/14
  */
 @Slf4j
 @RestControllerAdvice(basePackages = "com.ikeu.server.controller")

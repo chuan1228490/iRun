@@ -12,6 +12,11 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.*;
 
+/**
+ * 管理端订单管理接口，提供订单列表查询、详情查看和强制修改订单状态功能。
+ * @author ikeu
+ * @since 2025/06/02
+ */
 @Tag(name = "管理端-订单管理")
 @RestController
 @RequestMapping("/admin")

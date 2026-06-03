@@ -13,6 +13,11 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.*;
 
+/**
+ * 管理端任务管理接口，提供任务列表查询、详情查看和强制更新状态功能。
+ * @author ikeu
+ * @since 2025/06/02
+ */
 @Tag(name = "管理端-任务管理")
 @RestController
 @RequestMapping("/admin")

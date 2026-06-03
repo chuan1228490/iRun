@@ -12,6 +12,11 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.*;
 
+/**
+ * 管理端跑腿员管理接口，提供跑腿员列表查询、详情查看、认证审核和禁止接单功能。
+ * @author ikeu
+ * @since 2025/06/01
+ */
 @Tag(name = "管理端-跑腿员管理")
 @RestController
 @RequestMapping("/admin")

@@ -11,6 +11,11 @@ import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
 
+/**
+ * 操作日志服务实现，提供操作日志的分页条件查询。
+ * @author ikeu
+ * @since 2026/06/03
+ */
 @Service
 public class OperationLogServiceImpl extends ServiceImpl<OperationLogMapper, OperationLog> implements OperationLogService {
 

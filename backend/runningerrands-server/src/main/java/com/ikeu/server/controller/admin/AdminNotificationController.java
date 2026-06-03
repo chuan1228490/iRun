@@ -19,6 +19,11 @@ import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 
+/**
+ * 管理端消息管理接口，提供向指定用户发送通知和全站广播通知功能。
+ * @author ikeu
+ * @since 2025/06/02
+ * */
 @Slf4j
 @Tag(name = "管理端-消息管理")
 @RestController

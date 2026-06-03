@@ -12,6 +12,11 @@ import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.*;
 
+/**
+ * 管理端认证接口，提供管理员登录、刷新令牌和退出登录功能。
+ * @author ikeu
+ * @since 2025/06/01
+ */
 @Tag(name = "管理端-认证")
 @RestController
 @RequestMapping("/admin")

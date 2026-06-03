@@ -25,6 +25,11 @@ import org.springframework.transaction.annotation.Transactional;
 import java.util.List;
 import java.util.stream.Collectors;
 
+/**
+ * 管理员员工服务实现，处理管理员员工的 CRUD 操作及权限校验（禁止操作超管账号、禁止停用自己）。
+ * @author ikeu
+ * @since 2026/06/03
+ */
 @Slf4j
 @Service
 @RequiredArgsConstructor

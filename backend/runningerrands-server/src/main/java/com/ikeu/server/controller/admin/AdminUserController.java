@@ -12,6 +12,11 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.*;
 
+/**
+ * 管理端用户管理接口，提供用户列表查询、详情查看、封禁/解封和实名认证审核功能。
+ * @author ikeu
+ * @since 2025/06/01
+ */
 @Tag(name = "管理端-用户管理")
 @RestController
 @RequestMapping("/admin")

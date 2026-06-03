@@ -7,7 +7,7 @@ import com.ikeu.model.vo.*;
 /**
  * 管理员服务接口，提供登录认证、用户管理、任务订单管理和仪表盘数据等功能。
  * @author ikeu
- * @since 2026/05/14
+ * @since 2026/05/21
  */
 public interface AdminService {
 

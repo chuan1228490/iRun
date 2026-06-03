@@ -9,9 +9,9 @@ import org.springframework.stereotype.Component;
 @ConfigurationProperties(prefix = "runningerrands.alioss")
 public class AliOssProperties {
 
-    private String endpoint;
     private String accessKeyId;
     private String accessKeySecret;
+    private String endpoint;
     private String bucketName;
 
 }

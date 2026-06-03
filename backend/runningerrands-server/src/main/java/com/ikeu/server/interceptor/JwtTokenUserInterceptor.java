@@ -19,6 +19,8 @@ import jakarta.servlet.http.HttpServletResponse;
  *
  * <p>支持从 HTTP 头或请求参数中获取 token，
  * token 名称由 {@link JwtProperties#getUserTokenName()} 配置。
+ * @author ikeu
+ * @since 2025/05/21
  */
 @Slf4j
 @Component

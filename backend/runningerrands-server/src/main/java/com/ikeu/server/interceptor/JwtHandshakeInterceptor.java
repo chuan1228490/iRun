@@ -16,7 +16,7 @@ import java.util.Map;
 /**
  * WebSocket 握手拦截器，从 URL 查询参数中提取 JWT token 并验证用户身份。
  * @author ikeu
- * @date 2026/05/14
+ * @since 2026/05/26
  */
 @Slf4j
 @Component

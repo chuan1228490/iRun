@@ -14,6 +14,15 @@ import org.apache.ibatis.annotations.Update;
 @Mapper
 public interface TaskOrderMapper extends BaseMapper<TaskOrder> {
 
+    /**
+     * 条件更新订单状态：仅在订单当前状态符合预期时才更新，用于防止并发覆盖。
+     *
+     * @param orderId 订单ID
+     * @param expectedStatus 期望的当前状态
+     * @param targetStatus 目标状态
+     * @param cancelReason 取消原因
+     * @return 影响行数（0表示状态已被其他操作变更）
+     */
     @Update("UPDATE task_order SET status = #{targetStatus}, cancel_reason = #{cancelReason} " +
             "WHERE id = #{orderId} AND status = #{expectedStatus}")
     int updateStatusIf(@Param("orderId") Long orderId,

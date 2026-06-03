@@ -13,7 +13,7 @@ import org.springframework.web.bind.annotation.*;
 /**
  * 站内信通知接口，提供通知列表查询、单条/全部标记已读、删除通知等功能。
  * @author ikeu
- * @since 2025/05/21
+ * @since 2025/05/23
  */
 @Tag(name = "用户端 - 消息通知相关接口", description = "站内信查看与管理")
 @RestController

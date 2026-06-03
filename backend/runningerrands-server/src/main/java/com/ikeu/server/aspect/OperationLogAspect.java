@@ -30,7 +30,7 @@ import java.util.regex.Pattern;
 /**
  * 操作日志切面，拦截标注 @OperationLog 的管理端方法，自动记录操作日志。
  * @author ikeu
- * @since 2026/05/31
+ * @since 2026/06/03
  */
 @Slf4j
 @Aspect

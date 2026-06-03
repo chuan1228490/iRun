@@ -13,6 +13,11 @@ import org.springframework.web.bind.annotation.*;
 
 import java.time.LocalDateTime;
 
+/**
+ * 管理端操作日志接口，提供操作日志的分页查询和条件筛选。
+ * @author ikeu
+ * @since 2025/06/01
+ */
 @Tag(name = "管理端-操作日志")
 @RestController
 @RequestMapping("/admin")

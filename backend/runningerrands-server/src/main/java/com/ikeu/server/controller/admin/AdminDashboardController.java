@@ -11,6 +11,11 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
+/**
+ * 管理端仪表盘接口，提供平台运营数据统计（用户数、任务数、订单数、收益等）。
+ * @author ikeu
+ * @since 2025/06/01
+ */
 @Tag(name = "管理端-仪表盘")
 @RestController
 @RequestMapping("/admin")

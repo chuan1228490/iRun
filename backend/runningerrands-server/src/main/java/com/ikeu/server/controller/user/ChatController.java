@@ -24,7 +24,7 @@ import java.util.Map;
 /**
  * 用户与配送员实时聊天接口，提供联系人列表、聊天记录、消息收发等功能。
  * @author ikeu
- * @since 2025/05/21
+ * @since 2025/05/26
  */
 @Slf4j
 @Tag(name = "用户端 - 聊天模块相关接口", description = "用户与配送员实时聊天")
