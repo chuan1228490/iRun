@@ -12,15 +12,7 @@
       <!-- 左侧品牌 -->
       <div class="brand-side" ref="brandSideRef">
         <div class="brand-logo" ref="logoRef">
-          <div class="logo-icon">
-            <svg viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg">
-              <rect width="48" height="48" rx="12" fill="currentColor" fill-opacity="0.18"/>
-              <path d="M14 20 L24 12 L34 20" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
-              <path d="M18 20 L18 32 L30 32 L30 20" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
-              <path d="M22 32 L22 26 L26 26 L26 32" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
-              <circle cx="24" cy="16" r="2" fill="currentColor"/>
-            </svg>
-          </div>
+          <img class="logo-icon" src="/logo.svg" alt="小i跑腿" />
           <h1 class="brand-title">小i跑腿 · 管理端</h1>
         </div>
         <p class="brand-slogan" ref="sloganRef">让校园生活更高效</p>
@@ -376,13 +368,7 @@ onMounted(runEntranceAnimation)
 .logo-icon {
   width: 56px;
   height: 56px;
-  color: #FF6B4A;
   flex-shrink: 0;
-}
-
-.logo-icon svg {
-  width: 100%;
-  height: 100%;
 }
 
 .brand-title {

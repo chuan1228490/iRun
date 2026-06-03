@@ -2,9 +2,7 @@
   <el-container class="admin-layout">
     <el-aside :width="appStore.sidebarCollapsed ? '64px' : '220px'" class="aside">
       <div class="logo">
-        <span class="logo-icon">
-          <svg viewBox="0 0 32 32" fill="none"><rect width="32" height="32" rx="8" fill="currentColor" fill-opacity="0.15"/><path d="M10 14 L16 8 L22 14" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M12 14 L12 22 L20 22 L20 14" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
-        </span>
+        <img class="logo-icon" src="/logo.svg" alt="小i跑腿" />
         <span v-if="!appStore.sidebarCollapsed" class="logo-text">小i跑腿管理端</span>
         <span v-else class="logo-text">小i</span>
       </div>
@@ -137,12 +135,6 @@ const visibleMenu = computed(() =>
   width: 28px;
   height: 28px;
   flex-shrink: 0;
-  color: #FF6B4A;
-}
-
-.logo-icon svg {
-  width: 100%;
-  height: 100%;
 }
 
 .logo-text {
