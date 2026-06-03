@@ -22,9 +22,9 @@ F:/ikeu_runningerrands/
 │   ├── runningerrands-model/             # 数据模型：entity, dto, vo
 │   ├── runningerrands-server/            # Spring Boot 应用：controller, service, mapper, config, interceptor, aspect
 │   └── runningerrands.sql               # 数据库建表脚本
-├── frontend/
-│   ├── admin/                            # 管理端（Vue 3 + TS + Element Plus）
-│   └── mobile/                           # 移动端（uni-app 微信小程序）
+├── admin/                                # 管理端（Vue 3 + TS + Element Plus）
+├── mobile/                               # 移动端（uni-app 微信小程序）
+├── DESIGN.md                             # 前端设计技能操作手册
 └── .claude/
     ├── CLAUDE.md                         # ← 本文件
     └── settings.local.json               # 本地命令自动批准
@@ -90,14 +90,14 @@ cd F:/ikeu_runningerrands/backend
 # → http://localhost:8080/api/doc.html  (Swagger)
 
 # ===== 管理端前端 =====
-cd F:/ikeu_runningerrands/frontend/admin
+cd F:/ikeu_runningerrands/admin
 
 npm run dev           # http://localhost:3001 (代理 /api → 8080)
 npx vue-tsc --noEmit  # 类型检查
 npx vite build         # 构建
 
 # ===== 移动端 =====
-# 在 HBuilderX 中打开 frontend/mobile，运行 → 微信小程序
+# 在 HBuilderX 中打开 mobile/，运行 → 微信小程序
 ```
 
 ## 数据库
