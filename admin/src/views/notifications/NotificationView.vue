@@ -192,11 +192,13 @@ watch(activeTab, (tab) => { if (tab === 'history') fetchHistory() })
 </script>
 
 <style scoped>
-.pagination { margin-top: 16px; display: flex; justify-content: flex-end; }
+.pagination { margin-top: 20px; display: flex; justify-content: center; }
+:deep(.el-table) { border-radius: var(--radius-sm); }
+:deep(.el-table th) { background: var(--neutral-surface); color: var(--text-secondary); font-weight: 600; }
 .expand-detail { padding: 8px 16px; }
-.expand-detail h4 { margin: 0 0 8px; font-size: 14px; color: #303133; }
-.params-json { background: #f5f7fa; padding: 12px; border-radius: 6px; font-size: 13px; line-height: 1.6; white-space: pre-wrap; word-break: break-all; margin: 0; max-height: 300px; overflow-y: auto; }
-.expand-empty { padding: 16px; color: #909399; font-size: 13px; text-align: center; }
+.expand-detail h4 { margin: 0 0 8px; font-size: 14px; color: var(--text-primary); }
+.params-json { background: var(--neutral-surface); padding: 12px; border-radius: var(--radius-sm); font-size: 13px; line-height: 1.6; white-space: pre-wrap; word-break: break-all; margin: 0; max-height: 300px; overflow-y: auto; }
+.expand-empty { padding: 16px; color: var(--text-tertiary); font-size: 13px; text-align: center; }
 .user-select-area { width: 100%; }
 .search-row { display: flex; gap: 8px; align-items: center; }
 .selected-tags { margin-top: 8px; }

@@ -112,5 +112,8 @@ onMounted(fetchData)
 <style scoped>
 .toolbar { display: flex; justify-content: flex-end; margin-bottom: 12px; }
 .search-form { margin-bottom: 16px; }
-.pagination { margin-top: 16px; display: flex; justify-content: flex-end; }
+.search-form :deep(.el-form-item__label) { color: var(--text-secondary); }
+.pagination { margin-top: 20px; display: flex; justify-content: center; }
+:deep(.el-table) { border-radius: var(--radius-sm); }
+:deep(.el-table th) { background: var(--neutral-surface); color: var(--text-secondary); font-weight: 600; }
 </style>

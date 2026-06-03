@@ -128,11 +128,11 @@ onMounted(async () => {
 <style scoped>
 .detail-card { margin-top: 20px; }
 .card-header { display: flex; justify-content: space-between; align-items: center; }
-.reward { color: #e67e22; font-weight: 600; font-size: 16px; }
+.reward { color: var(--brand-accent); font-weight: 600; font-size: 16px; }
 .cancel-info { margin-top: 16px; }
 .image-section { margin-top: 20px; }
-.image-section h4 { margin-bottom: 12px; }
+.image-section h4 { margin-bottom: 12px; color: var(--text-primary); }
 .image-grid { display: flex; flex-wrap: wrap; gap: 12px; }
-.task-image { width: 160px; height: 160px; border-radius: 8px; }
-.image-error { width: 100%; height: 100%; display: flex; flex-direction: column; align-items: center; justify-content: center; color: #c0c4cc; font-size: 12px; background: #f5f7fa; gap: 4px; }
+.task-image { width: 160px; height: 160px; border-radius: var(--radius-sm); }
+.image-error { width: 100%; height: 100%; display: flex; flex-direction: column; align-items: center; justify-content: center; color: var(--text-placeholder); font-size: 12px; background: var(--neutral-surface); gap: 4px; }
 </style>

@@ -2,16 +2,16 @@
   <el-container class="admin-layout">
     <el-aside :width="appStore.sidebarCollapsed ? '64px' : '220px'" class="aside">
       <div class="logo">
-        <span v-if="!appStore.sidebarCollapsed">小i跑腿管理端</span>
-        <span v-else>小i</span>
+        <span class="logo-icon">
+          <svg viewBox="0 0 32 32" fill="none"><rect width="32" height="32" rx="8" fill="currentColor" fill-opacity="0.15"/><path d="M10 14 L16 8 L22 14" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M12 14 L12 22 L20 22 L20 14" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        </span>
+        <span v-if="!appStore.sidebarCollapsed" class="logo-text">小i跑腿管理端</span>
+        <span v-else class="logo-text">小i</span>
       </div>
       <el-menu
         :default-active="currentRoute"
         :collapse="appStore.sidebarCollapsed"
         router
-        background-color="#304156"
-        text-color="#bfcbd9"
-        active-text-color="#409EFF"
       >
         <el-menu-item v-for="item in visibleMenu" :key="item.path" :index="item.path">
           <el-icon><component :is="item.icon" /></el-icon>
@@ -35,7 +35,8 @@
         <div class="header-right">
           <el-dropdown trigger="click">
             <span class="user-info">
-              {{ authStore.adminInfo?.name || authStore.adminInfo?.username }}
+              <span class="user-avatar">{{ avatarText }}</span>
+              <span class="user-name">{{ authStore.adminInfo?.name || authStore.adminInfo?.username }}</span>
               <el-icon><ArrowDown /></el-icon>
             </span>
             <template #dropdown>
@@ -50,7 +51,9 @@
       </el-header>
 
       <el-main>
-        <router-view />
+        <Transition name="page-fade" mode="out-in">
+          <router-view />
+        </Transition>
       </el-main>
     </el-container>
   </el-container>
@@ -70,6 +73,11 @@ const appStore = useAppStore()
 const currentRoute = computed(() => route.path)
 const currentTitle = computed(() => route.meta?.title as string)
 
+const avatarText = computed(() => {
+  const name = authStore.adminInfo?.name || authStore.adminInfo?.username || ''
+  return name.charAt(0).toUpperCase()
+})
+
 interface MenuItem {
   path: string
   title: string
@@ -87,7 +95,7 @@ const menuItems: MenuItem[] = [
   { path: '/notifications', title: '消息管理', icon: 'Message' },
   { path: '/audit', title: '审核管理', icon: 'CircleCheck' },
   { path: '/employees', title: '员工管理', icon: 'UserFilled', roles: [1] },
-  { path: '/logs', title: '操作日志', icon: 'Tickets', roles: [1] }
+  { path: '/logs', title: '操作日志', icon: 'Tickets', roles: [1] },
 ]
 
 async function handleLogout() {
@@ -97,53 +105,156 @@ async function handleLogout() {
   } catch { /* 用户取消 */ }
 }
 
-const visibleMenu = computed(() => menuItems.filter(item => {
-  if (!item.roles) return true
-  return authStore.adminInfo && item.roles.includes(authStore.adminInfo.role)
-}))
-
+const visibleMenu = computed(() =>
+  menuItems.filter((item) => {
+    if (!item.roles) return true
+    return authStore.adminInfo && item.roles.includes(authStore.adminInfo.role)
+  })
+)
 </script>
 
 <style scoped>
 .admin-layout {
   height: 100vh;
 }
+
+/* ===== 侧边栏 ===== */
 .aside {
-  background-color: #304156;
-  transition: width 0.3s;
+  background: linear-gradient(180deg, #1a1a2e 0%, #16213e 50%, #0f2b3d 100%);
+  transition: width 0.3s var(--ease-out);
   overflow: hidden;
 }
+
 .logo {
   height: 60px;
-  line-height: 60px;
-  text-align: center;
-  color: #fff;
-  font-size: 18px;
-  font-weight: bold;
-  background-color: #2b3a4a;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  background: var(--sidebar-logo-bg, #151d2b);
   white-space: nowrap;
+  overflow: hidden;
 }
+
+.logo-icon {
+  width: 28px;
+  height: 28px;
+  flex-shrink: 0;
+  color: #FF6B4A;
+}
+
+.logo-icon svg {
+  width: 100%;
+  height: 100%;
+}
+
+.logo-text {
+  color: #fff;
+  font-size: 16px;
+  font-weight: 700;
+  letter-spacing: 1px;
+}
+
+/* Override Element Plus menu styles in sidebar */
+.aside :deep(.el-menu) {
+  border-right: none;
+  background: transparent;
+}
+
+.aside :deep(.el-menu-item) {
+  color: #bfcbd9;
+  margin: 4px 8px;
+  border-radius: 8px;
+  transition: all var(--duration-normal) var(--ease-out);
+}
+
+.aside :deep(.el-menu-item:hover) {
+  background: rgba(255, 107, 74, 0.08) !important;
+  color: #fff;
+}
+
+.aside :deep(.el-menu-item.is-active) {
+  color: #fff !important;
+  background: rgba(255, 107, 74, 0.15) !important;
+  border-left: 3px solid #FF6B4A;
+  padding-left: 17px !important;
+}
+
+/* ===== 顶栏 ===== */
 .header {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  background: #fff;
-  border-bottom: 1px solid #e6e6e6;
-  padding: 0 20px;
+  background: rgba(255, 255, 255, 0.8);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border-bottom: 1px solid var(--neutral-outline-light);
+  padding: 0 24px;
+  height: 56px;
 }
+
 .header-left {
   display: flex;
   align-items: center;
   gap: 16px;
 }
+
 .collapse-btn {
   font-size: 20px;
   cursor: pointer;
+  color: var(--text-secondary);
+  transition: color var(--duration-fast);
 }
+
+.collapse-btn:hover {
+  color: var(--brand-primary);
+}
+
 .user-info {
   cursor: pointer;
   display: flex;
   align-items: center;
-  gap: 4px;
+  gap: 8px;
+  padding: 4px 8px;
+  border-radius: 8px;
+  transition: background var(--duration-fast);
+}
+
+.user-info:hover {
+  background: var(--neutral-surface);
+}
+
+.user-avatar {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #FF6B4A, #FFB347);
+  color: #fff;
+  font-size: 14px;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.user-name {
+  font-size: 14px;
+  color: var(--text-primary);
+}
+
+/* ===== 页面过渡 ===== */
+.page-fade-enter-active,
+.page-fade-leave-active {
+  transition: opacity 0.2s ease, transform 0.2s ease;
+}
+
+.page-fade-enter-from {
+  opacity: 0;
+  transform: translateY(8px);
+}
+
+.page-fade-leave-to {
+  opacity: 0;
+  transform: translateY(-4px);
 }
 </style>

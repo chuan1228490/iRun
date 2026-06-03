@@ -161,6 +161,8 @@ onMounted(fetchData)
 </script>
 
 <style scoped>
-.text-gray { color: #c0c4cc; }
-.pagination { margin-top: 16px; display: flex; justify-content: flex-end; }
+.text-gray { color: var(--text-placeholder); }
+.pagination { margin-top: 20px; display: flex; justify-content: center; }
+:deep(.el-table) { border-radius: var(--radius-sm); }
+:deep(.el-table th) { background: var(--neutral-surface); color: var(--text-secondary); font-weight: 600; }
 </style>
