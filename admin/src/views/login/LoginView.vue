@@ -1,13 +1,20 @@
 <template>
   <div class="login-page">
-    <!-- 左侧品牌区 -->
-    <div class="brand-panel" ref="brandPanelRef">
-      <canvas ref="particleCanvasRef" class="particle-canvas"></canvas>
-      <div class="brand-content">
+    <!-- 全屏粒子画布 -->
+    <canvas ref="particleCanvasRef" class="particle-canvas"></canvas>
+
+    <!-- 渐变光晕装饰 -->
+    <div class="glow-orb glow-orb--top"></div>
+    <div class="glow-orb glow-orb--bottom"></div>
+
+    <!-- 内容层 -->
+    <div class="login-content">
+      <!-- 左侧品牌 -->
+      <div class="brand-side" ref="brandSideRef">
         <div class="brand-logo" ref="logoRef">
           <div class="logo-icon">
             <svg viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg">
-              <rect width="48" height="48" rx="12" fill="currentColor" fill-opacity="0.15"/>
+              <rect width="48" height="48" rx="12" fill="currentColor" fill-opacity="0.18"/>
               <path d="M14 20 L24 12 L34 20" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
               <path d="M18 20 L18 32 L30 32 L30 20" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
               <path d="M22 32 L22 26 L26 26 L26 32" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
@@ -17,61 +24,63 @@
           <h1 class="brand-title">小i跑腿 · 管理端</h1>
         </div>
         <p class="brand-slogan" ref="sloganRef">让校园生活更高效</p>
-        <div class="brand-footer" ref="footerRef">
-          <span>Campus Errand Service Platform</span>
+      </div>
+
+      <!-- 右侧登录卡 -->
+      <div class="form-side" ref="formSideRef">
+        <div class="login-card">
+          <div class="login-header" ref="formHeaderRef">
+            <h2>欢迎回来</h2>
+            <p>请登录您的管理账号</p>
+          </div>
+          <el-form
+            :model="form"
+            :rules="rules"
+            ref="formRef"
+            class="login-form"
+            @keyup.enter="handleLogin"
+          >
+            <div ref="formFieldsRef">
+              <el-form-item prop="username">
+                <el-input
+                  v-model="form.username"
+                  placeholder="用户名"
+                  :prefix-icon="User"
+                  size="large"
+                />
+              </el-form-item>
+              <el-form-item prop="password">
+                <el-input
+                  v-model="form.password"
+                  type="password"
+                  placeholder="密码"
+                  :prefix-icon="Lock"
+                  size="large"
+                  show-password
+                />
+              </el-form-item>
+            </div>
+            <div ref="formActionsRef">
+              <el-form-item>
+                <el-button
+                  type="primary"
+                  size="large"
+                  class="login-btn"
+                  :loading="loading"
+                  @click="handleLogin"
+                >
+                  登 录
+                </el-button>
+              </el-form-item>
+            </div>
+          </el-form>
         </div>
       </div>
     </div>
 
-    <!-- 右侧登录面板 -->
-    <div class="login-panel" ref="loginPanelRef">
-      <div class="login-card">
-        <div class="login-header" ref="formHeaderRef">
-          <h2>欢迎回来</h2>
-          <p>请登录您的管理账号</p>
-        </div>
-        <el-form
-          :model="form"
-          :rules="rules"
-          ref="formRef"
-          class="login-form"
-          @keyup.enter="handleLogin"
-        >
-          <div ref="formFieldsRef">
-            <el-form-item prop="username">
-              <el-input
-                v-model="form.username"
-                placeholder="用户名"
-                :prefix-icon="User"
-                size="large"
-              />
-            </el-form-item>
-            <el-form-item prop="password">
-              <el-input
-                v-model="form.password"
-                type="password"
-                placeholder="密码"
-                :prefix-icon="Lock"
-                size="large"
-                show-password
-              />
-            </el-form-item>
-          </div>
-          <div ref="formActionsRef">
-            <el-form-item>
-              <el-button
-                type="primary"
-                size="large"
-                class="login-btn"
-                :loading="loading"
-                @click="handleLogin"
-              >
-                登 录
-              </el-button>
-            </el-form-item>
-          </div>
-        </el-form>
-      </div>
+    <!-- 底部版权 -->
+    <div class="page-footer" ref="footerRef">
+      Campus Errand Service Platform
     </div>
   </div>
 </template>
@@ -95,38 +104,33 @@ const rules = {
   password: [{ required: true, message: '请输入密码', trigger: 'blur' }],
 }
 
-// ---- GSAP template refs ----
-const brandPanelRef = ref<HTMLElement>()
+// ---- refs ----
 const particleCanvasRef = ref<HTMLCanvasElement>()
+const brandSideRef = ref<HTMLElement>()
 const logoRef = ref<HTMLElement>()
 const sloganRef = ref<HTMLElement>()
-const footerRef = ref<HTMLElement>()
-const loginPanelRef = ref<HTMLElement>()
+const formSideRef = ref<HTMLElement>()
 const formHeaderRef = ref<HTMLElement>()
 const formFieldsRef = ref<HTMLElement>()
 const formActionsRef = ref<HTMLElement>()
+const footerRef = ref<HTMLElement>()
 
-// ---- Canvas 粒子系统 ----
+// ---- 全屏粒子系统 ----
 let animId = 0
-let particles: Particle[] = []
-
-interface Particle {
-  x: number; y: number; vx: number; vy: number
-  r: number; alpha: number; alphaDir: number
-}
+let particles: { x: number; y: number; vx: number; vy: number; r: number; alpha: number; alphaDir: number }[] = []
 
 function initParticles(w: number, h: number) {
   particles = []
-  const count = 50
+  const count = Math.min(80, Math.floor((w * h) / 12000))
   for (let i = 0; i < count; i++) {
     particles.push({
       x: Math.random() * w,
       y: Math.random() * h,
-      vx: (Math.random() - 0.5) * 0.3,
-      vy: (Math.random() - 0.5) * 0.3,
-      r: Math.random() * 3 + 1,
-      alpha: Math.random() * 0.4 + 0.1,
-      alphaDir: Math.random() > 0.5 ? 0.002 : -0.002,
+      vx: (Math.random() - 0.5) * 0.25,
+      vy: (Math.random() - 0.5) * 0.25,
+      r: Math.random() * 2.5 + 0.8,
+      alpha: Math.random() * 0.35 + 0.08,
+      alphaDir: (Math.random() - 0.5) * 0.003,
     })
   }
 }
@@ -137,11 +141,28 @@ function drawParticles(ctx: CanvasRenderingContext2D, w: number, h: number) {
     p.x += p.vx
     p.y += p.vy
     p.alpha += p.alphaDir
-    if (p.alpha <= 0.05 || p.alpha >= 0.45) p.alphaDir *= -1
-    if (p.x < 0) p.x = w
-    if (p.x > w) p.x = 0
-    if (p.y < 0) p.y = h
-    if (p.y > h) p.y = 0
+    if (p.alpha <= 0.04 || p.alpha >= 0.4) p.alphaDir *= -1
+    if (p.x < -10) p.x = w + 10
+    if (p.x > w + 10) p.x = -10
+    if (p.y < -10) p.y = h + 10
+    if (p.y > h + 10) p.y = -10
+
+    // 连线 — 近距离粒子之间画半透明线
+    for (let j = 0; j < particles.length; j++) {
+      const q = particles[j]
+      const dx = p.x - q.x
+      const dy = p.y - q.y
+      const dist = Math.sqrt(dx * dx + dy * dy)
+      if (dist < 120) {
+        ctx.beginPath()
+        ctx.moveTo(p.x, p.y)
+        ctx.lineTo(q.x, q.y)
+        ctx.strokeStyle = `rgba(255,255,255,${0.04 * (1 - dist / 120)})`
+        ctx.lineWidth = 0.5
+        ctx.stroke()
+      }
+    }
+
     ctx.beginPath()
     ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2)
     ctx.fillStyle = `rgba(255,255,255,${p.alpha})`
@@ -154,17 +175,20 @@ function startCanvas() {
   if (!canvas) return
   const ctx = canvas.getContext('2d')
   if (!ctx) return
+
   const resize = () => {
-    const rect = canvas.parentElement!.getBoundingClientRect()
-    canvas.width = rect.width * devicePixelRatio
-    canvas.height = rect.height * devicePixelRatio
-    canvas.style.width = rect.width + 'px'
-    canvas.style.height = rect.height + 'px'
-    ctx.scale(devicePixelRatio, devicePixelRatio)
-    initParticles(rect.width, rect.height)
+    const w = window.innerWidth
+    const h = window.innerHeight
+    canvas.width = w * devicePixelRatio
+    canvas.height = h * devicePixelRatio
+    canvas.style.width = w + 'px'
+    canvas.style.height = h + 'px'
+    ctx.setTransform(devicePixelRatio, 0, 0, devicePixelRatio, 0, 0)
+    initParticles(w, h)
   }
   resize()
   window.addEventListener('resize', resize)
+
   const loop = () => {
     const w = canvas.width / devicePixelRatio
     const h = canvas.height / devicePixelRatio
@@ -179,82 +203,84 @@ function startCanvas() {
   })
 }
 
-// ---- GSAP 入场动画 ----
+// ---- 文字拆分 ----
 function splitText(el: HTMLElement) {
   const text = el.textContent || ''
   el.textContent = ''
-  const chars: HTMLSpanElement[] = []
-  for (const ch of text) {
+  return [...text].map((ch) => {
     const span = document.createElement('span')
     span.textContent = ch
     span.style.display = 'inline-block'
     el.appendChild(span)
-    chars.push(span)
-  }
-  return chars
+    return span
+  })
 }
 
+// ---- GSAP Timeline ----
 async function runEntranceAnimation() {
   await nextTick()
-
-  // 先启动 canvas 粒子
   startCanvas()
 
-  const tl = gsap.timeline({ defaults: { ease: 'power4.out' } })
+  const tl = gsap.timeline({ defaults: { ease: 'power3.out' } })
 
-  // Logo 从下方淡入 + 弹性回弹
-  if (logoRef.value) {
-    tl.from(logoRef.value, {
-      y: 40, opacity: 0, duration: 1, ease: 'back.out(1.7)',
-    }, 0.2)
+  // 品牌区淡入
+  if (brandSideRef.value) {
+    tl.from(brandSideRef.value, { opacity: 0, duration: 0.6 }, 0.15)
   }
 
-  // Slogan 逐字揭示
+  // Logo 弹性上浮
+  if (logoRef.value) {
+    tl.from(logoRef.value, {
+      y: 30, opacity: 0, duration: 0.9, ease: 'back.out(1.6)',
+    }, 0.3)
+  }
+
+  // Slogan 逐字
   if (sloganRef.value) {
     const chars = splitText(sloganRef.value)
     tl.from(chars, {
-      y: 20, opacity: 0, duration: 0.6, stagger: 0.04, ease: 'power3.out',
-    }, '-=0.3')
+      y: 16, opacity: 0, duration: 0.5, stagger: 0.045, ease: 'power3.out',
+    }, '-=0.35')
   }
 
-  // Footer
-  if (footerRef.value) {
-    tl.from(footerRef.value, {
-      opacity: 0, duration: 0.8,
-    }, '-=0.2')
-  }
-
-  // 右侧面板从右滑入
-  if (loginPanelRef.value) {
-    tl.from(loginPanelRef.value, {
-      x: '100%', duration: 1, ease: 'power4.out',
-    }, '-=0.4')
+  // 毛玻璃卡片从右滑入 + 淡入
+  if (formSideRef.value) {
+    tl.from(formSideRef.value, {
+      x: 60, opacity: 0, duration: 1, ease: 'power4.out',
+    }, '-=0.5')
   }
 
   // 表单头部
   if (formHeaderRef.value) {
     tl.from(formHeaderRef.value, {
-      y: 16, opacity: 0, duration: 0.6,
-    }, '-=0.2')
+      y: 12, opacity: 0, duration: 0.5,
+    }, '-=0.3')
   }
 
-  // 表单字段依次淡入
+  // 表单字段 stagger
   if (formFieldsRef.value) {
     const children = Array.from(formFieldsRef.value.children) as HTMLElement[]
     tl.from(children, {
-      y: 12, opacity: 0, duration: 0.5, stagger: 0.12, ease: 'power3.out',
+      y: 10, opacity: 0, duration: 0.45, stagger: 0.1, ease: 'power3.out',
     }, '-=0.1')
   }
 
-  // 登录按钮
+  // 按钮
   if (formActionsRef.value) {
     tl.from(formActionsRef.value, {
-      y: 8, opacity: 0, duration: 0.5,
-    }, '-=0.1')
+      y: 6, opacity: 0, duration: 0.45,
+    }, '-=0.05')
+  }
+
+  // Footer
+  if (footerRef.value) {
+    tl.from(footerRef.value, {
+      opacity: 0, duration: 0.6,
+    }, '-=0.2')
   }
 }
 
-// ---- 登录逻辑（保持不变）----
+// ---- 登录 ----
 async function handleLogin() {
   const valid = await formRef.value.validate().catch(() => false)
   if (!valid) return
@@ -276,53 +302,82 @@ async function handleLogin() {
   }
 }
 
-onMounted(() => {
-  runEntranceAnimation()
-})
+onMounted(runEntranceAnimation)
 </script>
 
 <style scoped>
+/* ===== 全屏容器 ===== */
 .login-page {
-  display: flex;
-  height: 100vh;
-  overflow: hidden;
-}
-
-/* ===== 左侧品牌区 ===== */
-.brand-panel {
   position: relative;
-  flex: 0 0 58%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background: linear-gradient(135deg, #1a1a2e 0%, #16213e 40%, #0f2b3d 100%);
+  width: 100vw;
+  height: 100vh;
+  background: linear-gradient(140deg, #0f0c1d 0%, #16132a 30%, #111b33 60%, #0a1628 100%);
   overflow: hidden;
 }
 
+/* ===== 全屏粒子 ===== */
 .particle-canvas {
   position: absolute;
   inset: 0;
+  z-index: 0;
   pointer-events: none;
 }
 
-.brand-content {
+/* ===== 光晕装饰 ===== */
+.glow-orb {
+  position: absolute;
+  border-radius: 50%;
+  filter: blur(120px);
+  pointer-events: none;
+  z-index: 0;
+}
+
+.glow-orb--top {
+  width: 500px;
+  height: 500px;
+  background: rgba(255, 107, 74, 0.12);
+  top: -180px;
+  right: -100px;
+}
+
+.glow-orb--bottom {
+  width: 400px;
+  height: 400px;
+  background: rgba(46, 196, 182, 0.08);
+  bottom: -140px;
+  left: -80px;
+}
+
+/* ===== 内容层 ===== */
+.login-content {
   position: relative;
   z-index: 1;
-  text-align: center;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 60px;
+  height: 100%;
+  padding: 0 60px;
+}
+
+/* ===== 左侧品牌 ===== */
+.brand-side {
+  text-align: left;
   color: #fff;
+  flex: 0 0 auto;
 }
 
 .brand-logo {
   display: flex;
-  flex-direction: column;
   align-items: center;
-  gap: 20px;
+  gap: 18px;
 }
 
 .logo-icon {
-  width: 72px;
-  height: 72px;
+  width: 56px;
+  height: 56px;
   color: #FF6B4A;
+  flex-shrink: 0;
 }
 
 .logo-icon svg {
@@ -331,7 +386,7 @@ onMounted(() => {
 }
 
 .brand-title {
-  font-size: 32px;
+  font-size: 30px;
   font-weight: 700;
   letter-spacing: 2px;
   margin: 0;
@@ -342,75 +397,86 @@ onMounted(() => {
 }
 
 .brand-slogan {
-  margin-top: 16px;
-  font-size: 18px;
-  font-weight: 400;
-  color: rgba(255, 255, 255, 0.65);
+  margin-top: 20px;
+  font-size: 17px;
+  color: rgba(255, 255, 255, 0.55);
   letter-spacing: 4px;
 }
 
-.brand-footer {
-  margin-top: 48px;
-  font-size: 12px;
-  color: rgba(255, 255, 255, 0.3);
-  letter-spacing: 1px;
-}
-
-/* ===== 右侧登录面板 ===== */
-.login-panel {
-  flex: 0 0 42%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background: var(--neutral-bg);
+/* ===== 右侧毛玻璃卡片 ===== */
+.form-side {
+  flex: 0 0 auto;
 }
 
 .login-card {
-  width: 380px;
-  max-width: 90%;
+  width: 400px;
+  padding: 44px 40px 36px;
+  background: rgba(255, 255, 255, 0.06);
+  backdrop-filter: blur(24px);
+  -webkit-backdrop-filter: blur(24px);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 20px;
+  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.3);
 }
 
 .login-header {
-  margin-bottom: 36px;
+  margin-bottom: 32px;
 }
 
 .login-header h2 {
-  font-size: 26px;
+  font-size: 24px;
   font-weight: 700;
-  color: var(--text-primary);
-  margin: 0 0 8px;
+  color: #fff;
+  margin: 0 0 6px;
 }
 
 .login-header p {
   font-size: 14px;
-  color: var(--text-tertiary);
+  color: rgba(255, 255, 255, 0.45);
   margin: 0;
 }
 
+/* 输入框 — 暗色主题 */
 .login-form :deep(.el-input__wrapper) {
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.12);
   border-radius: 10px;
   box-shadow: none;
-  border: 1px solid var(--el-border-color);
-  transition: border-color var(--duration-fast);
+  transition: border-color 0.2s, background 0.2s;
 }
 
 .login-form :deep(.el-input__wrapper:hover) {
-  border-color: var(--el-color-primary);
+  border-color: rgba(255, 107, 74, 0.5);
+  background: rgba(255, 255, 255, 0.1);
 }
 
 .login-form :deep(.el-input__wrapper.is-focus) {
-  border-color: var(--el-color-primary);
-  box-shadow: 0 0 0 2px var(--el-color-primary-light-9);
+  border-color: #FF6B4A;
+  background: rgba(255, 255, 255, 0.1);
+  box-shadow: 0 0 0 3px rgba(255, 107, 74, 0.15);
+}
+
+.login-form :deep(.el-input__inner) {
+  color: #fff;
+}
+
+.login-form :deep(.el-input__inner::placeholder) {
+  color: rgba(255, 255, 255, 0.3);
+}
+
+.login-form :deep(.el-input__prefix) {
+  color: rgba(255, 255, 255, 0.35);
 }
 
 .login-btn {
+  margin-top: 4px;
   width: 100%;
   border-radius: 10px;
   font-size: 16px;
   font-weight: 600;
   letter-spacing: 4px;
   height: 46px;
-  transition: transform var(--duration-fast);
+  transition: transform 0.2s;
 }
 
 .login-btn:hover {
@@ -421,13 +487,49 @@ onMounted(() => {
   transform: scale(0.98);
 }
 
+/* ===== 底部版权 ===== */
+.page-footer {
+  position: absolute;
+  bottom: 28px;
+  left: 0;
+  right: 0;
+  text-align: center;
+  font-size: 12px;
+  color: rgba(255, 255, 255, 0.2);
+  letter-spacing: 1px;
+  z-index: 1;
+}
+
 /* ===== 响应式 ===== */
-@media (max-width: 768px) {
-  .brand-panel {
-    display: none;
+@media (max-width: 860px) {
+  .login-content {
+    flex-direction: column;
+    gap: 32px;
+    padding: 40px 24px;
   }
-  .login-panel {
-    flex: 1;
+
+  .brand-side {
+    text-align: center;
+  }
+
+  .brand-logo {
+    flex-direction: column;
+    gap: 12px;
+  }
+
+  .brand-title {
+    font-size: 24px;
+  }
+
+  .brand-slogan {
+    font-size: 15px;
+    letter-spacing: 2px;
+  }
+
+  .login-card {
+    width: 100%;
+    max-width: 400px;
+    padding: 32px 24px 28px;
   }
 }
 </style>
