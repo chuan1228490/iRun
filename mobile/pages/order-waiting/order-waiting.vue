@@ -6,7 +6,8 @@
       <!-- 状态横幅 -->
       <view class="status-banner animate-scale-pop" :class="'status-banner--' + statusStyle">
         <view class="status-icon-wrap">
-          <iconpark-icon :name="statusIcon" size="44" :color="statusColor" />
+          <custom-icon v-if="statusIconName" :name="statusIconName" size="56" />
+          <iconpark-icon v-else :name="statusIcon" size="44" :color="statusColor" />
         </view>
         <text class="status-title">{{ statusTitle }}</text>
         <text class="status-desc">{{ statusDesc }}</text>
@@ -96,7 +97,7 @@
 
         <view class="info-card" v-if="task.pickupAddress || task.pickupCode">
           <view class="card-title">
-            <iconpark-icon name="location-filled" size="18" color="#4c5e86" />
+            <custom-icon name="pickup-info" size="32" />
             <text>{{ isQueueWait ? '代办信息' : '取件信息' }}</text>
           </view>
           <view class="card-row" v-if="task.pickupAddress">
@@ -111,7 +112,7 @@
 
         <view class="info-card" v-if="task.deliveryAddress">
           <view class="card-title">
-            <iconpark-icon name="flag-filled" size="18" color="#34d399" />
+            <custom-icon name="delivery-info" size="32" />
             <text>送达地址</text>
           </view>
           <view class="card-row">
@@ -130,7 +131,7 @@
 
         <view class="info-card" v-if="task.imageUrls && task.imageUrls.length">
           <view class="card-title">
-            <iconpark-icon name="image-filled" size="18" color="#FF6B4A" />
+            <custom-icon name="task-screenshot" size="32" />
             <text>任务截图</text>
           </view>
           <view class="proof-images">
@@ -233,7 +234,7 @@
       <!-- 配送时间线（所有人可见） -->
       <view class="info-card">
         <view class="card-title">
-          <iconpark-icon name="clock-filled" size="18" color="#F59E0B" />
+          <custom-icon name="delivery-progress" size="32" />
           <text>配送进度</text>
         </view>
         <uni-steps :options="stepItems" :active="stepActive" activeColor="#FF6B4A" direction="column" />
@@ -326,9 +327,9 @@ const typeIconColor = computed(() => typeMeta.value.color)
 const typeColor = computed(() => ({ 1: 'blue', 2: 'orange', 3: 'green', 4: 'teal' }[taskTypeCode.value] || 'blue'))
 
 const statusMap = {
-  1: { style: 'waiting', icon: 'search', color: '#FF6B4A', title: '等待接单中', desc: '任务已发布，正在为您匹配跑腿同学' },
+  1: { style: 'waiting', icon: 'search', iconName: 'pending-confirm', color: '#FF6B4A', title: '等待接单中', desc: '任务已发布，正在为您匹配跑腿同学' },
   2: { style: 'accepted', icon: 'checkbox-filled', color: '#e67e22', title: '已接单', desc: '跑腿同学已接单，准备为您取件' },
-  3: { style: 'delivering', icon: 'location-filled', color: '#FF6B4A', title: '配送中', desc: '跑腿同学正在为您配送' },
+  3: { style: 'delivering', icon: 'location-filled', iconName: 'delivering', color: '#FF6B4A', title: '配送中', desc: '跑腿同学正在为您配送' },
   4: { style: 'confirming', icon: 'checkmarkempty', color: '#34d399', title: '待确认收货', desc: '跑腿同学已送达，请确认收货' },
   5: { style: 'done', icon: 'checkbox-filled', color: '#34d399', title: '已完成', desc: '感谢使用 Campus Express' },
   6: { style: 'cancelled', icon: 'closeempty', color: '#8F8D88', title: '已取消', desc: '该任务已被取消' }
@@ -342,6 +343,7 @@ const runnerStatusMap = {
 }
 const statusStyle = computed(() => statusMap[task.value.status]?.style || 'waiting')
 const statusIcon = computed(() => statusMap[task.value.status]?.icon || 'search')
+const statusIconName = computed(() => statusMap[task.value.status]?.iconName || '')
 const statusColor = computed(() => statusMap[task.value.status]?.color || '#FF6B4A')
 const statusTitle = computed(() => {
   if (isRunner.value && runnerStatusMap[task.value.status]) return runnerStatusMap[task.value.status].title

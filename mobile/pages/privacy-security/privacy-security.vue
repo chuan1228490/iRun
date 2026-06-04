@@ -14,7 +14,7 @@
           <iconpark-icon name="right" size="16" color="#D4D2CC" />
         </view>
         <view class="menu-item" @click="onPayPassword">
-          <view class="menu-icon menu-icon--green"><iconpark-icon name="codeDisplay" size="20" color="#34d399" /></view>
+          <view class="menu-icon menu-icon--green"><custom-icon name="fingerprint" size="36" /></view>
           <view class="menu-body">
             <text class="menu-label">{{ payPasswordLabel }}</text>
             <text class="menu-note">{{ payPasswordNote }}</text>

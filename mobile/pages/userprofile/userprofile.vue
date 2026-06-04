@@ -58,7 +58,7 @@
         <!-- 骑手功能菜单 -->
         <view class="func-list">
           <view class="func-item func-item--last" @click="onMenuItem('dashboard')">
-            <view class="func-icon func-icon--blue"><iconpark-icon name="analysis" size="22" color="#FF6B4A" /></view>
+            <view class="func-icon func-icon--blue"><custom-icon name="my-rider" size="38" /></view>
             <text class="func-name">我的骑手</text>
             <iconpark-icon name="right" size="16" color="#D4D2CC" />
           </view>

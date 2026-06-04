@@ -7,8 +7,9 @@ import { ref, computed } from 'vue'
 import { defineStore } from 'pinia'
 import { chatApi } from '@/api'
 import { StompClient } from '@/utils/stomp'
-import { WS_URL } from '@/utils/config'
+import { WS_URL, BASE_URL } from '@/utils/config'
 import { showToast } from '@/utils/toast'
+import { getToken, getRefreshToken, setToken, setRefreshToken, removeToken, removeRefreshToken } from '@/utils/request'
 
 export const useChatStore = defineStore('chat', () => {
   // ---- state ----
@@ -30,16 +31,52 @@ export const useChatStore = defineStore('chat', () => {
   }
 
   // ---- actions ----
+  let _retryTimer = null
+
+  /** 尝试用 refresh token 换取新 access token，失败返回 null */
+  async function refreshUserToken() {
+    const refreshToken = getRefreshToken()
+    if (!refreshToken) return null
+
+    return new Promise((resolve) => {
+      uni.request({
+        url: BASE_URL + '/user/refresh',
+        method: 'POST',
+        data: {},
+        header: {
+          'Content-Type': 'application/json',
+          'X-Refresh-Token': refreshToken
+        },
+        success(res) {
+          const { statusCode, data: body } = res
+          if (statusCode === 200 && body.code === 1) {
+            const { token, refreshToken: newRefreshToken } = body.data
+            setToken(token)
+            setRefreshToken(newRefreshToken)
+            resolve(token)
+          } else {
+            resolve(null)
+          }
+        },
+        fail() {
+          resolve(null)
+        }
+      })
+    })
+  }
+
   async function connectStomp(token, userId) {
     if (stompClient.value && wsConnected.value) return
-    if (!token) { console.warn('[ChatStore] connectStomp called without token'); return }
+
+    // 优先从持久化存储读取最新 token，参数仅作为 fallback
+    const effectiveToken = getToken() || token
+    if (!effectiveToken) { console.warn('[ChatStore] connectStomp called without token'); return }
 
     if (userId) currentUserId.value = userId
     console.log('[ChatStore] Connecting STOMP...')
     const client = new StompClient()
     try {
-      // token 通过 URL 参数传递，供 HandshakeInterceptor 提取
-      await client.connect(`${WS_URL}/chat?token=${encodeURIComponent(token)}`)
+      await client.connect(`${WS_URL}/chat?token=${encodeURIComponent(effectiveToken)}`)
       wsConnected.value = true
       stompClient.value = client
       console.log('[ChatStore] STOMP connected, subscribing...')
@@ -55,14 +92,30 @@ export const useChatStore = defineStore('chat', () => {
     } catch (e) {
       wsConnected.value = false
       console.error('[ChatStore] STOMP connect failed:', e)
-      // 5 秒后重连
-      setTimeout(() => {
-        if (!wsConnected.value) connectStomp(token)
-      }, 5000)
+
+      // 尝试刷新 token 后再重连
+      const newToken = await refreshUserToken()
+      if (newToken) {
+        console.log('[ChatStore] Token refreshed, retrying STOMP connection')
+        _retryTimer = setTimeout(() => {
+          if (!wsConnected.value) connectStomp()
+        }, 3000)
+      } else {
+        console.warn('[ChatStore] Token refresh failed, giving up')
+        disconnectStomp()
+        clearCache()
+        removeToken()
+        removeRefreshToken()
+        showToast('登录已过期，请重新登录', { duration: 2000 })
+        setTimeout(() => {
+          uni.reLaunch({ url: '/pages/login/login' })
+        }, 1500)
+      }
     }
   }
 
   function disconnectStomp() {
+    if (_retryTimer) { clearTimeout(_retryTimer); _retryTimer = null }
     if (stompClient.value) {
       try { stompClient.value.disconnect() } catch (e) { /* ignore */ }
       stompClient.value = null

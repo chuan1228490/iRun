@@ -6,7 +6,8 @@
       <!-- 状态横幅 -->
       <view class="status-banner animate-scale-pop" :style="{ background: statusBg }" :class="{ 'animate-status-breathe': order.orderStatus === 2 }">
         <view class="status-icon-wrap" :style="{ background: statusIconBg }">
-          <iconpark-icon :name="statusIcon" size="40" :color="statusColor" />
+          <custom-icon v-if="statusIconName" :name="statusIconName" size="56" />
+          <iconpark-icon v-else :name="statusIcon" size="40" :color="statusColor" />
         </view>
         <text class="status-title">{{ displayStatusTitle }}</text>
         <text class="status-hint">{{ statusHint }}</text>
@@ -78,7 +79,7 @@
       <!-- 取件信息 -->
       <view class="info-card" v-if="order.pickupAddress || order.pickupCode">
         <view class="card-title">
-          <iconpark-icon name="location-filled" size="18" color="#4c5e86" />
+          <custom-icon name="pickup-info" size="32" />
           <text>取件信息</text>
         </view>
         <view class="card-row" v-if="order.pickupAddress">
@@ -100,7 +101,7 @@
       <!-- 送达信息 -->
       <view class="info-card" v-if="order.deliveryAddress">
         <view class="card-title">
-          <iconpark-icon name="flag-filled" size="18" color="#34d399" />
+          <custom-icon name="delivery-info" size="32" />
           <text>送达信息</text>
         </view>
         <view class="card-row">
@@ -126,7 +127,7 @@
       <!-- 任务图片 -->
       <view class="info-card" v-if="order.imageUrls && order.imageUrls.length">
         <view class="card-title">
-          <iconpark-icon name="image-filled" size="18" color="#FF6B4A" />
+          <custom-icon name="task-screenshot" size="32" />
           <text>任务截图</text>
         </view>
         <view class="proof-images">
@@ -137,7 +138,7 @@
       <!-- 配送进度 -->
       <view class="info-card">
         <view class="card-title">
-          <iconpark-icon name="clock-filled" size="18" color="#F59E0B" />
+          <custom-icon name="delivery-progress" size="32" />
           <text>{{ isQueueWait ? '任务进度' : '配送进度' }}</text>
         </view>
         <uni-steps :options="stepItems" :active="stepActive" activeColor="#FF6B4A" direction="column" />
@@ -285,9 +286,9 @@ const otherParty = computed(() => {
 })
 
 const statusMap = {
-  1: { color: '#e67e22', bg: 'linear-gradient(135deg,#fff7ed,#FAFAF8)', iconBg: 'rgba(230,126,34,.12)', icon: 'info', hint: '请尽快前往取货' },
-  2: { color: '#FF6B4A', bg: 'linear-gradient(135deg,#FFF0ED,#FAFAF8)', iconBg: 'rgba(255,107,74,.12)', icon: 'location-filled', hint: '正在配送中' },
-  3: { color: '#34d399', bg: 'linear-gradient(135deg,#f0fdf4,#FAFAF8)', iconBg: 'rgba(52,211,153,.12)', icon: 'checkmarkempty', hint: '' },
+  1: { color: '#e67e22', bg: 'linear-gradient(135deg,#fff7ed,#FAFAF8)', iconBg: 'rgba(230,126,34,.12)', icon: 'info', iconName: 'pending-pickup', hint: '请尽快前往取货' },
+  2: { color: '#FF6B4A', bg: 'linear-gradient(135deg,#FFF0ED,#FAFAF8)', iconBg: 'rgba(255,107,74,.12)', icon: 'location-filled', iconName: 'delivering', hint: '正在配送中' },
+  3: { color: '#34d399', bg: 'linear-gradient(135deg,#f0fdf4,#FAFAF8)', iconBg: 'rgba(52,211,153,.12)', icon: 'checkmarkempty', iconName: 'pending-confirm', hint: '' },
   4: { color: '#4c5e86', bg: 'linear-gradient(135deg,#f2f3fc,#FAFAF8)', iconBg: 'rgba(76,94,134,.12)', icon: 'checkbox-filled', hint: '' },
   5: { color: '#8F8D88', bg: 'linear-gradient(135deg,#F5F5F0,#FAFAF8)', iconBg: 'rgba(143,141,136,.12)', icon: 'closeempty', hint: '' }
 }
@@ -295,6 +296,7 @@ const statusColor = computed(() => statusMap[order.value.orderStatus]?.color || 
 const statusBg = computed(() => statusMap[order.value.orderStatus]?.bg || 'linear-gradient(135deg,#FFF0ED,#FAFAF8)')
 const statusIconBg = computed(() => statusMap[order.value.orderStatus]?.iconBg || 'rgba(255,107,74,.12)')
 const statusIcon = computed(() => statusMap[order.value.orderStatus]?.icon || 'info')
+const statusIconName = computed(() => statusMap[order.value.orderStatus]?.iconName || '')
 const statusHint = computed(() => {
   if (!dataReady.value) return ''
   const s = order.value.orderStatus

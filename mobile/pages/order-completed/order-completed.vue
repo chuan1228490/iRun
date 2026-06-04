@@ -154,7 +154,7 @@
       <!-- 取件信息 -->
       <view class="info-card" v-if="order.pickupAddress || order.pickupCode">
         <view class="card-title">
-          <iconpark-icon name="location-filled" size="18" color="#4c5e86" />
+          <custom-icon name="pickup-info" size="32" />
           <text>取件信息</text>
         </view>
         <view class="card-row" v-if="order.pickupAddress">
@@ -176,7 +176,7 @@
       <!-- 送达信息 -->
       <view class="info-card" v-if="order.deliveryAddress">
         <view class="card-title">
-          <iconpark-icon name="flag-filled" size="18" color="#34d399" />
+          <custom-icon name="delivery-info" size="32" />
           <text>送达信息</text>
         </view>
         <view class="card-row">
@@ -194,7 +194,7 @@
       <!-- 任务图片 -->
       <view class="info-card" v-if="order.imageUrls && order.imageUrls.length">
         <view class="card-title">
-          <iconpark-icon name="image-filled" size="18" color="#FF6B4A" />
+          <custom-icon name="task-screenshot" size="32" />
           <text>任务截图</text>
         </view>
         <view class="proof-images">
@@ -205,7 +205,7 @@
       <!-- 时间线 -->
       <view class="info-card">
         <view class="card-title">
-          <iconpark-icon name="clock-filled" size="18" color="#F59E0B" />
+          <custom-icon name="delivery-progress" size="32" />
           <text>时间记录</text>
         </view>
         <view class="detail-items">

@@ -78,6 +78,7 @@ service.interceptors.response.use(
       if (!refreshToken) {
         removeAdminToken()
         removeRefreshToken()
+        ElMessage.error('登录已过期，请重新登录')
         router.replace('/login')
         return Promise.reject(error)
       }
@@ -101,6 +102,7 @@ service.interceptors.response.use(
         } catch {
           removeAdminToken()
           removeRefreshToken()
+          ElMessage.error('登录已过期，请重新登录')
           router.replace('/login')
           return Promise.reject(error)
         } finally {

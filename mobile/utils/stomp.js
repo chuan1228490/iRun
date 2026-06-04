@@ -236,9 +236,13 @@ export class StompClient {
 
       if (command === 'ERROR') {
         console.error('STOMP ERROR:', rawFrame)
+        // 解析 ERROR 帧的消息头
+        const errMsg = this._parseErrorMessage(rawFrame)
+        const err = new Error(errMsg || 'STOMP ERROR')
+        err.isAuthError = /token|JWT|expired|auth|401|unauthorized/i.test(errMsg || rawFrame)
         // 如果是握手阶段的 ERROR，拒绝连接
         if (!this._connected && this._connectReject) {
-          this._connectReject(new Error('STOMP ERROR: ' + rawFrame.substring(0, 200)))
+          this._connectReject(err)
           this._connectReject = null
           this._connectResolve = null
         }
@@ -260,6 +264,27 @@ export class StompClient {
       clearInterval(this._heartbeatTimer)
       this._heartbeatTimer = null
     }
+  }
+
+  /** 从 STOMP ERROR 帧中提取 message 头 */
+  _parseErrorMessage(rawFrame) {
+    const lines = rawFrame.trim().split('\n')
+    for (let i = 1; i < lines.length; i++) {
+      const line = lines[i]
+      if (line === '') break
+      const colonIdx = line.indexOf(':')
+      if (colonIdx > 0) {
+        const key = line.substring(0, colonIdx).trim()
+        const val = line.substring(colonIdx + 1).trim()
+        if (key === 'message') return val
+      }
+    }
+    // fallback: 取 body 部分（第一个空行之后的内容）
+    const bodyIdx = lines.indexOf('')
+    if (bodyIdx > 0 && bodyIdx < lines.length - 1) {
+      return lines.slice(bodyIdx + 1).join('\n').trim() || null
+    }
+    return null
   }
 }
 

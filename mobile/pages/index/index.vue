@@ -77,7 +77,8 @@
       <view class="service-grid">
         <view class="service-card animate-scale-pop" v-for="(service, si) in services" :key="service.typeValue" :style="{ animationDelay: (si * 0.1) + 's' }" @click="onService(service.typeValue)">
           <view class="service-card-icon" :class="'service-card-icon--' + service.color">
-            <iconpark-icon :name="service.icon" size="28" :color="service.iconColor" />
+            <custom-icon v-if="service.iconName" :name="service.iconName" size="44" />
+            <iconpark-icon v-else :name="service.icon" size="28" :color="service.iconColor" />
           </view>
           <text class="service-card-title">{{ service.title }}</text>
           <text class="service-card-desc">{{ service.desc }}</text>
@@ -105,8 +106,11 @@
         @click="onHotCoffee"
       >
         <view class="hot-card-content">
-          <text class="hot-card-fee">基础配送费 ¥5.00</text>
-          <uni-tag text="代取餐食" type="primary" size="small" :inverted="true" customStyle="border-color:#FFD1C7;color:#FF6B4A;background:#FFF0ED;" />
+          <custom-icon name="coffee" size="64" class="hot-card-icon" />
+          <view class="hot-card-meta">
+            <text class="hot-card-fee">基础配送费 ¥5.00</text>
+            <uni-tag text="代取餐食" type="primary" size="small" :inverted="true" customStyle="border-color:#FFD1C7;color:#FF6B4A;background:#FFF0ED;" />
+          </view>
         </view>
       </uni-card>
 
@@ -122,8 +126,11 @@
         @click="onHotPrint"
       >
         <view class="hot-card-content">
-          <text class="hot-card-fee">基础配送费 ¥5.00</text>
-          <uni-tag text="校内代办" type="warning" size="small" :inverted="true" customStyle="border-color:#FED7AA;color:#EA580C;background:#FFF7ED;" />
+          <custom-icon name="document-print" size="64" class="hot-card-icon" />
+          <view class="hot-card-meta">
+            <text class="hot-card-fee">基础配送费 ¥5.00</text>
+            <uni-tag text="校内代办" type="warning" size="small" :inverted="true" customStyle="border-color:#FED7AA;color:#EA580C;background:#FFF7ED;" />
+          </view>
         </view>
       </uni-card>
 
@@ -139,8 +146,11 @@
         @click="onHotPaperExpress"
       >
         <view class="hot-card-content">
-          <text class="hot-card-fee">基础配送费 ¥5.00 + 商品费</text>
-          <uni-tag text="代购物品" type="warning" size="small" :inverted="true" customStyle="border-color:#A5F3FC;color:#0891B2;background:#ECFEFF;" />
+          <custom-icon name="tissue" size="64" class="hot-card-icon" />
+          <view class="hot-card-meta">
+            <text class="hot-card-fee">基础配送费 ¥5.00 + 商品费</text>
+            <uni-tag text="代购物品" type="warning" size="small" :inverted="true" customStyle="border-color:#A5F3FC;color:#0891B2;background:#ECFEFF;" />
+          </view>
         </view>
       </uni-card>
 
@@ -172,7 +182,7 @@ const searchValue = ref('')
 const unreadCount = ref(0)
 
 const services = [
-  { typeValue: 1, title: '代取快递', desc: '驿站包裹极速达', icon: 'express', color: 'blue', iconColor: '#FF6B4A' },
+  { typeValue: 1, title: '代取快递', desc: '驿站包裹极速达', iconName: 'express', color: 'blue' },
   { typeValue: 2, title: '代取餐食', desc: '食堂外卖送到寝', icon: 'fire', color: 'orange', iconColor: '#e67e22' },
   { typeValue: 3, title: '校内代办', desc: '急送跑腿帮办事', icon: 'campusErrand', color: 'green', iconColor: '#4c5e86' },
   { typeValue: 4, title: '代购物品', desc: '超市代购送到寝', icon: 'shop', color: 'teal', iconColor: '#0891B2' }
@@ -319,7 +329,9 @@ loadUnread()
 .section-more { display: flex; align-items: center; gap: 4rpx; }
 .section-more text { font-size: 26rpx; font-weight: 500; color: var(--primary); }
 
-.hot-card-content { display: flex; align-items: center; justify-content: flex-end; gap: 16rpx; padding-top: 8rpx; }
+.hot-card-content { display: flex; align-items: center; gap: 16rpx; padding-top: 8rpx; }
+.hot-card-icon { flex-shrink: 0; }
+.hot-card-meta { display: flex; align-items: center; justify-content: flex-end; gap: 16rpx; flex: 1; }
 .hot-card-fee { font-size: 24rpx; color: var(--text-secondary); }
 .hot-card-unit { font-size: 22rpx; font-weight: 500; color: var(--text-tertiary); margin-left: 4rpx; }
 
