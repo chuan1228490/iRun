@@ -1,6 +1,7 @@
 package com.ikeu.server.mapper;
 
 import com.baomidou.mybatisplus.core.mapper.BaseMapper;
+import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.ikeu.model.entity.ChatMessage;
 import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Param;
@@ -77,4 +78,19 @@ public interface ChatMessageMapper extends BaseMapper<ChatMessage> {
      */
     @Update("UPDATE chat_message SET is_recalled = 1 WHERE id = #{id}")
     void recallById(@Param("id") Long id);
+
+    /**
+     * 分页查询与指定用户的双向聊天记录。
+     *
+     * <p>仅查询未删除（is_deleted=0）的消息，按创建时间倒序排列。
+     * 查询条件覆盖双向通信：(sender=user AND receiver=target) OR (sender=target AND receiver=user)。
+     *
+     * @param page         分页对象
+     * @param userId       当前用户ID
+     * @param targetUserId 对话目标用户ID
+     * @return 分页聊天消息列表
+     */
+    Page<ChatMessage> selectHistory(Page<ChatMessage> page,
+                                    @Param("userId") Long userId,
+                                    @Param("targetUserId") Long targetUserId);
 }

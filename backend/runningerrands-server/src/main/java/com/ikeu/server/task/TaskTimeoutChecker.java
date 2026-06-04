@@ -18,6 +18,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Objects;
 import java.util.concurrent.TimeUnit;
 
 /**
@@ -64,24 +65,41 @@ public class TaskTimeoutChecker {
             );
 
             for (Task task : timeoutTasks) {
+                // 逐任务加锁，防止与用户主动 cancelTask 并发导致双重退款
+                RLock taskLock = redissonClient.getLock(RedisConstant.ORDER_LOCK_KEY + task.getId());
                 try {
-                    task.setStatus(StatusConstant.TASK_CANCELLED);
-                    task.setCancelReason(MessageConstant.TASK_TIMEOUT_CANCEL);
-                    task.setUpdatedAt(now);
-                    taskMapper.updateById(task);
+                    if (!taskLock.tryLock(0, 10, TimeUnit.SECONDS)) {
+                        continue;
+                    }
+                    // 锁内重查任务状态
+                    Task current = taskMapper.selectById(task.getId());
+                    if (current == null || !Objects.equals(current.getStatus(), StatusConstant.TASK_WAITING)) {
+                        continue;
+                    }
 
-                    paymentService.refundForTask(task.getPublisherId(), task.getId(), task.getReward());
+                    current.setStatus(StatusConstant.TASK_CANCELLED);
+                    current.setCancelReason(MessageConstant.TASK_TIMEOUT_CANCEL);
+                    current.setUpdatedAt(now);
+                    taskMapper.updateById(current);
+
+                    paymentService.refundForTask(current.getPublisherId(), current.getId(), current.getReward());
 
                     notificationService.sendNotification(
-                            task.getPublisherId(),
+                            current.getPublisherId(),
                             StatusConstant.NOTICE_SYSTEM,
                             "任务超时取消",
-                            "您的任务 " + task.getTaskNo() + " 已超过截止时间无人接单，已自动取消并退款",
-                            task.getId()
+                            "您的任务 " + current.getTaskNo() + " 已超过截止时间无人接单，已自动取消并退款",
+                            current.getId()
                     );
-                    log.info("任务 {} 超时无人接单（expire_time={}），已自动取消并退款", task.getId(), task.getExpireTime());
+                    log.info("任务 {} 超时无人接单（expire_time={}），已自动取消并退款", current.getId(), current.getExpireTime());
+                } catch (InterruptedException e) {
+                    Thread.currentThread().interrupt();
                 } catch (Exception e) {
                     log.error("处理超时任务 {} 失败", task.getId(), e);
+                } finally {
+                    if (taskLock.isHeldByCurrentThread()) {
+                        taskLock.unlock();
+                    }
                 }
             }
         } catch (InterruptedException e) {

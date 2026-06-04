@@ -35,7 +35,8 @@ public class RedisConstant {
 
     // ========== 缓存穿透防护 ==========
     public static final String TASK_NOT_EXIST_PREFIX = "task:notExist:";            // 任务不存在标记前缀
-    public static final Long TASK_NOT_EXIST_TTL = 60L;                              // 任务不存在标记过期时间-60秒
+    public static final String TASK_HALL_NULL_PREFIX = "task:notExist:hall:";       // 任务大厅空结果标记
+    public static final Long TASK_NOT_EXIST_TTL = 60L;                              // 空标记过期时间-60秒
 
     // ========== Spring Cache 缓存名称 ==========
     public static final String CACHE_TASK_HALL = "task:hall";               // 接单大厅列表缓存

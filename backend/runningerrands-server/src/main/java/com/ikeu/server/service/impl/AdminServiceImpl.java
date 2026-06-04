@@ -212,18 +212,7 @@ public class AdminServiceImpl extends ServiceImpl<AdminMapper, Admin> implements
      */
     @Override
     public PageResult<UserInfoVO> listUsers(Integer status, Integer isCertify, String keyword, int page, int size) {
-        LambdaQueryWrapper<User> wrapper = new LambdaQueryWrapper<>();
-        wrapper.eq(status != null, User::getStatus, status)
-                .eq(isCertify != null, User::getIsCertify, isCertify)
-                .and(keyword != null && !keyword.isBlank(), w -> w
-                        .like(User::getUsername, keyword)
-                        .or()
-                        .like(User::getPhone, keyword)
-                        .or()
-                        .like(User::getNickname, keyword))
-                .orderByDesc(User::getCreatedAt);
-
-        Page<User> p = userMapper.selectPage(new Page<>(page, size), wrapper);
+        Page<User> p = userMapper.selectUsersWithKeyword(new Page<>(page, size), status, isCertify, keyword);
         List<UserInfoVO> records = p.getRecords().stream()
                 .map(u -> BeanUtil.copyProperties(u, UserInfoVO.class))
                 .collect(Collectors.toList());
@@ -318,14 +307,8 @@ public class AdminServiceImpl extends ServiceImpl<AdminMapper, Admin> implements
         if (rp == null) throw new NotFoundException(MessageConstant.RUNNER_NOT_EXIST);
         User u = userMapper.selectById(rp.getUserId());
 
-        // 累计收入：查询交易记录中 type=2（跑腿收入）的总额
-        BigDecimal totalIncome = transactionRecordMapper.selectList(
-                new LambdaQueryWrapper<TransactionRecord>()
-                        .eq(TransactionRecord::getUserId, rp.getUserId())
-                        .eq(TransactionRecord::getType, 2))
-                .stream()
-                .map(TransactionRecord::getAmount)
-                .reduce(BigDecimal.ZERO, BigDecimal::add);
+        // 累计收入：数据库侧 SUM 聚合，避免全字段拉取
+        BigDecimal totalIncome = transactionRecordMapper.sumIncomeByUserId(rp.getUserId());
 
         return RunnerManageVO.builder()
                 .profileId(rp.getId())
@@ -764,15 +747,12 @@ public class AdminServiceImpl extends ServiceImpl<AdminMapper, Admin> implements
         List<User> users = userMapper.selectBatchIds(userIds);
         Map<Long, User> userMap = users.stream().collect(Collectors.toMap(User::getId, u -> u));
 
-        // 批量查询累计收入（type=2）
-        Map<Long, BigDecimal> incomeMap = transactionRecordMapper.selectList(
-                new LambdaQueryWrapper<TransactionRecord>()
-                        .in(TransactionRecord::getUserId, userIds)
-                        .eq(TransactionRecord::getType, 2))
+        // 批量查询累计收入：数据库侧 GROUP BY SUM，避免全字段拉取到内存
+        Map<Long, BigDecimal> incomeMap = transactionRecordMapper.sumIncomeByUserIds(userIds)
                 .stream()
-                .collect(Collectors.groupingBy(
-                        TransactionRecord::getUserId,
-                        Collectors.reducing(BigDecimal.ZERO, TransactionRecord::getAmount, BigDecimal::add)));
+                .collect(Collectors.toMap(
+                        row -> (Long) row.get("user_id"),
+                        row -> (BigDecimal) row.get("total_income")));
 
         List<RunnerManageVO> records = p.getRecords().stream().map(rp -> {
             User u = userMap.get(rp.getUserId());

@@ -1,6 +1,5 @@
 package com.ikeu.server.service.impl;
 
-import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.ikeu.common.constant.MessageConstant;
 import com.ikeu.common.constant.StatusConstant;
@@ -105,16 +104,8 @@ public class ChatServiceImpl implements ChatService {
      */
     @Override
     public List<ChatVO> getHistory(Long userId, Long targetUserId, int page, int size) {
-        Page<ChatMessage> p = chatMessageMapper.selectPage(new Page<>(page, size),
-                new LambdaQueryWrapper<ChatMessage>()
-                        .eq(ChatMessage::getIsDeleted, StatusConstant.MESSAGE_NOT_DELETED)
-                        .and(w -> w
-                                .eq(ChatMessage::getSenderId, userId)
-                                .eq(ChatMessage::getReceiverId, targetUserId)
-                                .or()
-                                .eq(ChatMessage::getSenderId, targetUserId)
-                                .eq(ChatMessage::getReceiverId, userId))
-                        .orderByDesc(ChatMessage::getCreatedAt));
+        Page<ChatMessage> p = chatMessageMapper.selectHistory(
+                new Page<>(page, size), userId, targetUserId);
 
         if (p.getRecords().isEmpty()) return Collections.emptyList();
 

@@ -24,12 +24,14 @@ import com.ikeu.server.annotation.SendNotification;
 import com.ikeu.server.mapper.*;
 import com.ikeu.server.service.PaymentService;
 import com.ikeu.server.service.TaskOrderService;
+import com.ikeu.server.util.RedisDefendUtil;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.redisson.api.RLock;
 import org.redisson.api.RedissonClient;
 import org.springframework.cache.CacheManager;
+import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -59,6 +61,8 @@ public class TaskOrderServiceImpl extends ServiceImpl<TaskOrderMapper, TaskOrder
     private final PaymentService paymentService;
     private final RedissonClient redissonClient;
     private final CacheManager cacheManager;
+    private final StringRedisTemplate stringRedisTemplate;
+    private final RedisDefendUtil redisDefendUtil;
 
     //TODO 预计配送时间（分钟），可根据取件点和送达点估算，这里简化固定为30分钟
     private static final int ESTIMATED_DELIVERY_MINUTES = 30;
@@ -209,6 +213,7 @@ public class TaskOrderServiceImpl extends ServiceImpl<TaskOrderMapper, TaskOrder
             // 清除任务相关缓存：任务大厅 & 任务详情
             Objects.requireNonNull(cacheManager.getCache(RedisConstant.CACHE_TASK_HALL)).clear();
             Objects.requireNonNull(cacheManager.getCache(RedisConstant.CACHE_TASK_DETAIL)).clear();
+            stringRedisTemplate.delete(RedisConstant.TASK_HALL_NULL_PREFIX + "default");
         } catch (InterruptedException e) {
             Thread.currentThread().interrupt();
             throw new BusinessException(MessageConstant.ERROR);
@@ -260,27 +265,49 @@ public class TaskOrderServiceImpl extends ServiceImpl<TaskOrderMapper, TaskOrder
             throw new BusinessException(MessageConstant.ORDER_CANCEL_TIMEOUT_RUNNER);
         }
 
-        // 5. 更新订单状态
-        order.setStatus(StatusConstant.ORDER_CANCELLED);
-        order.setCancelReason(dto.getReason() != null ? dto.getReason() : "配送员主动取消");
-        updateById(order);
+        // 分布式锁防止与 OrderTimeoutChecker 待取货超时取消并发
+        String lockKey = RedisConstant.ORDER_LOCK_KEY + order.getTaskId();
+        RLock lock = redissonClient.getLock(lockKey);
+        try {
+            if (!lock.tryLock(RedisConstant.LOCK_WAIT_TIME, RedisConstant.LOCK_EXPIRE, TimeUnit.SECONDS)) {
+                throw new BusinessException(MessageConstant.SYSTEM_BUSY);
+            }
+            // 锁内重查状态，防止已在超时检查中被取消
+            order = getById(orderId);
+            if (order == null || !Objects.equals(order.getStatus(), StatusConstant.ORDER_WAIT_PICKUP)) {
+                throw new BusinessException(MessageConstant.ORDER_STATUS_CHANGED);
+            }
 
-        // 6. 任务回退至待接单
-        Task task = taskMapper.selectById(order.getTaskId());
-        if (task != null) {
-            task.setStatus(StatusConstant.TASK_WAITING);
-            task.setUpdatedAt(LocalDateTime.now());
-            taskMapper.updateById(task);
+            // 5. 更新订单状态
+            order.setStatus(StatusConstant.ORDER_CANCELLED);
+            order.setCancelReason(dto.getReason() != null ? dto.getReason() : "配送员主动取消");
+            updateById(order);
+
+            // 6. 任务回退至待接单
+            Task task = taskMapper.selectById(order.getTaskId());
+            if (task != null) {
+                task.setStatus(StatusConstant.TASK_WAITING);
+                task.setUpdatedAt(LocalDateTime.now());
+                taskMapper.updateById(task);
+            }
+
+            // 7. 原子减少配送员当前接单数
+            runnerProfileMapper.decrementCurrentOrders(runnerId);
+
+            // 8. 清除任务相关缓存
+            Objects.requireNonNull(cacheManager.getCache(RedisConstant.CACHE_TASK_HALL)).clear();
+            Objects.requireNonNull(cacheManager.getCache(RedisConstant.CACHE_TASK_DETAIL)).clear();
+            stringRedisTemplate.delete(RedisConstant.TASK_HALL_NULL_PREFIX + "default");
+
+            log.info("配送员 {} 在5分钟内取消订单 {}，任务 {} 已回退至待接单", runnerId, orderId, order.getTaskId());
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            throw new BusinessException(MessageConstant.ERROR);
+        } finally {
+            if (lock.isHeldByCurrentThread()) {
+                lock.unlock();
+            }
         }
-
-        // 7. 原子减少配送员当前接单数
-        runnerProfileMapper.decrementCurrentOrders(runnerId);
-
-        // 8. 清除任务相关缓存
-        Objects.requireNonNull(cacheManager.getCache(RedisConstant.CACHE_TASK_HALL)).clear();
-        Objects.requireNonNull(cacheManager.getCache(RedisConstant.CACHE_TASK_DETAIL)).clear();
-
-        log.info("配送员 {} 在5分钟内取消订单 {}，任务 {} 已回退至待接单", runnerId, orderId, order.getTaskId());
     }
 
     /**
@@ -306,20 +333,42 @@ public class TaskOrderServiceImpl extends ServiceImpl<TaskOrderMapper, TaskOrder
         if (!order.getRunnerId().equals(runnerId)) {
             throw new ForbiddenException(MessageConstant.OPERATION_NOT_ALLOWED);
         }
-        OrderStateMachine.validate(order.getStatus(), StatusConstant.ORDER_DELIVERING, "Order");
-        order.setPickupProofImgs(proof.getImageUrls() != null ? JSONUtil.toJsonStr(proof.getImageUrls()) : null);
-        order.setPickupTime(LocalDateTime.now());
-        order.setStatus(StatusConstant.ORDER_DELIVERING);
-        updateById(order);
 
-        Task task = taskMapper.selectById(order.getTaskId());
-        if (task != null) {
-            TaskStateMachine.validate(task.getStatus(), StatusConstant.TASK_DELIVERING, "Task");
-            task.setStatus(StatusConstant.TASK_DELIVERING);
-            task.setUpdatedAt(LocalDateTime.now());
-            taskMapper.updateById(task);
+        // 分布式锁防止与 OrderTimeoutChecker 待取货超时取消并发
+        String lockKey = RedisConstant.ORDER_LOCK_KEY + order.getTaskId();
+        RLock lock = redissonClient.getLock(lockKey);
+        try {
+            if (!lock.tryLock(RedisConstant.LOCK_WAIT_TIME, RedisConstant.LOCK_EXPIRE, TimeUnit.SECONDS)) {
+                throw new BusinessException(MessageConstant.SYSTEM_BUSY);
+            }
+            // 锁内重查状态
+            order = getById(orderId);
+            if (order == null || !Objects.equals(order.getStatus(), StatusConstant.ORDER_WAIT_PICKUP)) {
+                throw new BusinessException(MessageConstant.ORDER_STATUS_CHANGED);
+            }
+
+            OrderStateMachine.validate(order.getStatus(), StatusConstant.ORDER_DELIVERING, "Order");
+            order.setPickupProofImgs(proof.getImageUrls() != null ? JSONUtil.toJsonStr(proof.getImageUrls()) : null);
+            order.setPickupTime(LocalDateTime.now());
+            order.setStatus(StatusConstant.ORDER_DELIVERING);
+            updateById(order);
+
+            Task task = taskMapper.selectById(order.getTaskId());
+            if (task != null) {
+                TaskStateMachine.validate(task.getStatus(), StatusConstant.TASK_DELIVERING, "Task");
+                task.setStatus(StatusConstant.TASK_DELIVERING);
+                task.setUpdatedAt(LocalDateTime.now());
+                taskMapper.updateById(task);
+            }
+            log.info("订单 {} 已取货，凭证：{}", orderId, proof.getImageUrls());
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            throw new BusinessException(MessageConstant.ERROR);
+        } finally {
+            if (lock.isHeldByCurrentThread()) {
+                lock.unlock();
+            }
         }
-        log.info("订单 {} 已取货，凭证：{}", orderId, proof.getImageUrls());
     }
 
     /**
@@ -517,13 +566,8 @@ public class TaskOrderServiceImpl extends ServiceImpl<TaskOrderMapper, TaskOrder
      */
     @Override
     public OrderDetailVO getOrderDetailByTaskId(Long taskId, Long currentUserId) {
-        // 查询该任务的最新订单（包括已取消，按ID倒序取最新）
-        TaskOrder order = taskOrderMapper.selectOne(
-                new LambdaQueryWrapper<TaskOrder>()
-                        .eq(TaskOrder::getTaskId, taskId)
-                        .eq(TaskOrder::getIsDeleted, StatusConstant.ORDER_NOT_DELETED)
-                        .orderByDesc(TaskOrder::getId)
-                        .last("LIMIT 1"));
+        // 查询该任务的最新订单（按ID倒序取最新）
+        TaskOrder order = taskOrderMapper.selectLatestByTaskId(taskId);
         if (order != null) {
             return getOrderDetailByOrderId(order.getId(), currentUserId);
         }

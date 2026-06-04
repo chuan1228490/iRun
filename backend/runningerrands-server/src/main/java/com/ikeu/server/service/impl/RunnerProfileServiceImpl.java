@@ -11,8 +11,6 @@ import com.ikeu.common.exception.NotFoundException;
 import com.ikeu.common.exception.ForbiddenException;
 import com.ikeu.model.dto.SetMaxOrdersDTO;
 import com.ikeu.model.entity.RunnerProfile;
-import com.ikeu.model.entity.TaskOrder;
-import com.ikeu.model.entity.TransactionRecord;
 import com.ikeu.model.entity.User;
 import com.ikeu.model.vo.RunnerInfoVO;
 import com.ikeu.model.vo.RunnerRankingVO;
@@ -224,15 +222,12 @@ public class RunnerProfileServiceImpl extends ServiceImpl<RunnerProfileMapper, R
         List<User> users = userMapper.selectBatchIds(userIds);
         Map<Long, User> userMap = users.stream().collect(Collectors.toMap(User::getId, u -> u));
 
-        // 批量查询所有骑手的累计跑腿收入（type=2）
-        Map<Long, BigDecimal> incomeMap = transactionRecordMapper.selectList(
-                new LambdaQueryWrapper<TransactionRecord>()
-                        .in(TransactionRecord::getUserId, userIds)
-                        .eq(TransactionRecord::getType, 2))
+        // 批量查询累计收入：数据库侧 GROUP BY SUM，避免全字段拉取到内存
+        Map<Long, BigDecimal> incomeMap = transactionRecordMapper.sumIncomeByUserIds(userIds)
                 .stream()
-                .collect(Collectors.groupingBy(
-                        TransactionRecord::getUserId,
-                        Collectors.reducing(BigDecimal.ZERO, TransactionRecord::getAmount, BigDecimal::add)));
+                .collect(Collectors.toMap(
+                        row -> (Long) row.get("user_id"),
+                        row -> (BigDecimal) row.get("total_income")));
 
         List<RunnerRankingVO> list = new ArrayList<>();
         int rank = 1;
@@ -282,29 +277,14 @@ public class RunnerProfileServiceImpl extends ServiceImpl<RunnerProfileMapper, R
 
         User user = userMapper.selectById(runnerId);
 
-        // 累计跑腿收入（type=2）
-        BigDecimal totalEarnings = transactionRecordMapper.selectList(
-                new LambdaQueryWrapper<TransactionRecord>()
-                        .eq(TransactionRecord::getUserId, runnerId)
-                        .eq(TransactionRecord::getType, 2))
-                .stream()
-                .map(TransactionRecord::getAmount)
-                .reduce(BigDecimal.ZERO, BigDecimal::add);
+        // 累计跑腿收入：数据库侧 SUM 聚合
+        BigDecimal totalEarnings = transactionRecordMapper.sumIncomeByUserId(runnerId);
 
-        // 准时率：已完成订单中 confirmTime <= expectFinishTime 的比例
-        List<TaskOrder> completedOrders = taskOrderMapper.selectList(
-                new LambdaQueryWrapper<TaskOrder>()
-                        .eq(TaskOrder::getRunnerId, runnerId)
-                        .eq(TaskOrder::getStatus, 4)
-                        .eq(TaskOrder::getIsDeleted, 0));
-        double onTimeRate = 0;
-        if (!completedOrders.isEmpty()) {
-            long onTimeCount = completedOrders.stream()
-                    .filter(o -> o.getConfirmTime() != null && o.getExpectFinishTime() != null
-                            && !o.getConfirmTime().isAfter(o.getExpectFinishTime()))
-                    .count();
-            onTimeRate = (double) onTimeCount / completedOrders.size() * 100;
-        }
+        // 准时率：数据库侧 COUNT + CASE WHEN 聚合
+        Map<String, Object> onTimeStats = taskOrderMapper.countCompletedOnTime(runnerId);
+        long total = ((Number) onTimeStats.get("total")).longValue();
+        long onTime = ((Number) onTimeStats.get("on_time")).longValue();
+        double onTimeRate = total > 0 ? (double) onTime / total * 100 : 0;
 
         return RunnerPerformanceVO.builder()
                 .userId(runnerId)

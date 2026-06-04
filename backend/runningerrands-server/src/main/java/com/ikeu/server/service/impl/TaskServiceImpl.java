@@ -1,8 +1,8 @@
 package com.ikeu.server.service.impl;
 
 import cn.hutool.core.bean.BeanUtil;
+import cn.hutool.core.lang.TypeReference;
 import cn.hutool.core.util.IdUtil;
-import cn.hutool.json.JSONObject;
 import cn.hutool.json.JSONUtil;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
@@ -26,6 +26,7 @@ import com.ikeu.model.vo.TaskStatisticsVO;
 import com.ikeu.server.mapper.*;
 import com.ikeu.server.service.PaymentService;
 import com.ikeu.server.service.TaskService;
+import com.ikeu.server.util.RedisDefendUtil;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.redisson.api.RLock;
@@ -65,6 +66,7 @@ public class TaskServiceImpl extends ServiceImpl<TaskMapper, Task> implements Ta
     private final RedissonClient redissonClient;
     private final CacheManager cacheManager;
     private final StringRedisTemplate stringRedisTemplate;
+    private final RedisDefendUtil redisDefendUtil;
 
     /**
      * 根据任务小类列表返回默认送达地址，若所有小类均须由用户选择则返回null
@@ -109,20 +111,19 @@ public class TaskServiceImpl extends ServiceImpl<TaskMapper, Task> implements Ta
      * @param wrapper 查询条件包装器
      * @return PageResult<TaskListVO> 分页任务列表结果
      */
-    private PageResult<TaskListVO> buildTaskListResult(int page, int size, LambdaQueryWrapper<Task> wrapper) {
-        Page<Task> p = page(new Page<>(page, size), wrapper);
-        if (p.getRecords().isEmpty()) {
+    /** 将分页 Task 结果批量转换为 TaskListVO */
+    private PageResult<TaskListVO> buildTaskListResult(Page<Task> taskPage) {
+        if (taskPage.getRecords().isEmpty()) {
             return new PageResult<>(0L, Collections.emptyList());
         }
-
-        List<Long> publisherIds = p.getRecords().stream()
+        List<Long> publisherIds = taskPage.getRecords().stream()
                 .map(Task::getPublisherId).distinct().collect(Collectors.toList());
         List<User> publishers = userMapper.selectBatchIds(publisherIds);
         Map<Long, User> publisherMap = publishers.stream().collect(Collectors.toMap(User::getId, u -> u));
-        List<TaskListVO> records = p.getRecords().stream()
+        List<TaskListVO> records = taskPage.getRecords().stream()
                 .map(task -> convertToTaskListVO(task, publisherMap))
                 .collect(Collectors.toList());
-        return new PageResult<>(p.getTotal(), records);
+        return new PageResult<>(taskPage.getTotal(), records);
     }
 
     /**
@@ -285,6 +286,7 @@ public class TaskServiceImpl extends ServiceImpl<TaskMapper, Task> implements Ta
             public void afterCommit() {
                 Objects.requireNonNull(cacheManager.getCache(RedisConstant.CACHE_TASK_HALL)).clear();
                 Objects.requireNonNull(cacheManager.getCache(RedisConstant.CACHE_TASK_DETAIL)).clear();
+                stringRedisTemplate.delete(RedisConstant.TASK_HALL_NULL_PREFIX + "default");
             }
         });
     }
@@ -311,51 +313,24 @@ public class TaskServiceImpl extends ServiceImpl<TaskMapper, Task> implements Ta
                                             int page, int size) {
         boolean canCache = type == null && subType == null && minReward == null
                 && maxReward == null && page == 1;
-        String cacheKey = "default";
 
         if (canCache) {
+            String cacheKey = "default";
             Cache cache = cacheManager.getCache(RedisConstant.CACHE_TASK_HALL);
-            if (cache != null) {
-                Cache.ValueWrapper cached = cache.get(cacheKey);
-                if (cached != null && cached.get() instanceof String) {
-                    JSONObject json = JSONUtil.parseObj((String) cached.get());
-                    Long total = json.getLong("total");
-                    if (total != null && total > 0) {
-                        List<TaskListVO> cachedRecords = json.getJSONArray("records").toList(TaskListVO.class);
-                        return new PageResult<>(total, cachedRecords);
-                    }
-                }
-            }
+            TypeReference<PageResult<TaskListVO>> typeRef = new TypeReference<>() {};
 
-            // 击穿防护：缓存未命中时抢锁重建，避免大量请求同时打 DB
-            RLock hallLock = redissonClient.getLock(RedisConstant.TASK_HALL_LOCK_KEY);
-            try {
-                if (hallLock.tryLock(RedisConstant.LOCK_WAIT_TIME, RedisConstant.LOCK_EXPIRE, TimeUnit.SECONDS)) {
-                    // double-check
-                    if (cache != null) {
-                        Cache.ValueWrapper cached = cache.get(cacheKey);
-                        if (cached != null && cached.get() instanceof String) {
-                            JSONObject json = JSONUtil.parseObj((String) cached.get());
-                            Long total = json.getLong("total");
-                            if (total != null && total > 0) {
-                                List<TaskListVO> cachedRecords = json.getJSONArray("records").toList(TaskListVO.class);
-                                return new PageResult<>(total, cachedRecords);
-                            }
-                        }
+            PageResult<TaskListVO> result = redisDefendUtil.getOrLoad(
+                    cache, cacheKey,
+                    RedisConstant.TASK_HALL_NULL_PREFIX + cacheKey, RedisConstant.TASK_NOT_EXIST_TTL,
+                    RedisConstant.TASK_HALL_LOCK_KEY,
+                    (long) RedisConstant.LOCK_WAIT_TIME, (long) RedisConstant.LOCK_EXPIRE,
+                    typeRef.getType(),
+                    () -> {
+                        PageResult<TaskListVO> r = queryHallTasks(page, size);
+                        return r.getTotal() > 0 ? r : null;
                     }
-                    PageResult<TaskListVO> result = queryHallTasks(page, size);
-                    if (result.getTotal() > 0 && cache != null) {
-                        cache.put(cacheKey, JSONUtil.toJsonStr(result));
-                    }
-                    return result;
-                }
-            } catch (InterruptedException e) {
-                Thread.currentThread().interrupt();
-            } finally {
-                if (hallLock.isHeldByCurrentThread()) {
-                    hallLock.unlock();
-                }
-            }
+            );
+            return result != null ? result : new PageResult<>(0L, List.of());
         }
 
         return queryHallTasks(page, size);
@@ -456,74 +431,26 @@ public class TaskServiceImpl extends ServiceImpl<TaskMapper, Task> implements Ta
     @Override
     public TaskDetailVO getTaskDetail(Long taskId, Long currentUserId) {
         String cacheKey = String.valueOf(taskId);
-
-        // 1. 查 Spring Cache
         Cache cache = cacheManager.getCache(RedisConstant.CACHE_TASK_DETAIL);
-        if (cache != null) {
-            Cache.ValueWrapper cached = cache.get(cacheKey);
-            if (cached != null && cached.get() instanceof String) {
-                TaskDetailVO vo = JSONUtil.toBean((String) cached.get(), TaskDetailVO.class);
-                applyTaskDetailMasking(vo);
-                return vo;
-            }
-        }
 
-        // 2. 穿透防护：查空标记
-        String nullKey = RedisConstant.TASK_NOT_EXIST_PREFIX + taskId;
-        if (stringRedisTemplate.hasKey(nullKey)) {
+        TaskDetailVO vo = redisDefendUtil.getOrLoad(
+                cache, cacheKey,
+                RedisConstant.TASK_NOT_EXIST_PREFIX + taskId, RedisConstant.TASK_NOT_EXIST_TTL,
+                RedisConstant.TASK_DETAIL_LOCK_PREFIX + taskId,
+                (long) RedisConstant.LOCK_WAIT_TIME, (long) RedisConstant.LOCK_EXPIRE,
+                TaskDetailVO.class,
+                () -> {
+                    Task task = getById(taskId);
+                    if (task == null) return null;
+                    return buildTaskDetailVO(task, currentUserId);
+                }
+        );
+
+        if (vo == null) {
             throw new BusinessException(MessageConstant.TASK_NOT_EXIST);
         }
-
-        // 3. 击穿防护：缓存未命中 → 分布式锁重建
-        String lockKey = RedisConstant.TASK_DETAIL_LOCK_PREFIX + taskId;
-        RLock lock = redissonClient.getLock(lockKey);
-        try {
-            if (lock.tryLock(RedisConstant.LOCK_WAIT_TIME, RedisConstant.LOCK_EXPIRE, TimeUnit.SECONDS)) {
-                if (cache != null) {
-                    Cache.ValueWrapper cached = cache.get(cacheKey);
-                    if (cached != null && cached.get() instanceof String) {
-                        TaskDetailVO vo = JSONUtil.toBean((String) cached.get(), TaskDetailVO.class);
-                        applyTaskDetailMasking(vo);
-                        return vo;
-                    }
-                }
-                if (stringRedisTemplate.hasKey(nullKey)) {
-                    throw new BusinessException(MessageConstant.TASK_NOT_EXIST);
-                }
-
-                Task task = getById(taskId);
-                if (task == null) {
-                    stringRedisTemplate.opsForValue().set(nullKey, "1",
-                            RedisConstant.TASK_NOT_EXIST_TTL, TimeUnit.SECONDS);
-                    throw new BusinessException(MessageConstant.TASK_NOT_EXIST);
-                }
-
-                TaskDetailVO vo = buildTaskDetailVO(task, currentUserId);
-                if (cache != null) {
-                    cache.put(cacheKey, JSONUtil.toJsonStr(vo));
-                }
-                return vo;
-            }
-        } catch (InterruptedException e) {
-            Thread.currentThread().interrupt();
-            throw new BusinessException(MessageConstant.ERROR);
-        } finally {
-            if (lock.isHeldByCurrentThread()) {
-                lock.unlock();
-            }
-        }
-
-        // 4. 未获锁 → 降级直 DB（仍检查空标记防止穿透）
-        if (stringRedisTemplate.hasKey(nullKey)) {
-            throw new BusinessException(MessageConstant.TASK_NOT_EXIST);
-        }
-        Task task = getById(taskId);
-        if (task == null) {
-            stringRedisTemplate.opsForValue().set(nullKey, "1",
-                    RedisConstant.TASK_NOT_EXIST_TTL, TimeUnit.SECONDS);
-            throw new BusinessException(MessageConstant.TASK_NOT_EXIST);
-        }
-        return buildTaskDetailVO(task, currentUserId);
+        applyTaskDetailMasking(vo);
+        return vo;
     }
 
     /**
@@ -607,16 +534,9 @@ public class TaskServiceImpl extends ServiceImpl<TaskMapper, Task> implements Ta
     @Override
     public PageResult<TaskListVO> searchTasks(String keyword, String type, BigDecimal minReward,
                                               BigDecimal maxReward, int page, int size) {
-        LambdaQueryWrapper<Task> wrapper = new LambdaQueryWrapper<>();
-        wrapper.like(keyword != null, Task::getPublicDesc, keyword)
-                .eq(type != null, Task::getType, type)
-                .ge(minReward != null, Task::getReward, minReward)
-                .le(maxReward != null, Task::getReward, maxReward)
-                .eq(Task::getStatus, StatusConstant.TASK_WAITING)
-                .gt(Task::getExpireTime, LocalDateTime.now())
-                .orderByDesc(Task::getCreatedAt);
-
-        return buildTaskListResult(page, size, wrapper);
+        Page<Task> taskPage = taskMapper.searchTasks(
+                new Page<>(page, size), keyword, type, minReward, maxReward);
+        return buildTaskListResult(taskPage);
     }
 
     /**
@@ -638,18 +558,10 @@ public class TaskServiceImpl extends ServiceImpl<TaskMapper, Task> implements Ta
     public PageResult<TaskListVO> filterTasks(String type, String pickupAddress, String deliveryAddress,
                                               String requireSex, BigDecimal minReward, BigDecimal maxReward,
                                               int page, int size) {
-        LambdaQueryWrapper<Task> wrapper = new LambdaQueryWrapper<>();
-        wrapper.eq(type != null, Task::getType, type)
-                .like(pickupAddress != null, Task::getPickupAddress, pickupAddress)
-                .like(deliveryAddress != null, Task::getDeliveryAddress, deliveryAddress)
-                .eq(requireSex != null, Task::getRequireSex, requireSex)
-                .ge(minReward != null, Task::getReward, minReward)
-                .le(maxReward != null, Task::getReward, maxReward)
-                .eq(Task::getStatus, StatusConstant.TASK_WAITING)
-                .gt(Task::getExpireTime, LocalDateTime.now())
-                .orderByDesc(Task::getCreatedAt);
-
-        return buildTaskListResult(page, size, wrapper);
+        Page<Task> taskPage = taskMapper.filterTasks(
+                new Page<>(page, size), type, pickupAddress, deliveryAddress,
+                requireSex, minReward, maxReward);
+        return buildTaskListResult(taskPage);
     }
 
     /**

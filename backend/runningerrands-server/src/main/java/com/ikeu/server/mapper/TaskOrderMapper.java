@@ -6,6 +6,8 @@ import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Param;
 import org.apache.ibatis.annotations.Update;
 
+import java.util.Map;
+
 /**
  * 任务订单 Mapper，提供订单实体的基础 CRUD 操作。
  * @author ikeu
@@ -29,4 +31,27 @@ public interface TaskOrderMapper extends BaseMapper<TaskOrder> {
                        @Param("expectedStatus") Integer expectedStatus,
                        @Param("targetStatus") Integer targetStatus,
                        @Param("cancelReason") String cancelReason);
+
+    /**
+     * 统计跑腿员的准时完成率数据。
+     *
+     * <p>数据库侧执行 {@code COUNT(*) AS total} 和 {@code SUM(CASE WHEN confirm_time <= expect_finish_time THEN 1 ELSE 0 END) AS on_time}，
+     * 返回包含 {@code total}（已完成订单总数）和 {@code on_time}（准时完成数）两个字段的 Map。
+     * 调用方按 {@code onTime / total * 100} 计算准时率百分比。
+     *
+     * @param runnerId 跑腿员用户ID
+     * @return 含 total 和 on_time 的 Map
+     */
+    Map<String, Object> countCompletedOnTime(@Param("runnerId") Long runnerId);
+
+    /**
+     * 查询指定任务的最新一条有效订单。
+     *
+     * <p>按 ID 倒序取第一条，仅查询未删除（is_deleted=0）的记录，
+     * 替代 {@code selectOne(...).last("LIMIT 1")} 的裸 SQL 注入写法。
+     *
+     * @param taskId 任务ID
+     * @return 最新订单实体，无记录时返回 null
+     */
+    TaskOrder selectLatestByTaskId(@Param("taskId") Long taskId);
 }
