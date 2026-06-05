@@ -4,7 +4,7 @@
 
 ## 前置要求
 
-- Ubuntu 22.04+ 虚拟机或服务器
+- 一台虚拟机或服务器，或Docker容器，本文档以Ubuntu为例。
 - Java 21、MySQL 8、Redis
 - 内网穿透工具（ngrok / frp 等）用于公网访问
 
