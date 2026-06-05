@@ -33,8 +33,10 @@ function removeRefreshToken() {
 let isRefreshing = false
 let refreshQueue: Array<(token: string) => void> = []
 
-const service = axios.create({
-  baseURL: '/api',
+// 开发环境 (Vite proxy 转发到 Ngrok 后端)
+const API_BASE = '/api'
+
+const service = axios.create({ baseURL: API_BASE,
   timeout: 15000
 })
 

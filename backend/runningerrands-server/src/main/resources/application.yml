@@ -44,9 +44,9 @@ logging:
 runningerrands:
   admin:
     init:
-      username: admin
-      password: admin20260510
-      name: 系统管理员
+      username: ${RUNNING_ERRANDS_ADMIN_USERNAME}
+      password: ${RUNNING_ERRANDS_ADMIN_PASSWORD}
+      name: ${RUNNING_ERRANDS_ADMIN_NAME:系统管理员}
 
   jwt:
     admin-secret-key: ${RUNNING_ERRANDS_JWT_ADMIN_SECRET:}

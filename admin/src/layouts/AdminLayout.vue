@@ -49,9 +49,11 @@
       </el-header>
 
       <el-main>
-        <Transition name="page-fade" mode="out-in">
-          <router-view />
-        </Transition>
+        <router-view v-slot="{ Component }">
+          <Transition name="page-fade" mode="out-in">
+            <component :is="Component" />
+          </Transition>
+        </router-view>
       </el-main>
     </el-container>
   </el-container>

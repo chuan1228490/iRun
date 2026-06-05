@@ -24,9 +24,13 @@ const ENV = {
     WS_URL: 'ws://127.0.0.1:8080/api/ws'
   },
   trial: {
-    SERVER_ORIGIN: 'https://test-api.runningerrands.com',
-    BASE_URL: 'https://test-api.runningerrands.com/api',
-    WS_URL: 'wss://test-api.runningerrands.com/api/ws'
+    // 测试环境 (ngrok 内网穿透)
+    // SERVER_ORIGIN: 'https://test-api.runningerrands.com',
+    SERVER_ORIGIN: 'https://sedative-squishy-worry.ngrok-free.dev',
+    // BASE_URL: 'https://test-api.runningerrands.com/api',
+    BASE_URL: 'https://sedative-squishy-worry.ngrok-free.dev/api',
+    // WS_URL: 'wss://test-api.runningerrands.com/api/ws',
+    WS_URL: 'wss://sedative-squishy-worry.ngrok-free.dev/api/ws'
   },
   release: {
     SERVER_ORIGIN: 'https://api.runningerrands.com',

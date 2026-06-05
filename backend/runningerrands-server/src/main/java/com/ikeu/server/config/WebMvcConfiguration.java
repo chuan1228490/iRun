@@ -13,8 +13,11 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.converter.HttpMessageConverter;
 import org.springframework.http.converter.json.MappingJackson2HttpMessageConverter;
+import org.springframework.core.io.Resource;
 import org.springframework.web.servlet.config.annotation.*;
+import org.springframework.web.servlet.resource.PathResourceResolver;
 
+import java.io.IOException;
 import java.util.List;
 
 /**
@@ -110,7 +113,22 @@ public class WebMvcConfiguration implements WebMvcConfigurer {
     }
 
     /**
-     * 配置静态资源映射，暴露接口文档页面和 WebJar 资源。
+     * 配置跨域资源共享（测试环境 ngrok 内网穿透需要）。
+     * 鉴权使用自定义请求头（token / authentication），不依赖 Cookie，
+     * 因此 credentials=false + 通配 origin 是安全的。
+     */
+    @Override
+    public void addCorsMappings(CorsRegistry registry) {
+        registry.addMapping("/**")
+                .allowedOriginPatterns("*")
+                .allowedMethods("GET", "POST", "PUT", "DELETE", "OPTIONS")
+                .allowedHeaders("*")
+                .allowCredentials(false);
+    }
+
+    /**
+     * 配置静态资源映射，暴露接口文档页面和 WebJar 资源，
+     * 并为 Vue Router History 模式提供 SPA fallback。
      *
      * @param registry 资源处理器注册器
      */
@@ -120,6 +138,21 @@ public class WebMvcConfiguration implements WebMvcConfigurer {
                 .addResourceLocations("classpath:/META-INF/resources/");
         registry.addResourceHandler("/webjars/**")
                 .addResourceLocations("classpath:/META-INF/resources/webjars/");
+
+        // SPA fallback: 非 API / 非文件路径 → index.html（Controller 未匹配时生效）
+        registry.addResourceHandler("/**")
+                .addResourceLocations("classpath:/static/")
+                .resourceChain(true)
+                .addResolver(new PathResourceResolver() {
+                    @Override
+                    protected Resource getResource(String resourcePath, Resource location) throws IOException {
+                        Resource resource = location.createRelative(resourcePath);
+                        if (resource.exists() && resource.isReadable()) {
+                            return resource;
+                        }
+                        return location.createRelative("index.html");
+                    }
+                });
     }
 
     /**

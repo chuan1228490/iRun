@@ -2,7 +2,7 @@ import { createRouter, createWebHistory } from 'vue-router'
 import { getAdminToken } from '@/utils/request'
 
 const router = createRouter({
-  history: createWebHistory(),
+  history: createWebHistory('/api/'),
   routes: [
     {
       path: '/login',
