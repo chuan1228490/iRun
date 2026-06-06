@@ -15,6 +15,10 @@
             <!-- 微信注册用户：短信验证 -->
             <template v-if="isWeChatUser">
               <view class="form-field">
+                <text class="field-label">手机号</text>
+                <input class="field-input" name="tel" type="number" v-model="bindPhone" placeholder="请先输入手机号" maxlength="11" />
+              </view>
+              <view class="form-field">
                 <text class="field-label">短信验证码</text>
                 <view class="code-row">
                   <input class="field-input code-input" name="number" type="number" v-model="verifyCode" placeholder="请输入验证码" maxlength="6" />
@@ -115,6 +119,7 @@ const isWeChatUser = computed(() => store.userInfo?.registerType === 2)
 
 // 首次设置支付密码
 const loginPassword = ref('')
+const bindPhone = ref('') // 微信用户绑定手机号
 const verifyCode = ref('')
 const counting = ref(false)
 const countdown = ref(60)
@@ -165,9 +170,9 @@ async function checkPayPasswordStatus() {
 
 async function onSendCode() {
   if (counting.value) return
-  const phone = store.userInfo?.phone
-  if (!phone) {
-    uni.showToast({ title: '请先绑定手机号', icon: 'none' })
+  const phone = isWeChatUser.value ? bindPhone.value : store.userInfo?.phone
+  if (!phone || !/^1[3-9]\d{9}$/.test(phone)) {
+    uni.showToast({ title: '请输入正确的手机号', icon: 'none' })
     return
   }
   try {

@@ -67,7 +67,7 @@ const store = useStore()
 const sysInfo = uni.getSystemInfoSync()
 const scrollHeight = sysInfo.windowHeight - sysInfo.statusBarHeight - 44
 
-const avatarPath = ref(store.userInfo.avatarUrl || '')
+const avatarPath = ref(store.avatarUrl || '')
 const nickname = ref(store.userInfo.nickname || '')
 const sex = ref(store.userInfo.sex || '男')
 const campus = ref(store.userInfo.campus || '计算机学院')

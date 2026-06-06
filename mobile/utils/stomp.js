@@ -152,7 +152,15 @@ export class StompClient {
         this._sendRaw(frame)
       } catch (e) { /* ignore */ }
       this._stopHeartbeat()
-      this._socket.close()
+      try {
+        this._socket.close({
+          code: 1000,
+          success: () => {},
+          fail: () => {}
+        })
+      } catch (e) {
+        try { this._socket.close() } catch (_) { /* ignore */ }
+      }
       this._socket = null
     }
     this._connected = false

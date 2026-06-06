@@ -4,7 +4,7 @@
       <template v-slot:left>
         <view class="nav-avatar-wrap">
           <view class="nav-avatar">
-            <image v-if="store.userInfo.avatarUrl" class="nav-avatar-img" :src="store.userInfo.avatarUrl" mode="aspectFill" />
+            <image v-if="store.avatarUrl" class="nav-avatar-img" :src="store.avatarUrl" mode="aspectFill" />
             <text v-else class="nav-avatar-text">{{ store.avatarText }}</text>
           </view>
         </view>
@@ -144,7 +144,7 @@
 
         <view class="task-footer">
           <view class="publisher-info">
-            <image v-if="item.publisherAvatar" class="pub-avatar-img" :src="normalizeUrl(item.publisherAvatar)" mode="aspectFill" />
+            <image v-if="item.publisherAvatar" class="pub-avatar-img" :src="normalizeUrl(item.publisherAvatar)" mode="aspectFill" lazy-load />
             <view v-else class="pub-avatar">{{ item.publisherInitial }}</view>
             <text class="pub-name">{{ item.publisherNickname }}</text>
             <text class="pub-time">{{ item.timeText }}</text>

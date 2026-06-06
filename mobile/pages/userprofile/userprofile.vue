@@ -1,15 +1,6 @@
 <template>
   <view class="page">
     <uni-nav-bar backgroundColor="#FAFAF8" :border="false" statusBar>
-      <template v-slot:left>
-        <view class="nav-avatar-wrap">
-          <view class="nav-avatar">
-            <image v-if="store.userInfo.avatarUrl" class="nav-avatar-img" :src="store.userInfo.avatarUrl" mode="aspectFill" />
-            <text v-else class="nav-avatar-text">{{ store.avatarText }}</text>
-          </view>
-        </view>
-      </template>
-      <view class="nav-title-wrap"><text class="nav-title-text">我的</text></view>
       <template v-slot:right>
         <view class="nav-btn" @click="goMessages">
           <iconpark-icon name="notification-filled" size="24" color="#FF6B4A" />
@@ -19,22 +10,18 @@
 
     <scroll-view class="main-scroll" :style="{ height: scrollHeight + 'px' }" scroll-y enhanced :show-scrollbar="false">
       <!-- 用户信息卡片 -->
-      <uni-card :isShadow="true" :shadow="'0 4rpx 20rpx rgba(255, 107, 74, 0.05)'" :margin="'16rpx 0 0 0'" :spacing="'32rpx 36rpx'" :border="false" @click="onProfileTap">
-        <template v-slot:title>
-          <view class="profile-header">
-            <view class="profile-avatar">
-              <image v-if="store.userInfo.avatarUrl" class="profile-avatar-img" :src="store.userInfo.avatarUrl" mode="aspectFill" />
-              <text v-else class="profile-avatar-text">{{ store.avatarText }}</text>
-            </view>
-            <view class="profile-info">
-              <text class="profile-name">{{ store.displayName }}</text>
-              <text class="profile-dept">{{ store.userInfo.campus || '未设置学院' }}</text>
-              <text class="profile-bio" v-if="store.userInfo.signature">{{ store.userInfo.signature }}</text>
-            </view>
-            <iconpark-icon name="right" size="18" color="#8F8D88" />
-          </view>
-        </template>
-      </uni-card>
+      <view class="profile-card" @click="onProfileTap">
+        <view class="profile-avatar">
+          <image v-if="store.avatarUrl" class="profile-avatar-img" :src="store.avatarUrl" mode="aspectFill" />
+          <text v-else class="profile-avatar-text">{{ store.avatarText }}</text>
+        </view>
+        <view class="profile-info">
+          <text class="profile-name">{{ store.displayName }}</text>
+          <text class="profile-dept">{{ store.userInfo.campus || '未设置学院' }}</text>
+          <text class="profile-bio" v-if="store.userInfo.signature">{{ store.userInfo.signature }}</text>
+        </view>
+        <iconpark-icon name="right" size="18" color="#8F8D88" />
+      </view>
 
       <!-- 钱包卡片 -->
       <uni-card title="我的钱包" :isShadow="true" :shadow="'0 4rpx 20rpx rgba(255, 107, 74, 0.05)'" :margin="'48rpx 0 0 0'" :spacing="'0 0 0 0'" :padding="'0'" :border="false">
@@ -190,19 +177,14 @@ async function onLogout() {
 <style scoped>
 .page { width: 100%; height: 100vh; display: flex; flex-direction: column; background: var(--background); overflow: hidden; }
 
-.nav-avatar-wrap { width: 68rpx; height: 68rpx; border-radius: 50%; background: var(--primary-container); display: flex; align-items: center; justify-content: center; }
-.nav-avatar { width: 56rpx; height: 56rpx; border-radius: 50%; background: var(--primary); display: flex; align-items: center; justify-content: center; }
-.nav-avatar-img { width: 100%; height: 100%; border-radius: 50%; object-fit: cover; }
-.nav-avatar-text { font-size: 26rpx; font-weight: 700; color: #fff; }
-.nav-title-wrap { display: flex; align-items: center; justify-content: center; }
 .nav-title-text { font-size: 34rpx; font-weight: 600; color: var(--text-primary); }
 .nav-btn { width: 68rpx; height: 68rpx; display: flex; align-items: center; justify-content: center; border-radius: 50%; position: relative; }
 .nav-btn:active { background: var(--primary-container); }
 
 .main-scroll { box-sizing: border-box; width: 100%; padding: 0 32rpx; padding-bottom: 180rpx; }
 
-:deep(.uni-card) { border-radius: var(--radius-card) !important; }
-.profile-header { display: flex; align-items: center; gap: 28rpx; width: 100%; }
+.profile-card { display: flex; align-items: center; gap: 28rpx; width: 100%; padding: 32rpx 36rpx; margin-top: 16rpx; background: var(--surface-raised); border-radius: var(--radius-card); box-shadow: var(--shadow-sm); box-sizing: border-box; }
+.profile-card:active { background: var(--surface-hover); }
 .profile-avatar { width: 112rpx; height: 112rpx; border-radius: 50%; background: linear-gradient(135deg, var(--primary), var(--secondary)); display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
 .profile-avatar-img { width: 100%; height: 100%; border-radius: 50%; object-fit: cover; }
 .profile-avatar-text { font-size: 44rpx; font-weight: 700; color: #fff; }

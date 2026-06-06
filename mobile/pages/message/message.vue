@@ -4,7 +4,7 @@
       <template v-slot:left>
         <view class="nav-avatar-wrap">
           <view class="nav-avatar">
-            <image v-if="store.userInfo.avatarUrl" class="nav-avatar-img" :src="store.userInfo.avatarUrl" mode="aspectFill" />
+            <image v-if="store.avatarUrl" class="nav-avatar-img" :src="store.avatarUrl" mode="aspectFill" />
             <text v-else class="nav-avatar-text">{{ store.avatarText }}</text>
           </view>
         </view>

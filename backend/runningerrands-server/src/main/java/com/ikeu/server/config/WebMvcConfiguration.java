@@ -11,6 +11,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springdoc.core.models.GroupedOpenApi;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.http.CacheControl;
 import org.springframework.http.converter.HttpMessageConverter;
 import org.springframework.http.converter.json.MappingJackson2HttpMessageConverter;
 import org.springframework.core.io.Resource;
@@ -19,6 +20,7 @@ import org.springframework.web.servlet.resource.PathResourceResolver;
 
 import java.io.IOException;
 import java.util.List;
+import java.util.concurrent.TimeUnit;
 
 /**
  * Web MVC 配置，注册 JWT 拦截器、Knife4j 接口文档、静态资源映射和 JSON 消息转换器。
@@ -134,6 +136,10 @@ public class WebMvcConfiguration implements WebMvcConfigurer {
      */
     @Override
     public void addResourceHandlers(ResourceHandlerRegistry registry) {
+        registry.addResourceHandler("/imgs/**")
+                .addResourceLocations("classpath:/static/imgs/")
+                .setCacheControl(CacheControl.maxAge(7, TimeUnit.DAYS).cachePublic());
+
         registry.addResourceHandler("/doc.html")
                 .addResourceLocations("classpath:/META-INF/resources/");
         registry.addResourceHandler("/webjars/**")

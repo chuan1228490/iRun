@@ -65,7 +65,9 @@ export const useStore = defineStore('main', {
     displayName: (state) => state.userInfo.nickname || state.userInfo.realName || '用户',
     avatarText: (state) => (state.userInfo.nickname || state.userInfo.realName || '用').charAt(0),
     avatarUrl: (state) => {
-      return state.userInfo.avatarUrl || (SERVER_ORIGIN + '/api/imgs/default_avatar.jpg')
+      const url = state.userInfo.avatarUrl
+      if (!url || url.includes('default_avatar')) return '/static/default_avatar.jpg'
+      return url
     },
     isCertified: (state) => state.userInfo.isCertify === 2,
     isCertifiedRunner: (state) => state.userInfo.verifyStatus === 2,
@@ -116,7 +118,7 @@ export const useStore = defineStore('main', {
       try {
         const data = await userApi.getUserInfo()
         // 后端返回的相对路径补全为完整URL（小程序不支持相对路径）
-        if (data.avatarUrl && data.avatarUrl.startsWith('/')) {
+        if (data.avatarUrl && data.avatarUrl.startsWith('/') && !data.avatarUrl.includes('default_avatar')) {
           data.avatarUrl = SERVER_ORIGIN + data.avatarUrl
         }
         this.userInfo = { ...this.userInfo, ...data }

@@ -9,6 +9,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.core.io.ClassPathResource;
 import org.springframework.core.io.Resource;
+import org.springframework.http.CacheControl;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -17,6 +18,7 @@ import org.springframework.web.multipart.MultipartFile;
 import java.io.IOException;
 import java.util.Set;
 import java.util.UUID;
+import java.util.concurrent.TimeUnit;
 
 /**
  * 通用接口，提供文件上传和获取默认头像等功能。
@@ -91,6 +93,7 @@ public class CommonController {
         }
         return ResponseEntity.ok()
                 .contentType(MediaType.IMAGE_JPEG)
+                .cacheControl(CacheControl.maxAge(7, TimeUnit.DAYS).cachePublic())
                 .body(resource);
     }
 }

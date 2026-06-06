@@ -161,6 +161,12 @@ function formatDates(obj) {
   return obj
 }
 
+// ---------- 安全工具 ----------
+
+function safeHideLoading() {
+  uni.hideLoading({ fail: () => {} })
+}
+
 // ---------- 请求核心 ----------
 
 /**
@@ -193,7 +199,10 @@ export function request({
     uni.showLoading({ title: '加载中…', mask: true })
   }
 
-  const header = { 'Content-Type': 'application/json' }
+  const header = {
+    'Content-Type': 'application/json',
+    'ngrok-skip-browser-warning': '1'
+  }
 
   if (auth === 'user') {
     header['authentication'] = getToken()
@@ -208,7 +217,7 @@ export function request({
       data,
       header,
       success(res) {
-        if (showLoading) uni.hideLoading()
+        if (showLoading) safeHideLoading()
 
         const { statusCode, data: body } = res
 
@@ -226,7 +235,7 @@ export function request({
                 data,
                 header: retryHeader,
                 success(retryRes) {
-                  if (showLoading) uni.hideLoading()
+                  if (showLoading) safeHideLoading()
                   const { statusCode: sc, data: retryBody } = retryRes
                   if (sc !== 200) {
                     const err = classifyError(`HTTP ${sc}`, { httpStatus: sc, showError })
@@ -242,7 +251,7 @@ export function request({
                   }
                 },
                 fail(retryErr) {
-                  if (showLoading) uni.hideLoading()
+                  if (showLoading) safeHideLoading()
                   const err = classifyError(retryErr, { showError })
                   if (showError) showToast(err.message)
                   reject(err)
@@ -250,7 +259,7 @@ export function request({
               })
             })
             .catch(() => {
-              if (showLoading) uni.hideLoading()
+              if (showLoading) safeHideLoading()
               removeToken()
               removeRefreshToken()
               showToast('登录已过期，请重新登录', { duration: 2000 })
@@ -284,7 +293,7 @@ export function request({
         }
       },
       fail(err) {
-        if (showLoading) uni.hideLoading()
+        if (showLoading) safeHideLoading()
         const classified = classifyError(err, { showError })
         if (showError) {
           showToast(classified.message)

@@ -13,7 +13,7 @@ CREATE TABLE `user`
     `pay_password`    VARCHAR(128)             DEFAULT NULL COMMENT '支付密码',
     `nickname`        VARCHAR(64)              DEFAULT '' COMMENT '用户昵称',
     `avatar_url`      VARCHAR(512)             DEFAULT '' COMMENT '头像URL',
-    `phone`           CHAR(11)                 DEFAULT '' COMMENT '手机号',
+    `phone`           CHAR(11)                 DEFAULT NULL COMMENT '手机号',
     `real_name`       VARCHAR(32)              DEFAULT '' COMMENT '真实姓名',
     `balance`         DECIMAL(10, 2)           DEFAULT 0.00 COMMENT '账户余额（元）',
     `campus`          VARCHAR(32)              DEFAULT '' COMMENT '学院名',

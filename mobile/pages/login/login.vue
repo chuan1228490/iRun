@@ -217,7 +217,8 @@ async function onWechatLogin() {
     await store.fetchUserInfo()
     onLoginSuccess()
   } catch (e) {
-    uni.showToast({ title: '微信登录失败', icon: 'none', duration: 2000 })
+    const msg = e?.message || '微信登录失败'
+    uni.showToast({ title: msg, icon: 'none', duration: 3000 })
   }
   submitting.value = false
 }

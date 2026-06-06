@@ -123,12 +123,12 @@ async function chooseAndUpload(count) {
     })
     uni.showLoading({ title: '上传中…' })
     const urls = await commonApi.uploadFiles(res.tempFilePaths)
-    uni.hideLoading()
+    uni.hideLoading({ fail: () => {} })
     if (urls && urls.length) {
       emit('update:modelValue', [...props.modelValue, ...urls])
     }
   } catch (e) {
-    uni.hideLoading()
+    uni.hideLoading({ fail: () => {} })
   }
 }
 </script>

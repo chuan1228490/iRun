@@ -274,7 +274,7 @@ async function onBatchDelete() {
   list.value = list.value.filter(item => !idSet.has(item.id))
   selectedIds.value = new Set()
   selectMode.value = false
-  uni.hideLoading()
+  uni.hideLoading({ fail: () => {} })
   showToast(`已删除${successCount}条`, { icon: 'success' })
 }
 

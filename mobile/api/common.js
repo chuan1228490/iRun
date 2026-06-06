@@ -22,7 +22,7 @@ export function uploadFile(filePath) {
       name: 'file',
       header: { authentication: getToken() },
       success(res) {
-        uni.hideLoading()
+        uni.hideLoading({ fail: () => {} })
         try {
           // uni.uploadFile 在不同平台 res.data 可能是字符串或已解析对象
           const body = typeof res.data === 'string' ? JSON.parse(res.data) : res.data
@@ -39,7 +39,7 @@ export function uploadFile(filePath) {
         }
       },
       fail(err) {
-        uni.hideLoading()
+        uni.hideLoading({ fail: () => {} })
         console.error('uploadFile 网络失败:', err)
         uni.showToast({ title: '上传失败，请重试', icon: 'none' })
         reject(err)

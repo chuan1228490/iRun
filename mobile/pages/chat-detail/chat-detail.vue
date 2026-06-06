@@ -94,7 +94,7 @@ const page = ref(1)
 const loadingMore = ref(false)
 
 const myUserId = ref(store.userId)
-const myAvatar = ref(store.userInfo.avatarUrl || '')
+const myAvatar = ref(store.avatarUrl || '')
 const myInitial = computed(() => store.avatarText)
 const peerInitial = computed(() => (peerNickname.value || '用').charAt(0))
 
@@ -155,7 +155,7 @@ async function onSend() {
     messageId: null,
     senderId: myUserId.value,
     senderNickname: store.userInfo.nickname || '',
-    senderAvatar: store.userInfo.avatarUrl || '',
+    senderAvatar: store.avatarUrl || '',
     receiverId: peerUserId.value,
     content: text,
     messageType: 1,

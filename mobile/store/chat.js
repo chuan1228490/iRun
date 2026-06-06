@@ -15,6 +15,7 @@ export const useChatStore = defineStore('chat', () => {
   // ---- state ----
   const stompClient = ref(null)
   const wsConnected = ref(false)
+  const _connecting = ref(false)  // 防止并发连接请求
   const currentUserId = ref(null)
   const contacts = ref([])
   const messageCache = ref(new Map())  // peerUserId → messages[]
@@ -32,6 +33,8 @@ export const useChatStore = defineStore('chat', () => {
 
   // ---- actions ----
   let _retryTimer = null
+  let _retryCount = 0
+  const MAX_RETRIES = 3
 
   /** 尝试用 refresh token 换取新 access token，失败返回 null */
   async function refreshUserToken() {
@@ -67,10 +70,12 @@ export const useChatStore = defineStore('chat', () => {
 
   async function connectStomp(token, userId) {
     if (stompClient.value && wsConnected.value) return
+    if (_connecting.value) return  // 正在连接中，跳过重复请求
+    _connecting.value = true
 
     // 优先从持久化存储读取最新 token，参数仅作为 fallback
     const effectiveToken = getToken() || token
-    if (!effectiveToken) { console.warn('[ChatStore] connectStomp called without token'); return }
+    if (!effectiveToken) { console.warn('[ChatStore] connectStomp called without token'); _connecting.value = false; return }
 
     if (userId) currentUserId.value = userId
     console.log('[ChatStore] Connecting STOMP...')
@@ -79,6 +84,8 @@ export const useChatStore = defineStore('chat', () => {
       await client.connect(`${WS_URL}/chat?token=${encodeURIComponent(effectiveToken)}`)
       wsConnected.value = true
       stompClient.value = client
+      _connecting.value = false
+      _retryCount = 0
       console.log('[ChatStore] STOMP connected, subscribing...')
 
       client.subscribe('/user/queue/chat', (body) => {
@@ -91,17 +98,42 @@ export const useChatStore = defineStore('chat', () => {
       console.log('[ChatStore] Subscribed to /user/queue/chat')
     } catch (e) {
       wsConnected.value = false
+      _connecting.value = false
+      // 确保失败的 socket 被关闭，释放微信 WebSocket 连接配额
+      try { client.disconnect() } catch (_) { /* ignore */ }
       console.error('[ChatStore] STOMP connect failed:', e)
 
+      // wcwss exceed: 微信 WebSocket 连接数已满，重试只会加深问题
+      const errMsg = e?.errMsg || e?.message || ''
+      if (errMsg.includes('exceed max concurrent')) {
+        console.warn('[ChatStore] WebSocket 连接数已满，放弃本次连接')
+        disconnectStomp()
+        return
+      }
+
+      // 超过最大重试次数，放弃
+      _retryCount++
+      if (_retryCount > MAX_RETRIES) {
+        console.warn('[ChatStore] STOMP 重试次数已达上限，放弃连接')
+        _retryCount = 0
+        disconnectStomp()
+        return
+      }
+
       // 尝试刷新 token 后再重连
-      const newToken = await refreshUserToken()
-      if (newToken) {
-        console.log('[ChatStore] Token refreshed, retrying STOMP connection')
-        _retryTimer = setTimeout(() => {
-          if (!wsConnected.value) connectStomp()
-        }, 3000)
-      } else {
+      try {
+        const newToken = await refreshUserToken()
+        if (newToken) {
+          console.log(`[ChatStore] Token refreshed, retrying STOMP (${_retryCount}/${MAX_RETRIES})`)
+          _retryTimer = setTimeout(() => {
+            if (!wsConnected.value) connectStomp()
+          }, 3000)
+        } else {
+          throw new Error('REFRESH_FAILED')
+        }
+      } catch (_) {
         console.warn('[ChatStore] Token refresh failed, giving up')
+        _retryCount = 0
         disconnectStomp()
         clearCache()
         removeToken()
@@ -121,6 +153,7 @@ export const useChatStore = defineStore('chat', () => {
       stompClient.value = null
     }
     wsConnected.value = false
+    _connecting.value = false
   }
 
   function handleIncomingMessage(msg) {

@@ -109,6 +109,11 @@ export function classifyError(rawError, ctx = {}) {
 
   // 4. 网络层异常（uni.request fail 回调）
   if (rawError?.errMsg || rawError?.errno !== undefined) {
+    const errMsg = rawError?.errMsg || ''
+    // closeSocket/hideLoading 等内部 API 错误不是真正的网络异常，静默处理
+    if (errMsg.includes('closeSocket') || errMsg.includes('hideLoading')) {
+      return new ClassifiedError(ErrorType.UNKNOWN, '', { showError: false })
+    }
     return new ClassifiedError(ErrorType.NETWORK, '网络异常，请稍后重试', { showError })
   }
 
