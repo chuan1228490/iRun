@@ -511,10 +511,20 @@ public class TaskServiceImpl extends ServiceImpl<TaskMapper, Task> implements Ta
             if (!task.getPublisherId().equals(userId)) {
                 throw new BusinessException(MessageConstant.TASK_CANCEL_FAILED);
             }
-            // 已被接单或配送中的任务不允许发布者直接取消，需由配送员先取消订单
+            // 已被接单/配送中 → 不允许发布者直接取消，需由配送员先取消订单
             if (StatusConstant.TASK_ACCEPTED.equals(task.getStatus())
                     || StatusConstant.TASK_DELIVERING.equals(task.getStatus())) {
                 throw new BusinessException(MessageConstant.TASK_CANCEL_NOT_BE_ALLOWED);
+            }
+            // 已完成/已取消/待确认 → 不允许取消
+            if (StatusConstant.TASK_COMPLETED.equals(task.getStatus())) {
+                throw new BusinessException(MessageConstant.TASK_COMPLETED_CANNOT_CANCEL);
+            }
+            if (StatusConstant.TASK_CANCELLED.equals(task.getStatus())) {
+                throw new BusinessException(MessageConstant.TASK_ALREADY_CANCELLED);
+            }
+            if (StatusConstant.TASK_WAIT_CONFIRM.equals(task.getStatus())) {
+                throw new BusinessException(MessageConstant.TASK_WAIT_CONFIRM_CANNOT_CANCEL);
             }
             TaskStateMachine.validate(task.getStatus(), StatusConstant.TASK_CANCELLED, "Task");
             task.setStatus(StatusConstant.TASK_CANCELLED);

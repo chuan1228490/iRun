@@ -31,9 +31,9 @@ public class OperationLogServiceImpl extends ServiceImpl<OperationLogMapper, Ope
 
     @Override
     public PageResult<OperationLog> listLogs(String module, Long adminId, LocalDateTime start, LocalDateTime end, int page, int size) {
-        // 普通管理员只能查看自己的操作日志
+        // 普通管理员只能查看自己的操作日志，忽略前端传入的 adminId 参数
         Long currentAdminId = BaseContext.getCurrentId();
-        if (currentAdminId != null && adminId == null) {
+        if (currentAdminId != null) {
             Admin admin = adminMapper.selectById(currentAdminId);
             if (admin != null && admin.getRole() != ROLE_SUPER_ADMIN) {
                 adminId = currentAdminId;
