@@ -40,26 +40,13 @@ logging:
   level:
     com.ikeu: DEBUG
 
-# 通过knife4j生成接口文档
-springdoc:
-  api-docs:
-    enabled: true
-    path: /v3/api-docs
-  swagger-ui:
-    enabled: true
-    path: /swagger-ui.html
-knife4j:
-  enable: true
-  setting:
-    language: zh_cn
-
 # 项目配置
 runningerrands:
   admin:
     init:
-      username: admin
-      password: admin20260510
-      name: 系统管理员
+      username: ${RUNNING_ERRANDS_ADMIN_USERNAME}
+      password: ${RUNNING_ERRANDS_ADMIN_PASSWORD}
+      name: ${RUNNING_ERRANDS_ADMIN_NAME:系统管理员}
 
   jwt:
     admin-secret-key: ${RUNNING_ERRANDS_JWT_ADMIN_SECRET:}
@@ -73,8 +60,8 @@ runningerrands:
 
   alioss:
     endpoint: oss-cn-beijing.aliyuncs.com
-    access-key-id: ${OSS_ACCESS_KEY_ID:}
-    access-key-secret: ${OSS_ACCESS_KEY_SECRET:}
+    access-key-id: ${ALIYUN_ACCESS_KEY_ID:}
+    access-key-secret: ${ALIYUN_ACCESS_KEY_SECRET:}
     bucket-name: runningerrands-ikeu
 
   wechat:

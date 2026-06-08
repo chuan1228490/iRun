@@ -19,6 +19,8 @@ import jakarta.servlet.http.HttpServletResponse;
  *
  * <p>支持从 HTTP 头或请求参数中获取 token，
  * token 名称由 {@link JwtProperties#getUserTokenName()} 配置。
+ * @author ikeu
+ * @since 2025/05/21
  */
 @Slf4j
 @Component
@@ -39,6 +41,7 @@ public class JwtTokenUserInterceptor implements HandlerInterceptor {
 
         if (token == null || token.isEmpty()) {
             response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
+            response.setContentType("application/json;charset=UTF-8");
             response.getWriter().write("{\"code\":401,\"msg\":\"" + MessageConstant.TOKEN_NOT_FOUND + "\"}");
             return false;
         }
@@ -52,6 +55,7 @@ public class JwtTokenUserInterceptor implements HandlerInterceptor {
             if (userId == null) {
                 log.error("Token 中未包含 userId，请检查生成逻辑！");
                 response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
+                response.setContentType("application/json;charset=UTF-8");
                 response.getWriter().write("{\"code\":401,\"msg\":\"" + MessageConstant.TOKEN_INVALID + "\"}");
                 return false;
             }
@@ -62,6 +66,7 @@ public class JwtTokenUserInterceptor implements HandlerInterceptor {
         } catch (Exception e) {
             log.error("用户端 token 校验失败: {}", e.getMessage());
             response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
+            response.setContentType("application/json;charset=UTF-8");
             response.getWriter().write("{\"code\":401,\"msg\":\"" + MessageConstant.TOKEN_EXPIRED + "\"}");
             return false;
         }

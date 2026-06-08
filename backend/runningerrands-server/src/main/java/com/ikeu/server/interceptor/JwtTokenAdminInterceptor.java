@@ -16,12 +16,10 @@ import jakarta.servlet.http.HttpServletResponse;
 
 /**
  * 管理端 JWT 拦截器 —— 校验 access token 并将管理员 ID 放入 ThreadLocal。
- * @author ikeu
- * @since 2025/05/21
- *
- *
  * <p>仅拦截 {@code /admin/**} 路径（login、refresh、captcha 除外），
  * token 从 {@link JwtProperties#getAdminTokenName()} 配置的 HTTP 头中提取。
+ * @author ikeu
+ * @since 2025/05/21
  */
 @Slf4j
 @Component
@@ -41,6 +39,7 @@ public class JwtTokenAdminInterceptor implements HandlerInterceptor {
         String token = request.getHeader(jwtProperties.getAdminTokenName());
         if (token == null || token.isEmpty()) {
             response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
+            response.setContentType("application/json;charset=UTF-8");
             response.getWriter().write("{\"code\":401,\"msg\":\"" + MessageConstant.TOKEN_NOT_FOUND + "\"}");
             return false;
         }
@@ -58,6 +57,7 @@ public class JwtTokenAdminInterceptor implements HandlerInterceptor {
         } catch (Exception e) {
             log.error("管理端 token 校验失败: {}", e.getMessage());
             response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
+            response.setContentType("application/json;charset=UTF-8");
             response.getWriter().write("{\"code\":401,\"msg\":\"" + MessageConstant.TOKEN_EXPIRED + "\"}");
             return false;
         }

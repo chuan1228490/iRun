@@ -12,6 +12,11 @@ import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.*;
 
+/**
+ * 管理端认证接口，提供管理员登录、刷新令牌和退出登录功能。
+ * @author ikeu
+ * @since 2025/06/01
+ */
 @Tag(name = "管理端-认证")
 @RestController
 @RequestMapping("/admin")
@@ -30,6 +35,12 @@ public class AdminAuthController {
     @PostMapping("/refresh")
     public Result<AdminLoginVO> refresh(@RequestHeader("X-Refresh-Token") String refreshToken) {
         return Result.success(adminService.refreshAccessToken(refreshToken));
+    }
+
+    @Operation(summary = "获取当前管理员信息")
+    @GetMapping("/info")
+    public Result<AdminLoginVO> info() {
+        return Result.success(adminService.getAdminInfo());
     }
 
     @Operation(summary = "管理员退出登录")

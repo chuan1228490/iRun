@@ -16,6 +16,11 @@ import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.*;
 
+/**
+ * 管理端员工管理接口，提供管理员员工的增删改查、状态管理和密码重置功能（仅超管可用）。
+ * @author ikeu
+ * @since 2025/06/01
+ */
 @Tag(name = "管理端-员工管理")
 @RestController
 @RequestMapping("/admin")
@@ -58,7 +63,7 @@ public class AdminEmployeeController {
         return Result.success(MessageConstant.ADMIN_UPDATE_SUCCESS);
     }
 
-    @OperationLog(module = "员工管理", action = "封禁/解封", description = "切换管理员 #id 状态为 #enabled")
+    @OperationLog(module = "员工管理", action = "封禁/解封", description = "管理员 #id → #enabled")
     @Operation(summary = "启用/停用管理员")
     @PutMapping("/employees/{id}/status")
     @RequireRole({1})

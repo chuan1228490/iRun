@@ -11,6 +11,7 @@ import com.ikeu.common.constant.RedisConstant;
 import com.ikeu.common.constant.StatusConstant;
 import com.ikeu.common.exception.BusinessException;
 import com.ikeu.common.exception.NotFoundException;
+import com.ikeu.common.enums.OrderStateMachine;
 import com.ikeu.common.exception.UnauthorizedException;
 import com.ikeu.common.properties.JwtProperties;
 import com.ikeu.common.result.PageResult;
@@ -33,13 +34,13 @@ import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
+import java.util.concurrent.TimeUnit;
 import java.time.format.DateTimeFormatter;
 import java.util.*;
 import java.util.stream.Collectors;
 
 /**
  * 管理员服务实现类，处理管理员登录、用户管理、任务管理、订单管理、跑腿员审核及仪表盘数据等功能
- *
  * @author ikeu
  * @since 2026/05/21
  */
@@ -70,10 +71,22 @@ public class AdminServiceImpl extends ServiceImpl<AdminMapper, Admin> implements
     @Override
     @Transactional
     public AdminLoginVO login(AdminLoginDTO dto) {
+        // 登录失败次数检查（防暴力破解）
+        String failKey = RedisConstant.ADMIN_LOGIN_FAIL_PREFIX + dto.getUsername();
+        String failCount = redisTemplate.opsForValue().get(failKey);
+        if (failCount != null && Integer.parseInt(failCount) >= RedisConstant.LOGIN_MAX_FAIL_COUNT) {
+            throw new BusinessException("登录失败次数过多，请15分钟后再试");
+        }
+
         Admin admin = lambdaQuery().eq(Admin::getUsername, dto.getUsername()).one();
         if (admin == null || !passwordEncoder.matches(dto.getPassword(), admin.getPassword())) {
+            redisTemplate.opsForValue().increment(failKey);
+            redisTemplate.expire(failKey, RedisConstant.LOGIN_LOCK_SECONDS, TimeUnit.SECONDS);
             throw new BusinessException(MessageConstant.ADMIN_LOGIN_FAILED);
         }
+
+        // 登录成功后清除失败计数
+        redisTemplate.delete(failKey);
         if (Objects.equals(admin.getStatus(), StatusConstant.DISABLE)) {
             throw new BusinessException(MessageConstant.ADMIN_DISABLED);
         }
@@ -102,6 +115,24 @@ public class AdminServiceImpl extends ServiceImpl<AdminMapper, Admin> implements
                 .token(accessToken)
                 .refreshToken(refreshToken)
                 .expiresIn(jwtProperties.getAdminAccessTtl() / 1000)
+                .build();
+    }
+
+    /**
+     * 获取当前登录管理员信息，仅返回基本信息不含令牌。
+     */
+    @Override
+    public AdminLoginVO getAdminInfo() {
+        Long adminId = com.ikeu.common.context.BaseContext.getCurrentId();
+        Admin admin = getById(adminId);
+        if (admin == null || Objects.equals(admin.getStatus(), StatusConstant.DISABLE)) {
+            throw new UnauthorizedException(MessageConstant.ACCOUNT_DISABLED_OR_NOT_EXIST);
+        }
+        return AdminLoginVO.builder()
+                .adminId(admin.getId())
+                .username(admin.getUsername())
+                .name(admin.getName())
+                .role(admin.getRole())
                 .build();
     }
 
@@ -199,18 +230,7 @@ public class AdminServiceImpl extends ServiceImpl<AdminMapper, Admin> implements
      */
     @Override
     public PageResult<UserInfoVO> listUsers(Integer status, Integer isCertify, String keyword, int page, int size) {
-        LambdaQueryWrapper<User> wrapper = new LambdaQueryWrapper<>();
-        wrapper.eq(status != null, User::getStatus, status)
-                .eq(isCertify != null, User::getIsCertify, isCertify)
-                .and(keyword != null && !keyword.isBlank(), w -> w
-                        .like(User::getUsername, keyword)
-                        .or()
-                        .like(User::getPhone, keyword)
-                        .or()
-                        .like(User::getNickname, keyword))
-                .orderByDesc(User::getCreatedAt);
-
-        Page<User> p = userMapper.selectPage(new Page<>(page, size), wrapper);
+        Page<User> p = userMapper.selectUsersWithKeyword(new Page<>(page, size), status, isCertify, keyword);
         List<UserInfoVO> records = p.getRecords().stream()
                 .map(u -> BeanUtil.copyProperties(u, UserInfoVO.class))
                 .collect(Collectors.toList());
@@ -258,15 +278,6 @@ public class AdminServiceImpl extends ServiceImpl<AdminMapper, Admin> implements
         profile.setUpdatedAt(LocalDateTime.now());
         runnerProfileMapper.updateById(profile);
 
-        // 审批通过时同步更新 user.is_certify，保持两列数据一致
-        if (StatusConstant.CERTIFY_APPROVED.equals(verifyStatus)) {
-            User runnerUser = userMapper.selectById(profile.getUserId());
-            if (runnerUser != null) {
-                runnerUser.setIsCertify(StatusConstant.CERTIFY_APPROVED);
-                userMapper.updateById(runnerUser);
-            }
-        }
-
         log.info("管理员审核跑腿员 {} 结果为 {}", runnerProfileId, verifyStatus);
     }
 
@@ -299,7 +310,13 @@ public class AdminServiceImpl extends ServiceImpl<AdminMapper, Admin> implements
     public UserInfoVO getUserDetail(Long userId) {
         User user = userMapper.selectById(userId);
         if (user == null) throw new NotFoundException(MessageConstant.USER_NOT_EXIST);
-        return BeanUtil.copyProperties(user, UserInfoVO.class);
+        UserInfoVO vo = BeanUtil.copyProperties(user, UserInfoVO.class);
+        RunnerProfile rp = runnerProfileMapper.selectOne(
+                new LambdaQueryWrapper<RunnerProfile>().eq(RunnerProfile::getUserId, userId));
+        if (rp != null) {
+            vo.setVerifyStatus(rp.getVerifyStatus());
+        }
+        return vo;
     }
 
     @Override
@@ -308,14 +325,8 @@ public class AdminServiceImpl extends ServiceImpl<AdminMapper, Admin> implements
         if (rp == null) throw new NotFoundException(MessageConstant.RUNNER_NOT_EXIST);
         User u = userMapper.selectById(rp.getUserId());
 
-        // 累计收入：查询交易记录中 type=2（跑腿收入）的总额
-        BigDecimal totalIncome = transactionRecordMapper.selectList(
-                new LambdaQueryWrapper<TransactionRecord>()
-                        .eq(TransactionRecord::getUserId, rp.getUserId())
-                        .eq(TransactionRecord::getType, 2))
-                .stream()
-                .map(TransactionRecord::getAmount)
-                .reduce(BigDecimal.ZERO, BigDecimal::add);
+        // 累计收入：数据库侧 SUM 聚合，避免全字段拉取
+        BigDecimal totalIncome = transactionRecordMapper.sumIncomeByUserId(rp.getUserId());
 
         return RunnerManageVO.builder()
                 .profileId(rp.getId())
@@ -332,7 +343,7 @@ public class AdminServiceImpl extends ServiceImpl<AdminMapper, Admin> implements
                 .currentOrders(rp.getCurrentOrders())
                 .maxConcurrentOrders(rp.getMaxConcurrentOrders())
                 .isBanned(rp.getIsBanned())
-                .totalIncome(totalIncome)
+                .totalEarnings(totalIncome)
                 .build();
     }
 
@@ -380,6 +391,7 @@ public class AdminServiceImpl extends ServiceImpl<AdminMapper, Admin> implements
             vo.setPublishTime(task.getCreatedAt());
             User pub = publisherMap.get(task.getPublisherId());
             vo.setPublisherNickname(pub != null ? pub.getNickname() : "");
+            vo.setPublisherUsername(pub != null ? pub.getUsername() : "");
             vo.setPublisherAvatar(pub != null ? pub.getAvatarUrl() : "");
             vo.setImageUrls(task.getImageUrls() != null
                     ? JSONUtil.toList(task.getImageUrls(), String.class) : Collections.emptyList());
@@ -428,6 +440,9 @@ public class AdminServiceImpl extends ServiceImpl<AdminMapper, Admin> implements
         // 任务分类占比
         List<DashboardVO.CategoryPie> taskCategories = buildTaskCategories();
 
+        // 订单状态分布
+        List<DashboardVO.CategoryPie> orderStatusDistribution = buildOrderStatusDistribution();
+
         return DashboardVO.builder()
                 .userCount(userCount).taskCount(taskCount)
                 .orderCount(orderCount).runnerCount(runnerCount)
@@ -436,6 +451,7 @@ public class AdminServiceImpl extends ServiceImpl<AdminMapper, Admin> implements
                 .todayNewTasks(todayNewTasks).todayCompletedOrders(todayCompletedOrders)
                 .userTrend(userTrend).revenueTrend(revenueTrend)
                 .taskCategories(taskCategories)
+                .orderStatusDistribution(orderStatusDistribution)
                 .build();
     }
 
@@ -487,6 +503,62 @@ public class AdminServiceImpl extends ServiceImpl<AdminMapper, Admin> implements
         }).collect(Collectors.toList());
     }
 
+    private static final String[] ORDER_STATUS_LABELS = {"待取货", "配送中", "待确认", "已完成", "已取消"};
+
+    private List<DashboardVO.CategoryPie> buildOrderStatusDistribution() {
+        List<DashboardVO.CategoryPie> result = new ArrayList<>();
+        for (int i = 1; i <= 5; i++) {
+            Long count = taskOrderMapper.selectCount(
+                    new LambdaQueryWrapper<TaskOrder>().eq(TaskOrder::getStatus, i)
+                            .eq(TaskOrder::getIsDeleted, 0));
+            result.add(DashboardVO.CategoryPie.builder()
+                    .name(ORDER_STATUS_LABELS[i - 1]).value(count).build());
+        }
+        return result;
+    }
+
+    /**
+     * 获取任务详情（管理端），不脱敏。
+     */
+    @Override
+    public TaskDetailVO getTaskDetail(Long taskId) {
+        Task task = taskMapper.selectById(taskId);
+        if (task == null) throw new NotFoundException(MessageConstant.TASK_NOT_EXIST);
+        User publisher = userMapper.selectById(task.getPublisherId());
+
+        return TaskDetailVO.builder()
+                .taskId(task.getId())
+                .taskNo(task.getTaskNo())
+                .type(task.getType())
+                .subType(task.getSubType())
+                .taskSpecs(task.getTaskSpecs())
+                .publicDesc(task.getPublicDesc())
+                .privateNote(task.getPrivateNote())
+                .reward(task.getReward())
+                .pickupAddress(task.getPickupAddress())
+                .pickupLng(task.getPickupLng())
+                .pickupLat(task.getPickupLat())
+                .deliveryAddress(task.getDeliveryAddress())
+                .deliveryLng(task.getDeliveryLng())
+                .deliveryLat(task.getDeliveryLat())
+                .expireTime(task.getExpireTime())
+                .publishTime(task.getCreatedAt())
+                .publisherNickname(publisher != null ? publisher.getNickname() : "")
+                .publisherUsername(publisher != null ? publisher.getUsername() : "")
+                .publisherAvatar(publisher != null ? publisher.getAvatarUrl() : "")
+                .imageUrls(task.getImageUrls() != null
+                        ? JSONUtil.toList(task.getImageUrls(), String.class) : Collections.emptyList())
+                .pickupCode(task.getPickupCode())
+                .hasPickupCode(task.getPickupCode() != null && !task.getPickupCode().isBlank())
+                .requireSex(task.getRequireSex())
+                .contactName(task.getContactName())
+                .contactPhone(task.getContactPhone())
+                .status(task.getStatus())
+                .cancelReason(task.getCancelReason())
+                .cancelTime(task.getUpdatedAt())
+                .build();
+    }
+
     /**
      * 强制更新任务状态方法
      *  逻辑：直接更新任务状态为指定值，用于管理员手动调整，清除仪表盘缓存
@@ -500,10 +572,11 @@ public class AdminServiceImpl extends ServiceImpl<AdminMapper, Admin> implements
     public void updateTaskStatus(Long taskId, Integer status) {
         Task task = taskMapper.selectById(taskId);
         if (task == null) throw new NotFoundException(MessageConstant.TASK_NOT_EXIST);
+        com.ikeu.common.enums.TaskStateMachine.validate(task.getStatus(), status, "任务");
         task.setStatus(status);
         task.setUpdatedAt(LocalDateTime.now());
         taskMapper.updateById(task);
-        log.info("管理员强制更新任务 {} 状态为 {}", taskId, status);
+        log.info("管理员强制更新任务 {} 状态为 {} → {}", taskId, task.getStatus(), status);
     }
 
     /**
@@ -556,10 +629,117 @@ public class AdminServiceImpl extends ServiceImpl<AdminMapper, Admin> implements
                     .pickupTime(order.getPickupTime())
                     .deliverTime(order.getDeliverTime())
                     .confirmTime(order.getConfirmTime())
+                    .expectFinishTime(order.getExpectFinishTime())
                     .build();
         }).collect(Collectors.toList());
 
         return new PageResult<>(p.getTotal(), records);
+    }
+
+    /**
+     * 获取订单详情方法
+     *  逻辑：查询订单及关联的任务、发布者、跑腿员信息，构建完整的 OrderDetailVO
+     *
+     * @param orderId 订单ID
+     * @return OrderDetailVO 订单详情
+     */
+    @Override
+    public OrderDetailVO getOrderDetail(Long orderId) {
+        TaskOrder order = taskOrderMapper.selectById(orderId);
+        if (order == null) throw new NotFoundException(MessageConstant.ORDER_NOT_EXIST);
+
+        Task task = taskMapper.selectById(order.getTaskId());
+        if (task == null) throw new NotFoundException(MessageConstant.TASK_NOT_EXIST);
+
+        User publisher = userMapper.selectById(task.getPublisherId());
+        User runner = userMapper.selectById(order.getRunnerId());
+
+        return OrderDetailVO.builder()
+                .orderId(order.getId())
+                .taskId(task.getId())
+                .taskNo(task.getTaskNo())
+                .type(task.getType())
+                .subType(task.getSubType())
+                .taskSpecs(task.getTaskSpecs())
+                .publicDesc(task.getPublicDesc())
+                .privateNote(task.getPrivateNote())
+                .reward(task.getReward())
+                .orderStatus(order.getStatus())
+                .pickupAddress(task.getPickupAddress())
+                .deliveryAddress(task.getDeliveryAddress())
+                .pickupCode(task.getPickupCode())
+                .imageUrls(task.getImageUrls() != null
+                        ? JSONUtil.toList(task.getImageUrls(), String.class) : Collections.emptyList())
+                .publisherId(task.getPublisherId())
+                .runnerId(order.getRunnerId())
+                .contactName(task.getContactName())
+                .contactPhone(task.getContactPhone())
+                .publisherPhone(publisher != null ? publisher.getPhone() : "")
+                .runnerPhone(runner != null ? runner.getPhone() : "")
+                .publisherAvatar(publisher != null ? publisher.getAvatarUrl() : "")
+                .runnerAvatar(runner != null ? runner.getAvatarUrl() : "")
+                .publisherNickname(publisher != null ? publisher.getNickname() : "")
+                .publisherUsername(publisher != null ? publisher.getUsername() : "")
+                .runnerNickname(runner != null ? runner.getNickname() : "")
+                .runnerUsername(runner != null ? runner.getUsername() : "")
+                .acceptTime(order.getAcceptTime())
+                .pickupTime(order.getPickupTime())
+                .deliverTime(order.getDeliverTime())
+                .confirmTime(order.getConfirmTime())
+                .expectFinishTime(order.getExpectFinishTime())
+                .pickupProofImgs(order.getPickupProofImgs() != null
+                        ? JSONUtil.toList(order.getPickupProofImgs(), String.class) : Collections.emptyList())
+                .deliverProofImgs(order.getDeliverProofImgs() != null
+                        ? JSONUtil.toList(order.getDeliverProofImgs(), String.class) : Collections.emptyList())
+                .cancelReason(order.getCancelReason())
+                .cancelTime(order.getStatus().equals(StatusConstant.ORDER_CANCELLED) ? order.getConfirmTime() : null)
+                .build();
+    }
+
+    /**
+     * 强制更新订单状态方法
+     *  逻辑：使用 OrderStateMachine 校验状态转换合法性后更新订单状态，
+     *  同时同步更新关联任务状态，清除仪表盘缓存
+     *
+     * @param orderId 订单ID
+     * @param status 新状态值
+     */
+    @Override
+    @Transactional
+    @CacheEvict(value = RedisConstant.CACHE_DASHBOARD, allEntries = true)
+    public void updateOrderStatus(Long orderId, Integer status) {
+        TaskOrder order = taskOrderMapper.selectById(orderId);
+        if (order == null) throw new NotFoundException(MessageConstant.ORDER_NOT_EXIST);
+        Task task = taskMapper.selectById(order.getTaskId());
+
+        OrderStateMachine.validate(order.getStatus(), status, "订单");
+
+        LocalDateTime now = LocalDateTime.now();
+        order.setStatus(status);
+        if (status.equals(StatusConstant.ORDER_COMPLETED)) order.setConfirmTime(now);
+        if (status.equals(StatusConstant.ORDER_CANCELLED)) order.setConfirmTime(now);
+        taskOrderMapper.updateById(order);
+
+        // 同步任务状态
+        if (task != null) {
+            Integer taskStatus = mapOrderStatusToTaskStatus(status);
+            if (taskStatus != null) {
+                task.setStatus(taskStatus);
+                task.setUpdatedAt(now);
+                taskMapper.updateById(task);
+            }
+        }
+
+        log.info("管理员强制更新订单 {} 状态为 {} → {}", orderId, order.getStatus(), status);
+    }
+
+    private Integer mapOrderStatusToTaskStatus(Integer orderStatus) {
+        if (orderStatus.equals(StatusConstant.ORDER_WAIT_PICKUP)) return StatusConstant.TASK_ACCEPTED;
+        if (orderStatus.equals(StatusConstant.ORDER_DELIVERING)) return StatusConstant.TASK_DELIVERING;
+        if (orderStatus.equals(StatusConstant.ORDER_WAIT_CONFIRM)) return StatusConstant.TASK_WAIT_CONFIRM;
+        if (orderStatus.equals(StatusConstant.ORDER_COMPLETED)) return StatusConstant.TASK_COMPLETED;
+        if (orderStatus.equals(StatusConstant.ORDER_CANCELLED)) return StatusConstant.TASK_CANCELLED;
+        return null;
     }
 
     /**
@@ -585,6 +765,13 @@ public class AdminServiceImpl extends ServiceImpl<AdminMapper, Admin> implements
         List<User> users = userMapper.selectBatchIds(userIds);
         Map<Long, User> userMap = users.stream().collect(Collectors.toMap(User::getId, u -> u));
 
+        // 批量查询累计收入：数据库侧 GROUP BY SUM，避免全字段拉取到内存
+        Map<Long, BigDecimal> incomeMap = transactionRecordMapper.sumIncomeByUserIds(userIds)
+                .stream()
+                .collect(Collectors.toMap(
+                        row -> (Long) row.get("user_id"),
+                        row -> (BigDecimal) row.get("total_income")));
+
         List<RunnerManageVO> records = p.getRecords().stream().map(rp -> {
             User u = userMap.get(rp.getUserId());
             return RunnerManageVO.builder()
@@ -602,6 +789,7 @@ public class AdminServiceImpl extends ServiceImpl<AdminMapper, Admin> implements
                     .currentOrders(rp.getCurrentOrders())
                     .isBanned(rp.getIsBanned())
                     .maxConcurrentOrders(rp.getMaxConcurrentOrders())
+                    .totalEarnings(incomeMap.getOrDefault(rp.getUserId(), BigDecimal.ZERO))
                     .build();
         }).collect(Collectors.toList());
 

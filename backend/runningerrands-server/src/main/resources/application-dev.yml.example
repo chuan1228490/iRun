@@ -3,33 +3,33 @@ spring:
   # MySQL数据库连接池
   datasource:
     driver-class-name: com.mysql.cj.jdbc.Driver
-    url: jdbc:mysql://localhost:3306/dorm2dorm?useUnicode=true&characterEncoding=UTF-8&serverTimezone=GMT%2B8
+    url: <your-db-url>
     username: <your-db-username>
     password: <your-db-password>
-    hikari:
-      maximum-pool-size: 10
-      minimum-idle: 5
+    # hikari:
+      # maximum-pool-size: 10
+      # minimum-idle: 5
   # Redis数据库连接池
   data:
     redis:
-      host: localhost
+      host: <your-redis-host>
       port: 6379
-      database: 1
-      timeout: 3000ms
-      lettuce:
-        pool:
-          max-active: 8
-          max-idle: 8
-          min-idle: 0
+      database: <your-database>
+      # timeout: 3000ms
+      # lettuce:
+        # pool:
+          # max-active: 8
+          # max-idle: 8
+          # min-idle: 0
 
   # 热部署
-  devtools:
-    restart:
-      enabled: true
-      additional-paths: src/main/java
+  # devtools:
+    # restart:
+      # enabled: true
+      # additional-paths: src/main/java
 
 # 项目自定义配置
-dorm2dorm:
+runningerrands:
   # 阿里云OSS
   alioss:
     access-key-id: <your-aliyun-access-key-id>

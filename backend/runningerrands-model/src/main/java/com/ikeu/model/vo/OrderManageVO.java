@@ -58,4 +58,7 @@ public class OrderManageVO implements Serializable {
 
     @Schema(description = "确认完成时间")
     private LocalDateTime confirmTime;
+
+    @Schema(description = "预计送达时间")
+    private LocalDateTime expectFinishTime;
 }

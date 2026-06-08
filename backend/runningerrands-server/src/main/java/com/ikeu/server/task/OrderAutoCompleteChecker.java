@@ -72,12 +72,22 @@ public class OrderAutoCompleteChecker {
             );
 
             for (TaskOrder order : staleOrders) {
-                Task task = taskMapper.selectById(order.getTaskId());
-                if (task == null || !task.getStatus().equals(StatusConstant.TASK_WAIT_CONFIRM)) {
-                    continue;
-                }
-
+                // 逐订单加锁，防止与手动 confirmComplete 并发
+                RLock orderLock = redissonClient.getLock(RedisConstant.ORDER_LOCK_KEY + order.getTaskId());
                 try {
+                    if (!orderLock.tryLock(0, 10, TimeUnit.SECONDS)) {
+                        continue;
+                    }
+                    // 锁内重查订单状态
+                    order = orderMapper.selectById(order.getId());
+                    if (order == null || !order.getStatus().equals(StatusConstant.ORDER_WAIT_CONFIRM)) {
+                        continue;
+                    }
+                    Task task = taskMapper.selectById(order.getTaskId());
+                    if (task == null || !task.getStatus().equals(StatusConstant.TASK_WAIT_CONFIRM)) {
+                        continue;
+                    }
+
                     LocalDateTime now = LocalDateTime.now();
                     order.setConfirmTime(now);
                     order.setStatus(StatusConstant.ORDER_COMPLETED);
@@ -101,8 +111,14 @@ public class OrderAutoCompleteChecker {
                             "您配送的任务 " + task.getTaskNo() + " 已自动确认完成，报酬已到账", order.getId());
 
                     log.info("订单 {} 24h自动结算完成，报酬 {} 支付给跑腿员 {}", order.getId(), task.getReward(), order.getRunnerId());
+                } catch (InterruptedException e) {
+                    Thread.currentThread().interrupt();
                 } catch (Exception e) {
                     log.error("处理自动结算订单 {} 失败", order.getId(), e);
+                } finally {
+                    if (orderLock.isHeldByCurrentThread()) {
+                        orderLock.unlock();
+                    }
                 }
             }
         } catch (InterruptedException e) {

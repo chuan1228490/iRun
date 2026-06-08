@@ -9,13 +9,16 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.core.io.ClassPathResource;
 import org.springframework.core.io.Resource;
+import org.springframework.http.CacheControl;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
+import java.util.Set;
 import java.util.UUID;
+import java.util.concurrent.TimeUnit;
 
 /**
  * 通用接口，提供文件上传和获取默认头像等功能。
@@ -28,6 +31,11 @@ import java.util.UUID;
 @RequiredArgsConstructor
 public class CommonController {
     private final AliOssUtil aliOssUtil;
+
+    private static final Set<String> ALLOWED_EXTENSIONS = Set.of(
+            ".jpg", ".jpeg", ".png", ".gif", ".webp",
+            ".pdf", ".doc", ".docx", ".xls", ".xlsx", ".ppt", ".pptx", ".txt"
+    );
 
     /**
      * 文件上传至阿里云OSS。
@@ -51,6 +59,9 @@ public class CommonController {
         String suffix = null;
         if (originalFileName != null) {
             suffix = originalFileName.substring(originalFileName.lastIndexOf("."));
+        }
+        if (suffix == null || !ALLOWED_EXTENSIONS.contains(suffix.toLowerCase())) {
+            return Result.error("不支持的文件类型，允许的类型：" + String.join(", ", ALLOWED_EXTENSIONS));
         }
         String fileName = UUID.randomUUID() + suffix;
 
@@ -82,6 +93,7 @@ public class CommonController {
         }
         return ResponseEntity.ok()
                 .contentType(MediaType.IMAGE_JPEG)
+                .cacheControl(CacheControl.maxAge(7, TimeUnit.DAYS).cachePublic())
                 .body(resource);
     }
 }

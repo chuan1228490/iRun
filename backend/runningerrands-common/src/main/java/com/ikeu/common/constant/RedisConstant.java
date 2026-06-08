@@ -14,6 +14,10 @@ public class RedisConstant {
     // ========== 用户相关 ==========
     public static final String USER_INFO_PREFIX = "user:info:";                     // 用户基本信息
     public static final String USER_CERTIFY_CODE = "user:code:";                    // 验证码
+    public static final String USER_LOGIN_FAIL_PREFIX = "user:login:fail:";         // 用户登录失败计数
+    public static final String ADMIN_LOGIN_FAIL_PREFIX = "admin:login:fail:";       // 管理员登录失败计数
+    public static final long LOGIN_LOCK_SECONDS = 900;                              // 登录锁定时间-15分钟
+    public static final int LOGIN_MAX_FAIL_COUNT = 5;                               // 登录最大失败次数
 
     // ========== 订单相关锁 ==========
     public static final String ORDER_LOCK_KEY = "order:accept:";               // Redis分布式锁LockKey
@@ -31,7 +35,8 @@ public class RedisConstant {
 
     // ========== 缓存穿透防护 ==========
     public static final String TASK_NOT_EXIST_PREFIX = "task:notExist:";            // 任务不存在标记前缀
-    public static final Long TASK_NOT_EXIST_TTL = 60L;                              // 任务不存在标记过期时间-60秒
+    public static final String TASK_HALL_NULL_PREFIX = "task:notExist:hall:";       // 任务大厅空结果标记
+    public static final Long TASK_NOT_EXIST_TTL = 60L;                              // 空标记过期时间-60秒
 
     // ========== Spring Cache 缓存名称 ==========
     public static final String CACHE_TASK_HALL = "task:hall";               // 接单大厅列表缓存

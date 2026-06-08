@@ -13,7 +13,7 @@ CREATE TABLE `user`
     `pay_password`    VARCHAR(128)             DEFAULT NULL COMMENT '支付密码',
     `nickname`        VARCHAR(64)              DEFAULT '' COMMENT '用户昵称',
     `avatar_url`      VARCHAR(512)             DEFAULT '' COMMENT '头像URL',
-    `phone`           CHAR(11)                 DEFAULT '' COMMENT '手机号',
+    `phone`           CHAR(11)                 DEFAULT NULL COMMENT '手机号',
     `real_name`       VARCHAR(32)              DEFAULT '' COMMENT '真实姓名',
     `balance`         DECIMAL(10, 2)           DEFAULT 0.00 COMMENT '账户余额（元）',
     `campus`          VARCHAR(32)              DEFAULT '' COMMENT '学院名',
@@ -388,3 +388,25 @@ CREATE TABLE `operation_log`
     KEY `idx_created_at` (`created_at`)
 ) ENGINE = InnoDB
   DEFAULT CHARSET = utf8mb4 COMMENT ='操作日志表';
+
+
+# ========================================== 索引优化补充 ==========================================
+
+-- user表：微信OAuth登录按openid查询
+ALTER TABLE `user`
+    ADD INDEX `idx_openid` (`openid`);
+-- user表：管理端按状态筛选用户
+ALTER TABLE `user`
+    ADD INDEX `idx_status` (`status`);
+
+-- runner_profile表：管理端筛选禁止接单的跑腿员
+ALTER TABLE `runner_profile`
+    ADD INDEX `idx_is_banned` (`is_banned`);
+
+-- transaction_record表：按类型筛选资金流水（如只看提现记录）
+ALTER TABLE `transaction_record`
+    ADD INDEX `idx_user_type_time` (`user_id`, `type`, `created_at`);
+
+-- chat_message表：会话消息分页查询（按时间排序）
+ALTER TABLE `chat_message`
+    ADD INDEX `idx_conversation_time` (`sender_id`, `receiver_id`, `created_at`);

@@ -12,6 +12,11 @@ import org.springframework.web.bind.annotation.*;
 
 import java.time.LocalDateTime;
 
+/**
+ * 管理端资金流水接口，提供所有用户的资金流水列表查询和条件筛选。
+ * @author ikeu
+ * @since 2025/06/01
+ */
 @Tag(name = "管理端-资金流水")
 @RestController
 @RequestMapping("/admin")

@@ -101,7 +101,7 @@ public class UserAddressServiceImpl extends ServiceImpl<UserAddressMapper, UserA
             clearDefaultAddress(userId);
             address.setIsDefault(1);
         } else {
-            address.setIsDefault(addressSaveDTO.getIsDefault());
+            address.setIsDefault(addressSaveDTO.getIsDefault() != null ? addressSaveDTO.getIsDefault() : 0);
         }
 
         updateById(address);

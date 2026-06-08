@@ -1,12 +1,14 @@
 package com.ikeu.server.mapper;
 
 import com.baomidou.mybatisplus.core.mapper.BaseMapper;
+import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.ikeu.model.entity.Task;
 import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Param;
 import org.apache.ibatis.annotations.Select;
 
 import java.math.BigDecimal;
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Map;
 
@@ -78,5 +80,47 @@ public interface TaskMapper extends BaseMapper<Task> {
             "FROM task WHERE status = #{status} AND updated_at >= #{since} " +
             "GROUP BY DATE(updated_at) ORDER BY date")
     List<Map<String, Object>> sumRewardPerDay(@Param("status") Integer status,
-                                              @Param("since") java.time.LocalDateTime since);
+                                              @Param("since") LocalDateTime since);
+
+    /**
+     * 关键词搜索任务，支持按类型和报酬范围筛选。
+     *
+     * <p>仅查询状态为待接单（status=1）且未过期（expire_time &gt; NOW()）的任务，
+     * 按创建时间倒序排列。所有筛选条件均可选，为 null 时跳过对应条件。
+     *
+     * @param page      分页对象
+     * @param keyword   搜索关键词（模糊匹配 public_desc），可为 null
+     * @param type      任务类型，可为 null
+     * @param minReward 最低报酬，可为 null
+     * @param maxReward 最高报酬，可为 null
+     * @return 分页任务列表
+     */
+    Page<Task> searchTasks(Page<Task> page,
+                           @Param("keyword") String keyword,
+                           @Param("type") String type,
+                           @Param("minReward") BigDecimal minReward,
+                           @Param("maxReward") BigDecimal maxReward);
+
+    /**
+     * 多条件筛选任务，支持取件/送达地址模糊匹配、性别要求、报酬范围。
+     *
+     * <p>仅查询状态为待接单（status=1）且未过期（expire_time &gt; NOW()）的任务，
+     * 按创建时间倒序排列。所有筛选条件均可选，为 null 时跳过对应条件。
+     *
+     * @param page            分页对象
+     * @param type            任务类型，可为 null
+     * @param pickupAddress   取件地址（模糊匹配），可为 null
+     * @param deliveryAddress 送达地址（模糊匹配），可为 null
+     * @param requireSex      性别要求，可为 null
+     * @param minReward       最低报酬，可为 null
+     * @param maxReward       最高报酬，可为 null
+     * @return 分页任务列表
+     */
+    Page<Task> filterTasks(Page<Task> page,
+                           @Param("type") String type,
+                           @Param("pickupAddress") String pickupAddress,
+                           @Param("deliveryAddress") String deliveryAddress,
+                           @Param("requireSex") String requireSex,
+                           @Param("minReward") BigDecimal minReward,
+                           @Param("maxReward") BigDecimal maxReward);
 }

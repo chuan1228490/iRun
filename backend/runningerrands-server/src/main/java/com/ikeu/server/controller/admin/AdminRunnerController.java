@@ -12,6 +12,11 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.*;
 
+/**
+ * 管理端跑腿员管理接口，提供跑腿员列表查询、详情查看、认证审核和禁止接单功能。
+ * @author ikeu
+ * @since 2025/06/01
+ */
 @Tag(name = "管理端-跑腿员管理")
 @RestController
 @RequestMapping("/admin")
@@ -32,7 +37,7 @@ public class AdminRunnerController {
     }
 
     @RequireRole({1, 2})
-    @OperationLog(module = "跑腿员管理", action = "审核认证", description = "审核跑腿员档案 #profileId，结果 #verifyStatus")
+    @OperationLog(module = "跑腿员管理", action = "审核认证", description = "审核跑腿员档案 #profileId → #verifyStatus")
     @Operation(summary = "审核跑腿员认证")
     @PutMapping("/reviews/{profileId}")
     public Result<Void> reviewCertification(

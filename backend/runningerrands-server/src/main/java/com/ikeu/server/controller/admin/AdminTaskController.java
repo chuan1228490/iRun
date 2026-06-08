@@ -3,6 +3,7 @@ package com.ikeu.server.controller.admin;
 import com.ikeu.common.constant.MessageConstant;
 import com.ikeu.common.result.PageResult;
 import com.ikeu.common.result.Result;
+import com.ikeu.model.vo.TaskDetailVO;
 import com.ikeu.model.vo.TaskListVO;
 import com.ikeu.server.annotation.OperationLog;
 import com.ikeu.server.annotation.RequireRole;
@@ -12,6 +13,11 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.*;
 
+/**
+ * 管理端任务管理接口，提供任务列表查询、详情查看和强制更新状态功能。
+ * @author ikeu
+ * @since 2025/06/02
+ */
 @Tag(name = "管理端-任务管理")
 @RestController
 @RequestMapping("/admin")
@@ -30,8 +36,15 @@ public class AdminTaskController {
         return Result.success(adminService.listAllTasks(status, page, size));
     }
 
+    @RequireRole({1, 2})
+    @Operation(summary = "任务详情")
+    @GetMapping("/tasks/{taskId}")
+    public Result<TaskDetailVO> getTaskDetail(@PathVariable Long taskId) {
+        return Result.success(adminService.getTaskDetail(taskId));
+    }
+
     @RequireRole({1})
-    @OperationLog(module = "任务管理", action = "修改状态", description = "强制更新任务 #taskId 状态为 #status")
+    @OperationLog(module = "任务管理", action = "修改状态", description = "任务 #taskId → #status")
     @Operation(summary = "强制更新任务状态")
     @PutMapping("/tasks/{taskId}/status")
     public Result<Void> updateTaskStatus(@PathVariable Long taskId,

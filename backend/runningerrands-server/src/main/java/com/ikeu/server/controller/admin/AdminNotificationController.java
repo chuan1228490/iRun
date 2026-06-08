@@ -19,6 +19,11 @@ import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 
+/**
+ * 管理端消息管理接口，提供向指定用户发送通知和全站广播通知功能。
+ * @author ikeu
+ * @since 2025/06/02
+ * */
 @Slf4j
 @Tag(name = "管理端-消息管理")
 @RestController
@@ -35,7 +40,16 @@ public class AdminNotificationController {
     @PostMapping("/notifications/send")
     public Result<Void> send(@Valid @RequestBody NotificationSendDTO dto) {
         for (Long userId : dto.getUserIds()) {
-            notificationService.sendNotification(userId, dto.getType(), dto.getTitle(), dto.getContent(), null);
+            try {
+                User user = userMapper.selectById(userId);
+                if (user == null || !user.getStatus().equals(1)) {
+                    log.warn("用户 {} 不存在或已禁用，跳过发送通知", userId);
+                    continue;
+                }
+                notificationService.sendNotification(userId, dto.getType(), dto.getTitle(), dto.getContent(), null);
+            } catch (Exception e) {
+                log.error("向用户 {} 发送通知失败", userId, e);
+            }
         }
         log.info("管理员向 {} 个用户发送了通知", dto.getUserIds().size());
         return Result.success(MessageConstant.SUCCESS);
@@ -48,12 +62,14 @@ public class AdminNotificationController {
     public Result<Void> broadcast(@Valid @RequestBody NotificationBroadcastDTO dto) {
         List<User> users = userMapper.selectList(
                 new LambdaQueryWrapper<User>().eq(User::getStatus, 1));
-        int count = 0;
         for (User user : users) {
-            notificationService.sendNotification(user.getId(), dto.getType(), dto.getTitle(), dto.getContent(), null);
-            count++;
+            try {
+                notificationService.sendNotification(user.getId(), dto.getType(), dto.getTitle(), dto.getContent(), null);
+            } catch (Exception e) {
+                log.error("向用户 {} 广播通知失败", user.getId(), e);
+            }
         }
-        log.info("管理员向 {} 个用户广播了通知", count);
+        log.info("管理员向 {} 个用户广播了通知", users.size());
         return Result.success(MessageConstant.SUCCESS);
     }
 }

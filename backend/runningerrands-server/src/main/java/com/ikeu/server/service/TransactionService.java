@@ -10,7 +10,7 @@ import java.time.LocalDateTime;
 /**
  * 资金流水服务接口，提供流水记录、用户查询和管理员查询等功能。
  * @author ikeu
- * @since 2026/05/14
+ * @since 2026/05/22
  */
 public interface TransactionService {
 

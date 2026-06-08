@@ -16,6 +16,7 @@ import com.ikeu.model.vo.RunnerInfoVO;
 import com.ikeu.model.vo.RunnerRankingVO;
 import com.ikeu.model.vo.RunnerPerformanceVO;
 import com.ikeu.server.mapper.RunnerProfileMapper;
+import com.ikeu.server.mapper.TaskOrderMapper;
 import com.ikeu.server.mapper.TransactionRecordMapper;
 import com.ikeu.server.mapper.UserMapper;
 import com.ikeu.server.service.RunnerProfileService;
@@ -43,6 +44,7 @@ public class RunnerProfileServiceImpl extends ServiceImpl<RunnerProfileMapper, R
     private final RunnerProfileMapper runnerProfileMapper;
     private final UserMapper userMapper;
     private final TransactionRecordMapper transactionRecordMapper;
+    private final TaskOrderMapper taskOrderMapper;
 
     /**
      * 根据用户ID获取配送员信息方法
@@ -220,6 +222,13 @@ public class RunnerProfileServiceImpl extends ServiceImpl<RunnerProfileMapper, R
         List<User> users = userMapper.selectBatchIds(userIds);
         Map<Long, User> userMap = users.stream().collect(Collectors.toMap(User::getId, u -> u));
 
+        // 批量查询累计收入：数据库侧 GROUP BY SUM，避免全字段拉取到内存
+        Map<Long, BigDecimal> incomeMap = transactionRecordMapper.sumIncomeByUserIds(userIds)
+                .stream()
+                .collect(Collectors.toMap(
+                        row -> (Long) row.get("user_id"),
+                        row -> (BigDecimal) row.get("total_income")));
+
         List<RunnerRankingVO> list = new ArrayList<>();
         int rank = 1;
         for (RunnerProfile p : profiles) {
@@ -236,7 +245,7 @@ public class RunnerProfileServiceImpl extends ServiceImpl<RunnerProfileMapper, R
                     .successOrders(p.getSuccessOrders())
                     .completionRate(Math.round(completionRate * 10.0) / 10.0)
                     .avgRating(p.getAvgRating() != null ? p.getAvgRating().doubleValue() : 5.0)
-                    .totalEarnings(BigDecimal.ZERO)
+                    .totalEarnings(incomeMap.getOrDefault(p.getUserId(), BigDecimal.ZERO))
                     .build());
         }
 
@@ -268,16 +277,25 @@ public class RunnerProfileServiceImpl extends ServiceImpl<RunnerProfileMapper, R
 
         User user = userMapper.selectById(runnerId);
 
+        // 累计跑腿收入：数据库侧 SUM 聚合
+        BigDecimal totalEarnings = transactionRecordMapper.sumIncomeByUserId(runnerId);
+
+        // 准时率：数据库侧 COUNT + CASE WHEN 聚合
+        Map<String, Object> onTimeStats = taskOrderMapper.countCompletedOnTime(runnerId);
+        long total = ((Number) onTimeStats.get("total")).longValue();
+        long onTime = ((Number) onTimeStats.get("on_time")).longValue();
+        double onTimeRate = total > 0 ? (double) onTime / total * 100 : 0;
+
         return RunnerPerformanceVO.builder()
                 .userId(runnerId)
                 .totalOrders(profile.getTotalOrders())
                 .successOrders(profile.getSuccessOrders())
                 .completionRate(Math.round(completionRate * 10.0) / 10.0)
-                .onTimeRate(0)
+                .onTimeRate(Math.round(onTimeRate * 10.0) / 10.0)
                 .currentOrders(profile.getCurrentOrders())
                 .avgRating(profile.getAvgRating() != null ? profile.getAvgRating().doubleValue() : 5.0)
                 .creditScore(profile.getCreditScore())
-                .totalEarnings(BigDecimal.ZERO)
+                .totalEarnings(totalEarnings)
                 .nickname(user != null ? user.getNickname() : "")
                 .avatarUrl(user != null ? user.getAvatarUrl() : "")
                 .sex(user != null ? user.getSex() : "")

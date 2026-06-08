@@ -119,7 +119,7 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements Us
             log.error("短信发送异常", e);
             throw new BusinessException(MessageConstant.CODE_SEND_FAILED);
         }
-        log.info("向手机号 {} 发送验证码：{}", phone, code);
+        log.info("向手机号 {} 发送了验证码", phone);
     }
 
     /**
@@ -200,13 +200,27 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements Us
                 throw new UnauthorizedException(MessageConstant.LOGIN_FAILED);
             }
             String account = userLoginDTO.getUsername();
+
+            // 登录失败次数检查（防暴力破解）
+            String failKey = RedisConstant.USER_LOGIN_FAIL_PREFIX + account;
+            String failCount = redisTemplate.opsForValue().get(failKey);
+            if (failCount != null && Integer.parseInt(failCount) >= RedisConstant.LOGIN_MAX_FAIL_COUNT) {
+                throw new BusinessException("登录失败次数过多，请15分钟后再试");
+            }
+
             user = lambdaQuery().eq(User::getUsername, account).one();
             if (user == null) {
                 user = lambdaQuery().eq(User::getPhone, account).one();
             }
             if (user == null || !passwordEncoder.matches(userLoginDTO.getPassword(), user.getPassword())) {
+                // 记录失败次数
+                redisTemplate.opsForValue().increment(failKey);
+                redisTemplate.expire(failKey, RedisConstant.LOGIN_LOCK_SECONDS, TimeUnit.SECONDS);
                 throw new UnauthorizedException(MessageConstant.INVALID_CREDENTIALS);
             }
+
+            // 登录成功后清除失败计数
+            redisTemplate.delete(failKey);
         } else if (userLoginDTO.getLoginType() == 2) {
             // 手机号验证码登录
             if (userLoginDTO.getPhone() == null || userLoginDTO.getCode() == null) {
@@ -560,9 +574,28 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements Us
         if (user.getPayPassword() != null) {
             throw new BusinessException(MessageConstant.PAY_PASSWORD_ALREADY_SET);
         }
-        if (!passwordEncoder.matches(dto.getLoginPassword(), user.getPassword())) {
-            throw new BusinessException(MessageConstant.INVALID_CREDENTIALS);
+
+        boolean isWeChatUser = Objects.equals(user.getRegisterType(), 2);
+
+        if (isWeChatUser && dto.getCode() != null && !dto.getCode().isBlank()) {
+            if (user.getPhone() == null || user.getPhone().isBlank()) {
+                throw new BusinessException("请先绑定手机号");
+            }
+            String cachedCode = redisTemplate.opsForValue()
+                    .get(RedisConstant.USER_CERTIFY_CODE + user.getPhone());
+            if (cachedCode == null || !cachedCode.equals(dto.getCode())) {
+                throw new BusinessException(MessageConstant.CODE_ERROR);
+            }
+            redisTemplate.delete(RedisConstant.USER_CERTIFY_CODE + user.getPhone());
+        } else {
+            if (dto.getLoginPassword() == null || dto.getLoginPassword().isBlank()) {
+                throw new BusinessException("登录密码或验证码不能为空");
+            }
+            if (!passwordEncoder.matches(dto.getLoginPassword(), user.getPassword())) {
+                throw new BusinessException(MessageConstant.INVALID_CREDENTIALS);
+            }
         }
+
         user.setPayPassword(passwordEncoder.encode(dto.getPayPassword()));
         updateById(user);
         log.info("用户 {} 设置了支付密码", userId);

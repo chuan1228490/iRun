@@ -13,7 +13,7 @@ import org.springframework.web.bind.annotation.*;
 /**
  * 站内信通知接口，提供通知列表查询、单条/全部标记已读、删除通知等功能。
  * @author ikeu
- * @since 2025/05/21
+ * @since 2025/05/23
  */
 @Tag(name = "用户端 - 消息通知相关接口", description = "站内信查看与管理")
 @RestController
@@ -75,6 +75,18 @@ public class NotificationController {
         Long userId = BaseContext.getCurrentId();
         notificationService.markAllAsRead(userId);
         return Result.success();
+    }
+
+    /**
+     * 获取当前用户的未读通知数量。
+     *
+     * @return 未读通知数量
+     */
+    @Operation(summary = "获取未读通知数量")
+    @GetMapping("/unread-count")
+    public Result<Long> unreadCount() {
+        Long userId = BaseContext.getCurrentId();
+        return Result.success(notificationService.getUnreadCount(userId));
     }
 
     /**

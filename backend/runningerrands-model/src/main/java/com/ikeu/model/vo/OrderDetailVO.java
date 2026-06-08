@@ -84,11 +84,17 @@ public class OrderDetailVO implements Serializable {
     @Schema(description = "接单人昵称")
     private String runnerNickname;
 
+    @Schema(description = "接单人用户名")
+    private String runnerUsername;
+
     @Schema(description = "接单人头像URL")
     private String runnerAvatar;
 
     @Schema(description = "发布人昵称")
     private String publisherNickname;
+
+    @Schema(description = "发布人用户名")
+    private String publisherUsername;
 
     @Schema(description = "接单时间")
     private LocalDateTime acceptTime;

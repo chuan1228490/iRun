@@ -8,6 +8,7 @@ import com.ikeu.common.exception.UnauthorizedException;
 import com.ikeu.common.result.Result;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
+import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
@@ -73,6 +74,20 @@ public class GlobalExceptionHandler {
     public Result<Void> handleForbidden(ForbiddenException e) {
         log.warn("操作被禁止: {}", e.getMessage());
         return Result.error(e.getCode(), e.getMessage());
+    }
+
+    /**
+     * 处理方法参数校验失败异常，返回 HTTP 400。
+     *
+     * <p>当 {@code @Valid} 或 {@code @Validated} 标注的 DTO 校验不通过时由 Spring 抛出。
+     */
+    @ExceptionHandler(MethodArgumentNotValidException.class)
+    @ResponseStatus(HttpStatus.BAD_REQUEST)
+    public Result<Void> handleValidation(MethodArgumentNotValidException e) {
+        String msg = e.getBindingResult().getFieldErrors().stream()
+                .map(err -> err.getField() + ": " + err.getDefaultMessage())
+                .reduce((a, b) -> a + "; " + b).orElse("参数校验失败");
+        return Result.error(msg);
     }
 
     /**

@@ -3,7 +3,6 @@ package com.ikeu.server.config;
 import com.ikeu.server.interceptor.AuthChannelInterceptor;
 import com.ikeu.server.interceptor.JwtHandshakeInterceptor;
 import lombok.RequiredArgsConstructor;
-import lombok.extern.log4j.Log4j;
 import lombok.extern.slf4j.Slf4j;
 import org.jetbrains.annotations.NotNull;
 import org.springframework.context.annotation.Bean;

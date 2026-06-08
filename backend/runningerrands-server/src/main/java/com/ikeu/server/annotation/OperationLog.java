@@ -5,7 +5,7 @@ import java.lang.annotation.*;
 /**
  * 操作日志注解，标记方法需要在执行成功后自动记录操作日志。
  * @author ikeu
- * @since 2026/05/31
+ * @since 2026/06/02
  */
 @Target(ElementType.METHOD)
 @Retention(RetentionPolicy.RUNTIME)

@@ -16,7 +16,7 @@ import java.util.Map;
 /**
  * STOMP 通道拦截器，在消息处理前从 session 中获取 userId 设置到 ThreadLocal。
  * @author ikeu
- * @since 2025/05/21
+ * @since 2025/05/26
  */
 @Slf4j
 @Component

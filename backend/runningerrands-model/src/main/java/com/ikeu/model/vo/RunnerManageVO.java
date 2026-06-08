@@ -58,5 +58,5 @@ public class RunnerManageVO implements Serializable {
     private Integer maxConcurrentOrders;
 
     @Schema(description = "累计收入")
-    private java.math.BigDecimal totalIncome;
+    private java.math.BigDecimal totalEarnings;
 }

@@ -51,19 +51,22 @@ public class HttpClientUtil {
 
             //创建GET请求
             HttpGet httpGet = new HttpGet(uri);
+            httpGet.setConfig(builderRequestConfig());
 
             //发送请求
             response = httpClient.execute(httpGet);
 
             //判断响应状态
-            if(response.getStatusLine().getStatusCode() == 200){
-                result = EntityUtils.toString(response.getEntity(),"UTF-8");
+            int statusCode = response.getStatusLine().getStatusCode();
+            result = EntityUtils.toString(response.getEntity(),"UTF-8");
+            if (statusCode != 200) {
+                // 非 200 也返回响应体，让调用方能看到错误详情
             }
-        }catch (Exception e){
+        } catch (Exception e) {
             e.printStackTrace();
-        }finally {
+        } finally {
             try {
-                response.close();
+                if (response != null) response.close();
                 httpClient.close();
             } catch (IOException e) {
                 e.printStackTrace();
@@ -92,7 +95,7 @@ public class HttpClientUtil {
 
             // 创建参数列表
             if (paramMap != null) {
-                List<NameValuePair> paramList = new ArrayList();
+                List<NameValuePair> paramList = new ArrayList<>();
                 for (Map.Entry<String, String> param : paramMap.entrySet()) {
                     paramList.add(new BasicNameValuePair(param.getKey(), param.getValue()));
                 }
