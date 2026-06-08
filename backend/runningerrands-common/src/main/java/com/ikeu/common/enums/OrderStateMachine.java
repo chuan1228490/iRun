@@ -1,7 +1,7 @@
 package com.ikeu.common.enums;
 
 import com.ikeu.common.constant.StatusConstant;
-import com.ikeu.common.exception.ForbiddenException;
+import com.ikeu.common.exception.BusinessException;
 
 import java.util.Collections;
 import java.util.HashSet;
@@ -41,17 +41,16 @@ public enum OrderStateMachine {
 
     public static void validate(Integer currentStatus, Integer targetStatus, String entityName) {
         if (currentStatus == null || targetStatus == null) {
-            throw new ForbiddenException("状态不能为空");
+            throw new BusinessException("订单状态异常，请刷新后重试");
         }
         for (OrderStateMachine state : values()) {
             if (state.currentStatus == currentStatus) {
                 if (state.allowedNext.contains(targetStatus)) {
                     return;
                 }
-                throw new ForbiddenException(
-                        entityName + " 不允许从状态 " + currentStatus + " 变更为 " + targetStatus);
+                throw new BusinessException("当前订单状态不允许此操作");
             }
         }
-        throw new ForbiddenException(entityName + " 未知状态: " + currentStatus);
+        throw new BusinessException("订单状态异常，请刷新后重试");
     }
 }

@@ -3,6 +3,7 @@ package com.ikeu.server.service.impl;
 import cn.hutool.core.bean.BeanUtil;
 import cn.hutool.core.lang.TypeReference;
 import cn.hutool.core.util.IdUtil;
+import cn.hutool.json.JSONObject;
 import cn.hutool.json.JSONUtil;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
@@ -77,6 +78,22 @@ public class TaskServiceImpl extends ServiceImpl<TaskMapper, Task> implements Ta
     private String getDefaultDeliveryAddress(String subType) {
         if (subType == null || subType.isEmpty()) return null;
         return TaskTypeConstant.DEFAULT_DELIVERY_MAP.get(subType);
+    }
+
+    /**
+     * 合并任务规格JSON与配送费/商品费明细
+     */
+    private String mergeTaskSpecs(String taskSpecs, BigDecimal deliveryFee, BigDecimal productCost) {
+        JSONObject json = (taskSpecs != null && !taskSpecs.isBlank())
+                ? JSONUtil.parseObj(taskSpecs)
+                : JSONUtil.createObj();
+        if (deliveryFee.compareTo(BigDecimal.ZERO) > 0) {
+            json.set("配送费", deliveryFee);
+        }
+        if (productCost.compareTo(BigDecimal.ZERO) > 0) {
+            json.set("预估商品费", productCost);
+        }
+        return json.toString();
     }
 
     /**
@@ -194,8 +211,13 @@ public class TaskServiceImpl extends ServiceImpl<TaskMapper, Task> implements Ta
         if (user == null || Objects.equals(user.getStatus(), StatusConstant.DISABLE)) {
             throw new BusinessException(MessageConstant.USER_NOT_EXIST);
         }
+        // 计算合计支付金额（赏金 + 配送费 + 预估商品费）
+        BigDecimal deliveryFee = taskPublishDTO.getDeliveryFee() != null ? taskPublishDTO.getDeliveryFee() : BigDecimal.ZERO;
+        BigDecimal productCost = taskPublishDTO.getProductCost() != null ? taskPublishDTO.getProductCost() : BigDecimal.ZERO;
+        BigDecimal totalAmount = taskPublishDTO.getReward().add(deliveryFee).add(productCost);
+
         // 校验余额
-        if (user.getBalance().compareTo(taskPublishDTO.getReward()) < 0) {
+        if (user.getBalance().compareTo(totalAmount) < 0) {
             throw new BusinessException(MessageConstant.BALANCE_NOT_ENOUGH);
         }
 
@@ -236,6 +258,9 @@ public class TaskServiceImpl extends ServiceImpl<TaskMapper, Task> implements Ta
 
         Task task = BeanUtil.copyProperties(taskPublishDTO, Task.class);
 
+        // reward 存储合计支付金额（赏金 + 配送费 + 预估商品费）
+        task.setReward(totalAmount);
+
         task.setTaskNo(taskNo);
         task.setPublisherId(userId);
 
@@ -243,9 +268,9 @@ public class TaskServiceImpl extends ServiceImpl<TaskMapper, Task> implements Ta
             task.setSubType(taskPublishDTO.getSubType());
         }
 
-        if (taskPublishDTO.getTaskSpecs() != null) {
-            task.setTaskSpecs(taskPublishDTO.getTaskSpecs());
-        }
+        // 合并 taskSpecs：将 deliveryFee 和 productCost 附加到 JSON 中供前端展示
+        String mergedSpecs = mergeTaskSpecs(taskPublishDTO.getTaskSpecs(), deliveryFee, productCost);
+        task.setTaskSpecs(mergedSpecs);
 
         if (taskPublishDTO.getImageUrls() != null) {
             task.setImageUrls(JSONUtil.toJsonStr(taskPublishDTO.getImageUrls()));
@@ -486,10 +511,20 @@ public class TaskServiceImpl extends ServiceImpl<TaskMapper, Task> implements Ta
             if (!task.getPublisherId().equals(userId)) {
                 throw new BusinessException(MessageConstant.TASK_CANCEL_FAILED);
             }
-            // 已被接单或配送中的任务不允许发布者直接取消，需由配送员先取消订单
+            // 已被接单/配送中 → 不允许发布者直接取消，需由配送员先取消订单
             if (StatusConstant.TASK_ACCEPTED.equals(task.getStatus())
                     || StatusConstant.TASK_DELIVERING.equals(task.getStatus())) {
                 throw new BusinessException(MessageConstant.TASK_CANCEL_NOT_BE_ALLOWED);
+            }
+            // 已完成/已取消/待确认 → 不允许取消
+            if (StatusConstant.TASK_COMPLETED.equals(task.getStatus())) {
+                throw new BusinessException(MessageConstant.TASK_COMPLETED_CANNOT_CANCEL);
+            }
+            if (StatusConstant.TASK_CANCELLED.equals(task.getStatus())) {
+                throw new BusinessException(MessageConstant.TASK_ALREADY_CANCELLED);
+            }
+            if (StatusConstant.TASK_WAIT_CONFIRM.equals(task.getStatus())) {
+                throw new BusinessException(MessageConstant.TASK_WAIT_CONFIRM_CANNOT_CANCEL);
             }
             TaskStateMachine.validate(task.getStatus(), StatusConstant.TASK_CANCELLED, "Task");
             task.setStatus(StatusConstant.TASK_CANCELLED);
