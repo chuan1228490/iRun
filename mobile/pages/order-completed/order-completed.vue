@@ -299,7 +299,6 @@ const ratingTags = ['态度好', '速度快', '包装仔细', '沟通及时', '�
 // 配送员追评
 const publisherReview = ref(null)
 const followUpContent = ref('')
-const myFollowUpDone = ref(false)
 const submittingFollowUp = ref(false)
 const replyingTo = ref(null) // 当前正在回复的评价ID
 const { lock: reviewLock, unlock: reviewUnlock, locked: reviewSubmitting } = useSubmitLock()
@@ -502,18 +501,6 @@ async function loadReviews() {
     if (pubReview) {
       publisherReview.value = pubReview
       reviewSubmitted.value = true
-      // 检查当前用户是否已经追加过反馈（递归检查所有层级）
-      if (pubReview.followUps && pubReview.followUps.length) {
-        const myId = order.value.isOwnerRunner ? order.value.runnerId : order.value.publisherId
-        function hasMyReply(review) {
-          if (String(review.reviewerId) === String(myId)) return true
-          if (review.followUps && review.followUps.length) {
-            return review.followUps.some(f => hasMyReply(f))
-          }
-          return false
-        }
-        myFollowUpDone.value = pubReview.followUps.some(f => hasMyReply(f))
-      }
     }
   } catch (e) { /* ignore */ }
 }
