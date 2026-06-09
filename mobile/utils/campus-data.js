@@ -264,5 +264,6 @@ export function parseMerchantInfoFromSpecs(specs) {
  */
 export function parseExtraFeeFromSpecs(specs) {
   if (!specs || specs.额外费用 == null) return null
-  return Number(specs.额外费用) || null
+  const val = Number(specs.额外费用)
+  return isNaN(val) ? null : val
 }
