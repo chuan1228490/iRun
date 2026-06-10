@@ -95,9 +95,10 @@ cd F:/ikeu_runningerrands/backend
 # ===== 管理端前端 =====
 cd F:/ikeu_runningerrands/admin
 
-npm run dev           # http://localhost:3001 (代理 /api → 8080)
+npm run dev           # http://localhost:3001 (代理后端 API: /api/admin|user/|common|ws → 8080，前端 HMR)
 npx vue-tsc --noEmit  # 类型检查
-npx vite build         # 构建
+npx vite build         # 构建 → dist/
+# 构建后部署到后端: cp -r dist/* ../backend/runningerrands-server/src/main/resources/static/
 
 # ===== 移动端 =====
 # 在 HBuilderX 中打开 mobile/，运行 → 微信小程序

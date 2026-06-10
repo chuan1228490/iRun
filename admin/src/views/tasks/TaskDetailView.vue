@@ -6,46 +6,71 @@
       </template>
     </el-page-header>
 
-    <el-card v-loading="loading" class="detail-card anim-card">
-      <template #header>
-        <div class="card-header">
-          <span>基本信息</span>
-          <el-tag :type="statusTag(detail.status)" size="default">
-            {{ TASK_STATUS[detail.status as keyof typeof TASK_STATUS] }}
-          </el-tag>
-        </div>
-      </template>
+    <div class="detail-blocks" v-loading="loading">
+      <!-- 任务信息 -->
+      <el-card class="detail-block anim-block" style="--anim-order: 0">
+        <template #header>
+          <div class="card-header">
+            <span class="card-title-text">任务信息</span>
+            <el-tag :type="statusTag(detail.status)" size="default">
+              {{ TASK_STATUS[detail.status as keyof typeof TASK_STATUS] }}
+            </el-tag>
+          </div>
+        </template>
+        <el-descriptions :column="2" border>
+          <el-descriptions-item label="任务编号">{{ detail.taskNo }}</el-descriptions-item>
+          <el-descriptions-item label="报酬">
+            <span class="reward">¥{{ formatReward(detail.reward) }}</span>
+          </el-descriptions-item>
+          <el-descriptions-item label="任务大类">{{ detail.type }}</el-descriptions-item>
+          <el-descriptions-item label="任务小类">{{ detail.subType || '-' }}</el-descriptions-item>
+          <el-descriptions-item label="任务规格" :span="2">{{ taskSpecsDisplay }}</el-descriptions-item>
+          <el-descriptions-item label="性别要求">{{ detail.requireSex || '不限' }}</el-descriptions-item>
+          <el-descriptions-item label="发布时间">{{ detail.publishTime }}</el-descriptions-item>
+          <el-descriptions-item label="过期时间">{{ detail.expireTime }}</el-descriptions-item>
+        </el-descriptions>
+      </el-card>
 
-      <el-descriptions :column="2" border>
-        <el-descriptions-item label="任务编号">{{ detail.taskNo }}</el-descriptions-item>
-        <el-descriptions-item label="报酬">
-          <span class="reward">¥{{ formatReward(detail.reward) }}</span>
-        </el-descriptions-item>
-        <el-descriptions-item label="任务大类">{{ detail.type }}</el-descriptions-item>
-        <el-descriptions-item label="任务小类">{{ detail.subType || '-' }}</el-descriptions-item>
-        <el-descriptions-item label="任务规格" :span="2">{{ taskSpecsDisplay }}</el-descriptions-item>
-        <el-descriptions-item label="发布时间">{{ detail.publishTime }}</el-descriptions-item>
-        <el-descriptions-item label="过期时间">{{ detail.expireTime }}</el-descriptions-item>
-        <el-descriptions-item label="发布者昵称">{{ detail.publisherNickname }}</el-descriptions-item>
-        <el-descriptions-item label="发布者用户名">{{ detail.publisherUsername || '-' }}</el-descriptions-item>
-        <el-descriptions-item label="性别要求">{{ detail.requireSex || '不限' }}</el-descriptions-item>
-        <el-descriptions-item label="取件地址" :span="2">{{ detail.pickupAddress || '-' }}</el-descriptions-item>
-        <el-descriptions-item label="送达地址" :span="2">{{ detail.deliveryAddress || '-' }}</el-descriptions-item>
-        <el-descriptions-item label="公开描述" :span="2">{{ detail.publicDesc }}</el-descriptions-item>
-        <el-descriptions-item v-if="detail.privateNote" label="私密备注" :span="2">
-          {{ detail.privateNote }}
-        </el-descriptions-item>
-        <el-descriptions-item label="联系人">{{ detail.contactName || '-' }}</el-descriptions-item>
-        <el-descriptions-item label="联系电话">{{ detail.contactPhone || '-' }}</el-descriptions-item>
-        <el-descriptions-item v-if="detail.pickupCode" label="取件码">{{ detail.pickupCode }}</el-descriptions-item>
-      </el-descriptions>
+      <!-- 取送信息 -->
+      <el-card class="detail-block anim-block" style="--anim-order: 1">
+        <template #header>
+          <span class="card-title-text">取送信息</span>
+        </template>
+        <el-descriptions :column="2" border>
+          <el-descriptions-item label="取件地址" :span="2">{{ detail.pickupAddress || '-' }}</el-descriptions-item>
+          <el-descriptions-item label="送达地址" :span="2">{{ detail.deliveryAddress || '-' }}</el-descriptions-item>
+          <el-descriptions-item label="联系人">{{ detail.contactName || '-' }}</el-descriptions-item>
+          <el-descriptions-item label="联系电话">{{ detail.contactPhone || '-' }}</el-descriptions-item>
+          <el-descriptions-item v-if="detail.pickupCode" label="取件码">{{ detail.pickupCode }}</el-descriptions-item>
+        </el-descriptions>
+      </el-card>
 
-      <div v-if="detail.cancelReason" class="cancel-info anim-cancel">
-        <el-alert :title="'取消原因：' + detail.cancelReason" type="warning" show-icon :closable="false" />
-      </div>
+      <!-- 描述信息 -->
+      <el-card class="detail-block anim-block" style="--anim-order: 2">
+        <template #header>
+          <span class="card-title-text">描述信息</span>
+        </template>
+        <el-descriptions :column="2" border>
+          <el-descriptions-item label="公开描述" :span="2">{{ detail.publicDesc || '-' }}</el-descriptions-item>
+          <el-descriptions-item v-if="detail.privateNote" label="私密备注" :span="2">{{ detail.privateNote }}</el-descriptions-item>
+          <el-descriptions-item label="发布者昵称">{{ detail.publisherNickname }}</el-descriptions-item>
+          <el-descriptions-item label="发布者用户名">{{ detail.publisherUsername || '-' }}</el-descriptions-item>
+        </el-descriptions>
+      </el-card>
 
-      <div v-if="detail.imageUrls && detail.imageUrls.length > 0" class="image-section">
-        <h4>任务图片</h4>
+      <!-- 取消原因 -->
+      <el-card v-if="detail.cancelReason" class="detail-block anim-block" style="--anim-order: 3">
+        <template #header>
+          <span class="card-title-text">取消原因</span>
+        </template>
+        <el-alert :title="detail.cancelReason" type="warning" show-icon :closable="false" />
+      </el-card>
+
+      <!-- 任务图片 -->
+      <el-card v-if="detail.imageUrls && detail.imageUrls.length > 0" class="detail-block anim-block" style="--anim-order: 4">
+        <template #header>
+          <span class="card-title-text">任务图片</span>
+        </template>
         <div class="image-grid">
           <el-image
             v-for="(url, i) in detail.imageUrls"
@@ -65,12 +90,13 @@
             </template>
           </el-image>
         </div>
-      </div>
-    </el-card>
+      </el-card>
+    </div>
   </div>
 </template>
 
 <script setup lang="ts">
+// v2 block-based layout — 2026-06-10
 import { onMounted, reactive, ref, nextTick, computed } from 'vue'
 import { useRoute } from 'vue-router'
 import { Picture } from '@element-plus/icons-vue'
@@ -107,20 +133,58 @@ onMounted(async () => {
 </script>
 
 <style scoped>
-.detail-card { margin-top: 20px; }
-.card-header { display: flex; justify-content: space-between; align-items: center; }
-.reward { color: var(--brand-accent); font-weight: 600; font-size: 16px; }
-.cancel-info { margin-top: 16px; }
-.image-section { margin-top: 20px; }
-.image-section h4 { margin-bottom: 12px; color: var(--text-primary); }
-.image-grid { display: flex; flex-wrap: wrap; gap: 12px; }
-.task-image { width: 160px; height: 160px; border-radius: var(--radius-sm); }
-.image-error { width: 100%; height: 100%; display: flex; flex-direction: column; align-items: center; justify-content: center; color: var(--text-placeholder); font-size: 12px; background: var(--neutral-surface); gap: 4px; }
+.detail-blocks {
+  margin-top: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.card-title-text {
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.reward {
+  color: var(--brand-accent);
+  font-weight: 600;
+  font-size: 16px;
+}
+
+.image-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+.task-image {
+  width: 160px;
+  height: 160px;
+  border-radius: var(--radius-sm);
+}
+
+.image-error {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  color: var(--text-placeholder);
+  font-size: 12px;
+  background: var(--neutral-surface);
+  gap: 4px;
+}
 
 /* ===== 入场动画 ===== */
 .anim-header,
-.anim-card,
-.anim-cancel,
+.anim-block,
 .anim-img {
   opacity: 0;
 }
@@ -129,12 +193,8 @@ onMounted(async () => {
   animation: slideInLeft 0.4s var(--ease-out) both;
 }
 
-.entered .anim-card {
-  animation: fadeUp 0.5s 0.05s var(--ease-out) both;
-}
-
-.entered .anim-cancel {
-  animation: slideInLeft 0.35s 0.15s var(--ease-out) both;
+.entered .anim-block {
+  animation: fadeUp 0.45s calc(0.05s + var(--anim-order, 0) * 0.06s) var(--ease-out) both;
 }
 
 .entered .anim-img {
@@ -147,7 +207,7 @@ onMounted(async () => {
 }
 
 @keyframes fadeUp {
-  from { opacity: 0; transform: translateY(20px); }
+  from { opacity: 0; transform: translateY(16px); }
   to   { opacity: 1; transform: translateY(0); }
 }
 

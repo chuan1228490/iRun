@@ -229,6 +229,10 @@
             <text class="row-label">预估商品费</text>
             <text class="row-value">¥{{ productFeeText.toFixed(2) }}</text>
           </view>
+          <view class="card-row" v-if="extraFee">
+            <text class="row-label">额外费用</text>
+            <text class="row-value">¥{{ extraFee.toFixed(2) }}</text>
+          </view>
           <view class="desc-hidden" v-if="task.hasPickupCode && !task.pickupCode">
             <iconpark-icon name="locked-filled" size="16" color="#8F8D88" />
             <text>{{ pickupCodeLabel }}已隐藏，接单后方可查看</text>
@@ -302,7 +306,7 @@ import { onLoad } from '@dcloudio/uni-app'
 import { useStore } from '@/store/index.js'
 import { taskApi, orderApi } from '@/api'
 import { TASK_STATUS, TASK_TYPES, TASK_TYPE_META, TYPE_FROM_API, isQueueWaitType } from '@/utils/constants.js'
-import { parseDeliveryAddress, parseTaskSpecs, parseExpressPackagesFromSpecs, parseShoppingItemsFromSpecs, parseBookCountFromSpecs, parsePrintSpecsFromSpecs, parseMerchantInfoFromSpecs, parseFoodItemsFromSpecs, parseItemExpressFromSpecs, parseServiceDurationFromSpecs, parseExtraFeeFromSpecs } from '@/utils/campus-data.js'
+import { parseDeliveryAddress, parseTaskSpecs, parseExpressPackagesFromSpecs, parseBookCountFromSpecs, parsePrintSpecsFromSpecs, parseMerchantInfoFromSpecs, parseFoodItemsFromSpecs, parseItemExpressFromSpecs, parseServiceDurationFromSpecs, parseExtraFeeFromSpecs } from '@/utils/campus-data.js'
 import { useSubmitLock } from '@/utils/submit-guard'
 import { SERVER_ORIGIN } from '@/utils/config'
 
@@ -339,7 +343,7 @@ const taskSpecs = computed(() => parseTaskSpecs(task.value.taskSpecs))
 const productFeeText = computed(() => {
   if (taskTypeCode.value !== 4) return null
   const specs = taskSpecs.value
-  if (specs && specs.预估商品费) return specs.预估商品费
+  if (specs && specs.预估商品费 != null) return Number(specs.预估商品费)
   return null
 })
 const productTags = computed(() => {

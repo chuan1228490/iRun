@@ -219,7 +219,7 @@ import { ref, computed } from 'vue'
 import { onLoad, onUnload } from '@dcloudio/uni-app'
 import { orderApi } from '@/api'
 import { TASK_TYPES, TASK_TYPE_META, TYPE_FROM_API, isQueueWaitType } from '@/utils/constants.js'
-import { parseTaskSpecs, parseExpressPackagesFromSpecs, parseShoppingItemsFromSpecs, parseBookCountFromSpecs, parsePrintSpecsFromSpecs, parseMerchantInfoFromSpecs, parseItemExpressFromSpecs, parseFoodItemsFromSpecs, parseServiceDurationFromSpecs, parseExtraFeeFromSpecs } from '@/utils/campus-data.js'
+import { parseTaskSpecs, parseExpressPackagesFromSpecs, parseBookCountFromSpecs, parsePrintSpecsFromSpecs, parseMerchantInfoFromSpecs, parseItemExpressFromSpecs, parseFoodItemsFromSpecs, parseServiceDurationFromSpecs, parseExtraFeeFromSpecs } from '@/utils/campus-data.js'
 import { useSubmitLock } from '@/utils/submit-guard'
 import UploadGrid from '@/components/upload-grid/upload-grid.vue'
 import { showToast } from '@/utils/toast'
@@ -412,7 +412,6 @@ const displayDescription = computed(() => {
     }
   }
   if (taskTypeCode.value === 4) {
-    if (specs && specs.商品列表) return desc || '暂无描述'
     return desc || '暂无描述'
   }
   return desc || '暂无描述'
@@ -421,7 +420,7 @@ const displayDescription = computed(() => {
 const productFeeText = computed(() => {
   if (taskTypeCode.value !== 4) return null
   const specs = taskSpecs.value
-  if (specs && specs.预估商品费) return specs.预估商品费
+  if (specs && specs.预估商品费 != null) return Number(specs.预估商品费)
   return null
 })
 

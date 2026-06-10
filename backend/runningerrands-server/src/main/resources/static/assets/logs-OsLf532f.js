@@ -1,1 +1,0 @@
-import{t as e}from"./index-9w6II4ze.js";function t(t){return e({url:`/admin/logs`,method:`get`,params:t})}export{t};
