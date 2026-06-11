@@ -209,6 +209,14 @@
           <custom-icon name="delivery-info" size="32" />
           <text>送达信息</text>
         </view>
+        <view class="card-row" v-if="deliveryContactName">
+          <text class="row-label">收货人</text>
+          <text class="row-value">{{ deliveryContactName }}</text>
+        </view>
+        <view class="card-row" v-if="deliveryContactPhone">
+          <text class="row-label">联系电话</text>
+          <text class="row-value">{{ deliveryContactPhone }}</text>
+        </view>
         <view class="card-row">
           <text class="row-label">送达地址</text>
           <text class="row-value">{{ order.deliveryAddress }}</text>
@@ -279,7 +287,7 @@ import { ref, computed } from 'vue'
 import { onLoad } from '@dcloudio/uni-app'
 import { orderApi, reviewApi, taskApi } from '@/api'
 import { TASK_TYPES, TASK_TYPE_META, TYPE_FROM_API, isQueueWaitType } from '@/utils/constants.js'
-import { parseTaskSpecs, parseShoppingItemsFromSpecs, parseBookCountFromSpecs, parsePrintSpecsFromSpecs, parseMerchantInfoFromSpecs, parseItemExpressFromSpecs, parseExtraFeeFromSpecs, parseFoodItemsFromSpecs, parseServiceDurationFromSpecs } from '@/utils/campus-data.js'
+import { parseTaskSpecs, parseExpressPackagesFromSpecs, parseBookCountFromSpecs, parsePrintSpecsFromSpecs, parseMerchantInfoFromSpecs, parseItemExpressFromSpecs, parseExtraFeeFromSpecs, parseFoodItemsFromSpecs, parseServiceDurationFromSpecs } from '@/utils/campus-data.js'
 import { useSubmitLock } from '@/utils/submit-guard'
 import { SERVER_ORIGIN } from '@/utils/config'
 
@@ -395,8 +403,15 @@ const otherParty = computed(() => {
 const displayDescription = computed(() => {
   const desc = order.value.publicDesc || ''
   const specs = taskSpecs.value
+  if (taskTypeCode.value === 1) {
+    const pkgSpecs = parseExpressPackagesFromSpecs(specs)
+    if (pkgSpecs) {
+      let text = `快递规格：${pkgSpecs.sizes}`
+      if (desc) text += `\n需求描述：${desc}`
+      return text
+    }
+  }
   if (taskTypeCode.value === 4) {
-    if (specs && specs.商品列表) return desc || '暂无描述'
     return desc || '暂无描述'
   }
   return desc || '暂无描述'
@@ -405,9 +420,19 @@ const displayDescription = computed(() => {
 const productFeeText = computed(() => {
   if (taskTypeCode.value !== 4) return null
   const specs = taskSpecs.value
-  if (specs && specs.预估商品费) return specs.预估商品费
+  if (specs && specs.预估商品费 != null) return Number(specs.预估商品费)
   return null
 })
+
+const deliveryContactName = computed(() => {
+  const name = order.value.contactName || ''
+  if (!name) return ''
+  const gender = order.value.deliveryGender
+  if (gender === 1 || gender === '1' || gender === '男') return name + '先生'
+  if (gender === 0 || gender === '0' || gender === '女') return name + '女士'
+  return name
+})
+const deliveryContactPhone = computed(() => order.value.contactPhone || '')
 
 const productTags = computed(() => {
   if (taskTypeCode.value !== 4) return []
