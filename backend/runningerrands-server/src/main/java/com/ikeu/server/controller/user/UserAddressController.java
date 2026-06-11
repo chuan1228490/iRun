@@ -19,7 +19,7 @@ import java.util.List;
  * @author ikeu
  * @since 2025/05/21
  */
-@Tag(name = "用户端 - 地址簿接口", description = "用户地址簿CRUD相关接口")
+@Tag(name = "用户端-地址簿接口", description = "用户地址簿CRUD相关接口")
 @RestController
 @RequestMapping("/user/address")
 @RequiredArgsConstructor

@@ -23,7 +23,7 @@ import jakarta.validation.Valid;
  * @author ikeu
  * @since 2025/05/23
  */
-@Tag(name = "用户端 - 订单管理相关接口", description = "订单流程：接单、取货、送达、确认、取消、详情")
+@Tag(name = "用户端-订单管理相关接口", description = "订单流程：接单、取货、送达、确认、取消、详情")
 @RestController
 @RequestMapping("/order")
 @RequiredArgsConstructor

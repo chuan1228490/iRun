@@ -5,7 +5,7 @@ import com.ikeu.common.context.BaseContext;
 import com.ikeu.common.result.Result;
 import com.ikeu.model.dto.AdminLoginDTO;
 import com.ikeu.model.vo.AdminLoginVO;
-import com.ikeu.server.service.AdminService;
+import com.ikeu.server.service.AdminAuthService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
@@ -17,36 +17,36 @@ import org.springframework.web.bind.annotation.*;
  * @author ikeu
  * @since 2025/06/01
  */
-@Tag(name = "管理端-认证")
+@Tag(name = "管理端-认证接口")
 @RestController
 @RequestMapping("/admin")
 @RequiredArgsConstructor
 public class AdminAuthController {
 
-    private final AdminService adminService;
+    private final AdminAuthService adminAuthService;
 
     @Operation(summary = "管理员登录")
     @PostMapping("/login")
     public Result<AdminLoginVO> login(@Valid @RequestBody AdminLoginDTO dto) {
-        return Result.success(adminService.login(dto));
+        return Result.success(adminAuthService.login(dto));
     }
 
     @Operation(summary = "刷新管理员访问令牌")
     @PostMapping("/refresh")
     public Result<AdminLoginVO> refresh(@RequestHeader("X-Refresh-Token") String refreshToken) {
-        return Result.success(adminService.refreshAccessToken(refreshToken));
+        return Result.success(adminAuthService.refreshAccessToken(refreshToken));
     }
 
     @Operation(summary = "获取当前管理员信息")
     @GetMapping("/info")
     public Result<AdminLoginVO> info() {
-        return Result.success(adminService.getAdminInfo());
+        return Result.success(adminAuthService.getAdminInfo());
     }
 
     @Operation(summary = "管理员退出登录")
     @PostMapping("/logout")
     public Result<Void> logout() {
-        adminService.logout(BaseContext.getCurrentId());
+        adminAuthService.logout(BaseContext.getCurrentId());
         return Result.success(MessageConstant.LOGOUT_SUCCESS);
     }
 }

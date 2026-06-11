@@ -3,7 +3,6 @@ package com.ikeu.server.service.impl;
 import cn.hutool.core.bean.BeanUtil;
 import cn.hutool.core.lang.TypeReference;
 import cn.hutool.core.util.IdUtil;
-import cn.hutool.json.JSONObject;
 import cn.hutool.json.JSONUtil;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
@@ -24,6 +23,7 @@ import com.ikeu.model.entity.*;
 import com.ikeu.model.vo.TaskDetailVO;
 import com.ikeu.model.vo.TaskListVO;
 import com.ikeu.model.vo.TaskStatisticsVO;
+import com.ikeu.server.annotation.RedisDefend;
 import com.ikeu.server.mapper.*;
 import com.ikeu.server.service.PaymentService;
 import com.ikeu.server.service.TaskService;
@@ -148,7 +148,6 @@ public class TaskServiceImpl extends ServiceImpl<TaskMapper, Task> implements Ta
         vo.setTaskId(task.getId());
         vo.setPublishTime(task.getCreatedAt());
         vo.setIsOwner(isOwner);
-        vo.setCancelReason(task.getCancelReason());
         if (task.getStatus() != null && task.getStatus().equals(StatusConstant.TASK_CANCELLED)) {
             vo.setCancelTime(task.getUpdatedAt());
         }
@@ -306,16 +305,22 @@ public class TaskServiceImpl extends ServiceImpl<TaskMapper, Task> implements Ta
             public void afterCommit() {
                 Objects.requireNonNull(cacheManager.getCache(RedisConstant.CACHE_TASK_HALL)).clear();
                 Objects.requireNonNull(cacheManager.getCache(RedisConstant.CACHE_TASK_DETAIL)).clear();
-                stringRedisTemplate.delete(RedisConstant.TASK_HALL_NULL_PREFIX + "default");
+                var nullKeys = stringRedisTemplate.keys(RedisConstant.TASK_HALL_NULL_PREFIX + "*");
+                if (nullKeys != null && !nullKeys.isEmpty()) stringRedisTemplate.delete(nullKeys);
             }
         });
     }
 
     /**
-     * 配送员获取任务大厅列表方法
-     *  逻辑：支持按类型、子类型、报酬范围条件筛选任务，
-     *  查询状态为"待接单"且未过期的任务，按发布时间倒序排列，
-     *  关联查询发布者信息填充昵称和头像，结果缓存到Redis
+     * 配送员获取任务大厅列表。
+     *
+     * <p>查询状态为“待接单”且未过期的任务，关联发布者信息填充昵称和头像。
+     * 支持按类型、子类型、报酬范围筛选，结果按发布时间倒序。
+     *
+     * <p>缓存策略：仅无筛选条件时缓存全部分页，
+     * 通过 {@code @RedisDefend} 标注使用 RedisDefendUtil 提供穿击+击穿防护
+     * （空标记防穿透、分布式锁防击穿、持锁后双检）。
+     * 接单/取消操作清除 task:hall 全部缓存和空标记。
      *
      * @param type 任务类型
      * @param subType 任务子类型
@@ -325,24 +330,25 @@ public class TaskServiceImpl extends ServiceImpl<TaskMapper, Task> implements Ta
      * @param lat 纬度（附近任务预留）
      * @param page 页码
      * @param size 每页条数
-     * @return PageResult<TaskListVO> 分页任务大厅列表
+     * @return 分页任务大厅列表
      */
     @Override
+    @RedisDefend
     public PageResult<TaskListVO> listTasksHall(String type, String subType, BigDecimal minReward,
                                             BigDecimal maxReward, BigDecimal lng, BigDecimal lat,
                                             int page, int size) {
         boolean canCache = type == null && subType == null && minReward == null
-                && maxReward == null && page == 1;
+                && maxReward == null;
 
         if (canCache) {
-            String cacheKey = "default";
+            String cacheKey = page + ":" + size;
             Cache cache = cacheManager.getCache(RedisConstant.CACHE_TASK_HALL);
             TypeReference<PageResult<TaskListVO>> typeRef = new TypeReference<>() {};
 
             PageResult<TaskListVO> result = redisDefendUtil.getOrLoad(
                     cache, cacheKey,
                     RedisConstant.TASK_HALL_NULL_PREFIX + cacheKey, RedisConstant.TASK_NOT_EXIST_TTL,
-                    RedisConstant.TASK_HALL_LOCK_KEY,
+                    RedisConstant.TASK_HALL_LOCK_KEY + page,
                     (long) RedisConstant.LOCK_WAIT_TIME, (long) RedisConstant.LOCK_EXPIRE,
                     typeRef.getType(),
                     () -> {
@@ -449,6 +455,7 @@ public class TaskServiceImpl extends ServiceImpl<TaskMapper, Task> implements Ta
      * @return TaskDetailVO 任务详情VO
      */
     @Override
+    @RedisDefend
     public TaskDetailVO getTaskDetail(Long taskId, Long currentUserId) {
         String cacheKey = String.valueOf(taskId);
         Cache cache = cacheManager.getCache(RedisConstant.CACHE_TASK_DETAIL);
@@ -478,7 +485,7 @@ public class TaskServiceImpl extends ServiceImpl<TaskMapper, Task> implements Ta
      *
      * <p>校验和实现逻辑：
      * <ol>
-     *   <li>Redisson 分布式锁并发控制</li>
+     *   <li>{@code @RedisDefend(Type.LOCK)} Redisson 分布式锁并发控制</li>
      *   <li>校验任务存在且当前用户为发布者</li>
      *   <li>若任务已被接单或配送中，拒绝取消，提示联系配送员先取消订单</li>
      *   <li>状态机验证通过后更新任务状态为已取消</li>
@@ -492,6 +499,7 @@ public class TaskServiceImpl extends ServiceImpl<TaskMapper, Task> implements Ta
      */
     @Override
     @Transactional
+    @RedisDefend(RedisDefend.Type.LOCK)
     public void cancelTask(Long userId, Long taskId, CancelTaskDTO cancelDTO) {
         String lockKey = RedisConstant.ORDER_LOCK_KEY + taskId;
         RLock lock = redissonClient.getLock(lockKey);

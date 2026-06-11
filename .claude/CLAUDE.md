@@ -24,6 +24,8 @@ F:/ikeu_runningerrands/
 │   └── runningerrands.sql               # 数据库建表脚本
 ├── admin/                                # 管理端（Vue 3 + TS + Element Plus）
 ├── mobile/                               # 移动端（uni-app 微信小程序）
+├── docs/                                 # 开发文档 & 工作记录
+├── .agent/                               # 子代理定义
 └── .claude/
     ├── CLAUDE.md                         # ← 本文件
     └── settings.local.json               # 本地命令自动批准
@@ -36,29 +38,65 @@ F:/ikeu_runningerrands/
 - **包结构**: `com.ikeu.{module}.{layer}`，controller 按 `admin`/`user` 分包
 - **注入**: `@RequiredArgsConstructor` 构造器注入，禁止字段注入
 - **返回**: 统一使用 `Result<T>` / `PageResult<T>`（`com.ikeu.common.result`）
-- **异常**: 业务异常抛 `BusinessException`（→ 400），`NotFoundException`（→ 404），由 `GlobalExceptionHandler` 统一处理
 - **实体**: MyBatis-Plus `@TableName` + `@TableId(type = IdType.AUTO)`，`LocalDateTime` 映射自动开启
-- **鉴权**: 管理端 `@RequireRole({1, 2})`（1-超管 2-普通管理员），`JwtTokenAdminInterceptor` 从 `token` 头提取
-- **日志**: 操作日志用 `@OperationLog(module, action, description)`，参数支持 `#paramName` 占位符
-- **缓存**: 仪表盘用 Spring Cache（`RedisConstant.CACHE_DASHBOARD`），数据变更时 `@CacheEvict`
+- **鉴权**: 管理端和用户端采用双token认证，`JwtTokenAdminInterceptor` 从 `token` 头提取，`JwtTokenUserInterceptor` 从 `authentication` 头提取
+- **缓存策略**:
+  - *仪表盘* — `AdminDashboardService` 5 个方法各用 `@Cacheable(value = "admin:dashboard", key = "...")` 独立缓存，写操作（订单/任务/用户/跑腿员变更）触发 `@CacheEvict(allEntries = true)` 全量清除
+  - *任务大厅/详情* — `@RedisDefend` + `RedisDefendUtil.getOrLoad()` 组合防护（缓存穿透 + 击穿），空结果用 `TASK_HALL_NULL_PREFIX` 标记防穿透，`TASK_HALL_LOCK_KEY` 互斥锁防击穿，多页缓存 key 为 `page:size`
+  - *排行榜* — `@Cacheable(value = "runner:leaderboard", key = "#sortBy + ':' + #limit")`
+  - *过期策略* — 任务缓存 TTL 600s，仪表盘缓存默认 TTL
+  - *分布式锁* — Redisson `RLock` 手动加锁，锁前缀定义在 `RedisConstant`（接单/超时/自动结算/通知清理），等待 3s 持有 10s
+  - *登录保护* — Redis 失败计数，5 次错误锁定 300s
 - **SQL 同步**: 实体字段变更时同步更新 `runningerrands.sql`（CREATE TABLE + ALTER TABLE 语句）
-- **task_specs**: 任务规格存储为 JSON 列，key 统一使用中文（`包裹列表`、`商家`、`餐品`、`服务时长`、`服务截止时间` 等），禁止英文 key；`配送费` 由后端 `mergeTaskSpecs()` 注入，不作为独立列
 - **日志安全**: 不在日志中打印 token 明文、密码等敏感信息
 - **注释**: 采用JavaDoc注释，遵循阿里巴巴注释规范，类注释写明类的作用，标注作者(`@author`)和创建日期(`@since`)，方法注释注明方法逻辑，参数(`@param`)以及返回值(`@return`)，重要方法嵌入HTML标签详细描述
 
 ### Vue 3 管理端
 
-- **目录**: `views/` 按模块分目录，`api/` 一个模块一个文件，`stores/` 按职责拆分
-- **HTTP**: 统一使用 `@/utils/request`（Axios 实例，自动附加 `token` 头、401 刷新、错误 toast）
-- **样式**: Element Plus 组件 + scoped CSS，不引入额外 CSS 框架
-- **角色**: 侧边栏菜单通过 `roles` 字段控制可见性，页面默认无需额外角色检查
+- **技术**: Vue 3.5 Composition API (`<script setup>`), TypeScript 6.0, Vite 8, Pinia 3, Vue Router 4, Element Plus 2.14, ECharts 6 + vue-echarts 8, GSAP 3
+- **目录结构**:
+  - `api/` — 10 模块按领域拆分（auth, dashboard, employees, logs, notifications, orders, runners, tasks, transactions, users）
+  - `views/` — 15 视图按模块分目录，列表页统一 `el-table` + `el-pagination` 模式，详情页 v2 块式布局（`el-card` + `--anim-order` CSS 序列动画）
+  - `stores/` — `app.ts`（侧边栏折叠）+ `auth.ts`（token/adminInfo/login/logout），组合式 API 风格
+  - `composables/` — `useCountUp.ts`（GSAP 数字递增）、`usePageEnter.ts`（GSAP 页面入场动画）
+  - `utils/` — `request.ts`（Axios 实例）、`constants.ts`（状态枚举映射）、`task-specs-parser.ts`（任务规格 JSON → 可读摘要）
+  - `styles/theme.css` — CSS 自定义属性设计系统，覆盖 Element Plus 变量
+  - `components/` — 目录存在但为空，所有 UI 直接用 Element Plus 组件
+- **路由**: history base `/api/`，`meta.role: [1]` 限制超管路由，全局 `beforeEach` 守卫检查 token（无 token → `/login`，有 token → `/dashboard`），角色过滤在 `AdminLayout` 侧边栏 `visibleMenu` 中完成
+- **HTTP**: Axios 实例，请求拦截器附加 `token` 头（非 `Authorization: Bearer`），响应拦截器解包 `code === 1` 返回 `data`，`code !== 1` toast 错误；并发 401 使用 `isRefreshing` + `refreshQueue` 队列防止并行刷新竞争
+- **认证**: access + refresh 双 token 存 localStorage（`admin_token` / `admin_refresh_token`），刷新后同步更新 `auth` store 中的 `adminInfo`
+- **动画**: 登录页、仪表盘计数器、404 页使用 GSAP；详情页 v2 使用纯 CSS `@keyframes`（`slideInLeft`、`fadeUp`、`imgPop`）通过 `:class="{ entered }"` + `--anim-order` 控制序列
+- **入口**: `main.ts` 全局注册 Element Plus（中文 locale）+ 全部 `@element-plus/icons-vue`，无需手动导入图标
 
 ### uni-app 移动端
 
-- **API**: `utils/request.js` 封装，支持 `auth: 'user'/'admin'/'none'`
-- **Store**: Pinia `defineStore('main', ...)`，用户信息/钱包/跑腿员状态
-- **错误**: `ClassifiedError` + `ErrorType` 枚举，`handlePageError()` 统一处理
-- **支付密码**: 通过 `promptPayPassword()` 弹窗获取，不在页面中持久化
+- **技术**: uni-app (Vue 3), 微信小程序, Pinia, 自制 STOMP 1.2 WebSocket 客户端
+- **页面**: 33 个页面（`pages.json` 注册），全 `navigationStyle: "custom"`，5 标签自定义 TabBar（毛玻璃效果 `backdrop-filter: blur(20px)`），`uni.switchTab` / `uni.navigateTo` 导航
+- **API 层**:
+  - `api/index.js` — 统一命名空间导出 10 个模块（user, task, order, chat, runner, address, transaction, notification, review, common）
+  - `utils/request.js` — 导出 `get/post/put/del` 便捷方法，`auth` 参数控制认证类型（`'user'`/`'admin'`/`'none'`）
+  - 上传使用 `uni.uploadFile`（非 `uni.request`），手动注入 `authentication` 头
+- **HTTP 认证**:
+  - 双 token 体系：用户端用 `authentication` 头，管理端用 `token` 头
+  - token 持久化键：`d2d_user_token` / `d2d_user_refresh_token` / `d2d_admin_token` / `d2d_admin_refresh_token`
+  - 401 自动刷新：`isRefreshing` + 请求队列，刷新失败清除 token 重定向登录页
+  - 响应解包：`code === 1` 返回 `data`（分页返回 `{ total, records }`），日期自动 `formatDates()` 去 `T`
+- **Store**:
+  - `store/index.js` — 主 Store（options API），管理登录态、用户信息（16 字段含 balance/isCertify）、`hasPayPassword` 持久化；login/logout 时自动连接/断开 STOMP
+  - `store/chat.js` — 聊天 Store（composition API），全局单例管理 STOMP 连接、消息缓存（`Map<peerUserId, messages[]>`）、乐观消息替换、去重、分页历史
+- **WebSocket/STOMP**: 自制 `StompClient` 类（`utils/stomp.js`），基于 `uni.connectSocket`，手动构建/解析 STOMP 帧，心跳 10s（发送 `\n`），连接超时 10s，3 次重试后尝试 refresh token，微信连接数限制检测
+- **错误处理**: `ClassifiedError`（Symbol-branded，9 种 `ErrorType`），`classifyError()` 按 HTTP 状态码/业务码/网络异常三级分类，`handlePageError()` 支持 `customHandlers` 映射，`showError` + `handled` 标志防重复 toast
+- **支付密码**: 全局 promise 式弹窗 `promptPayPassword(title)`，共享 `ref()` 状态驱动 `<pay-password-dialog>` 组件，6 位数字键盘输入，store 持久化 `hasPayPassword` 布尔标记（不存储密码原文）
+- **工具模块**:
+  - `config.js` — 动态环境检测（微信 `envVersion` → develop/trial/release 自动切换后端地址）
+  - `constants.js` — 状态码枚举 + 徽章样式映射 + API 序列化/反序列化辅助函数
+  - `toast.js` — 智能 toast（短消息带图标、中消息 `icon:'none'`、长消息自动降级 `uni.showModal`）
+  - `submit-guard.js` — `useSubmitLock` 防重复提交 composable
+  - `task-normalizer.js` — API 记录 → 统一任务卡片格式
+  - `campus-data.js` — 双校区硬编码数据（建筑/驿站）+ `buildAddressString` / `parseDeliveryAddress` 纯前端地址解析
+  - `custom-icons.js` — 阿里巴巴 iconfont 内联 SVG 图标字典
+- **样式**: `App.vue` 中 CSS 自定义属性设计令牌，暖珊瑚橙主色调（`#FF6B4A`）+ 青绿强调色（`#2EC4B6`），暖白表面层级（background/surface/raised），7 种入场动画关键帧（`fadeInUp`、`scaleIn`、`slideInRight` 等），通用 `.card` / `.badge` / `.safe-area-bottom` 工具类
+- **组件**: `custom-icon`（内联 SVG）、`custom-navbar`、`custom-tabbar`（毛玻璃）、`iconpark-icon`、`pay-password-dialog`（支付密码弹窗）、`upload-grid`（图片上传网格）
 
 ## 代理使用指南
 
@@ -115,8 +153,9 @@ npx vite build         # 构建 → dist/
 
 - 每次写代码前先计划思考，切勿直接动手，仔细分析代码链路关系，优先参考`/skills/karpathy-skills`
 - Git commit请先询问，允许后才可提交，切勿直接提交
+- **Git 分支规则**：代码提交至 `master` 或 feature 分支，通过 PR 合入 `main`，**禁止直接 push 到 `main` 分支**
 - Maven wrapper (`mvnw`) 位于 `runningerrands-server/`，从 `backend/` 根目录使用
-- Git Bash 路径用正斜杠 `/`，Windows 盘符 `F:/`
+- Git Bash 路径和Windows 盘符用正斜杠 `/`
 - 上下文路径 `/api`，管理端路径 `/admin/**`
 - 数据库变更必须同步 `runningerrands.sql`
 - 新建 controller 注意包位置：管理端 → `controller/admin/`，用户端 → `controller/user/`，通用 → `controller/`

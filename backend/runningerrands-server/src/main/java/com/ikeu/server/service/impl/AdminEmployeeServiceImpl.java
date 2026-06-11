@@ -35,8 +35,8 @@ import java.util.stream.Collectors;
 @RequiredArgsConstructor
 public class AdminEmployeeServiceImpl extends ServiceImpl<AdminMapper, Admin> implements AdminEmployeeService {
 
-    private static final int ROLE_SUPER_ADMIN = 1;
-    private static final int ROLE_NORMAL_ADMIN = 2;
+    private static final int ROLE_SUPER_ADMIN = 1;   // 超级管理员
+    private static final int ROLE_NORMAL_ADMIN = 2;  // 普通管理员
 
     private final PasswordEncoder passwordEncoder;
 
@@ -89,6 +89,7 @@ public class AdminEmployeeServiceImpl extends ServiceImpl<AdminMapper, Admin> im
         admin.setIdNumber(dto.getIdNumber() != null ? dto.getIdNumber() : "");
         admin.setRole(ROLE_NORMAL_ADMIN);
         admin.setStatus(StatusConstant.ENABLE);
+
         save(admin);
         log.info("管理员 {} 创建了普通管理员 {}", BaseContext.getCurrentId(), dto.getUsername());
     }
@@ -102,6 +103,7 @@ public class AdminEmployeeServiceImpl extends ServiceImpl<AdminMapper, Admin> im
         admin.setName(dto.getName());
         admin.setPhone(dto.getPhone());
         admin.setSex(dto.getSex() != null ? dto.getSex() : admin.getSex());
+
         updateById(admin);
     }
 
@@ -116,6 +118,7 @@ public class AdminEmployeeServiceImpl extends ServiceImpl<AdminMapper, Admin> im
             throw new BusinessException(MessageConstant.CANNOT_DISABLE_SELF);
         }
         admin.setStatus(enabled ? StatusConstant.ENABLE : StatusConstant.DISABLE);
+
         updateById(admin);
     }
 
@@ -125,6 +128,7 @@ public class AdminEmployeeServiceImpl extends ServiceImpl<AdminMapper, Admin> im
         Admin admin = getById(id);
         if (admin == null) throw new NotFoundException(MessageConstant.ADMIN_NOT_EXIST);
         admin.setPassword(passwordEncoder.encode(dto.getNewPassword()));
+
         updateById(admin);
     }
 
@@ -141,6 +145,7 @@ public class AdminEmployeeServiceImpl extends ServiceImpl<AdminMapper, Admin> im
         if (admin.getRole() == ROLE_SUPER_ADMIN) {
             throw new BusinessException(MessageConstant.CANNOT_DELETE_SELF);
         }
+
         removeById(id);
         log.info("管理员 {} 删除了普通管理员 {}", currentId, admin.getUsername());
     }

@@ -25,7 +25,7 @@ import java.util.List;
  * @since 2025/06/02
  * */
 @Slf4j
-@Tag(name = "管理端-消息管理")
+@Tag(name = "管理端-消息管理接口")
 @RestController
 @RequestMapping("/admin")
 @RequiredArgsConstructor

@@ -20,6 +20,7 @@ import com.ikeu.model.dto.ProofImageDTO;
 import com.ikeu.model.entity.*;
 import com.ikeu.model.vo.OrderDetailVO;
 import com.ikeu.model.vo.OrderListVO;
+import com.ikeu.server.annotation.RedisDefend;
 import com.ikeu.server.annotation.SendNotification;
 import com.ikeu.server.mapper.*;
 import com.ikeu.server.service.PaymentService;
@@ -108,15 +109,36 @@ public class TaskOrderServiceImpl extends ServiceImpl<TaskOrderMapper, TaskOrder
 
 
     /**
-     * 配送员接取订单方法
-     *   校验：确保任务状态正常，配送员状态正常，配送员没有正在处理的订单，配送员信用分正常，任务发布时间未过期，任务性别限制与配送员性别匹配
-     *   逻辑：利用Redisson分布式锁进行并发控制，接单成功后调用NotificationAspect切面发送通知
+     * 配送员接取订单。
+     *
+     * <p>前置校验（持锁前）：
+     * <ol>
+     *   <li>任务存在且状态为待接单</li>
+     *   <li>任务未过期</li>
+     *   <li>配送员不是任务发布者</li>
+     *   <li>任务性别限制与配送员性别匹配（“不限”跳过）</li>
+     *   <li>配送员已认证、在线、未达接单上限、信用分 ≥ 60、未被封禁</li>
+     * </ol>
+     *
+     * <p>持锁后二次校验（防并发抢单）：
+     * <ol>
+     *   <li>任务状态仍为待接单、未过期</li>
+     *   <li>该任务不存在未取消的订单</li>
+     * </ol>
+     *
+     * <p>业务执行：创建订单（状态=待取货，预计完成时间=当前+30min），
+     * 更新任务状态为已接单，原子增加配送员当前接单数，清除任务大厅和详情缓存。
+     *
+     * <p>通过 {@code @RedisDefend(Type.LOCK)} 声明分布式锁，
+     * {@code @SendNotification} 声明接单成功后推送通知给发布者。
      *
      * @param runnerId 配送员ID
      * @param taskId 任务ID
+     * @throws BusinessException 任务不存在/已过期/已接单/性别不匹配/配送员未认证/离线/订单满/信用低/被封禁/系统繁忙
      */
     @Override
     @Transactional
+    @RedisDefend(RedisDefend.Type.LOCK)
     @SendNotification(
             targetUserType = 1, // 发布者
             noticeType = StatusConstant.NOTICE_ORDER,
@@ -213,7 +235,8 @@ public class TaskOrderServiceImpl extends ServiceImpl<TaskOrderMapper, TaskOrder
             // 清除任务相关缓存：任务大厅 & 任务详情
             Objects.requireNonNull(cacheManager.getCache(RedisConstant.CACHE_TASK_HALL)).clear();
             Objects.requireNonNull(cacheManager.getCache(RedisConstant.CACHE_TASK_DETAIL)).clear();
-            stringRedisTemplate.delete(RedisConstant.TASK_HALL_NULL_PREFIX + "default");
+            var nullKeys = stringRedisTemplate.keys(RedisConstant.TASK_HALL_NULL_PREFIX + "*");
+            if (nullKeys != null && !nullKeys.isEmpty()) stringRedisTemplate.delete(nullKeys);
         } catch (InterruptedException e) {
             Thread.currentThread().interrupt();
             throw new BusinessException(MessageConstant.ERROR);
@@ -245,6 +268,7 @@ public class TaskOrderServiceImpl extends ServiceImpl<TaskOrderMapper, TaskOrder
      */
     @Override
     @Transactional
+    @RedisDefend(RedisDefend.Type.LOCK)
     public void cancelOrder(Long runnerId, Long orderId, CancelOrderDTO dto) {
         // 1. 校验订单存在且未删除
         TaskOrder order = getById(orderId);
@@ -297,7 +321,8 @@ public class TaskOrderServiceImpl extends ServiceImpl<TaskOrderMapper, TaskOrder
             // 8. 清除任务相关缓存
             Objects.requireNonNull(cacheManager.getCache(RedisConstant.CACHE_TASK_HALL)).clear();
             Objects.requireNonNull(cacheManager.getCache(RedisConstant.CACHE_TASK_DETAIL)).clear();
-            stringRedisTemplate.delete(RedisConstant.TASK_HALL_NULL_PREFIX + "default");
+            var nullKeys = stringRedisTemplate.keys(RedisConstant.TASK_HALL_NULL_PREFIX + "*");
+            if (nullKeys != null && !nullKeys.isEmpty()) stringRedisTemplate.delete(nullKeys);
 
             log.info("配送员 {} 在5分钟内取消订单 {}，任务 {} 已回退至待接单", runnerId, orderId, order.getTaskId());
         } catch (InterruptedException e) {
@@ -321,6 +346,7 @@ public class TaskOrderServiceImpl extends ServiceImpl<TaskOrderMapper, TaskOrder
      */
     @Override
     @Transactional
+    @RedisDefend(RedisDefend.Type.LOCK)
     @SendNotification(
             targetUserType = 1,
             noticeType = StatusConstant.NOTICE_ORDER,
@@ -421,6 +447,7 @@ public class TaskOrderServiceImpl extends ServiceImpl<TaskOrderMapper, TaskOrder
      */
     @Override
     @Transactional
+    @RedisDefend(RedisDefend.Type.LOCK)
     @SendNotification(
             targetUserType = 2,
             noticeType = StatusConstant.NOTICE_ORDER,
