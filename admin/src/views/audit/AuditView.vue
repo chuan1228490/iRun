@@ -71,7 +71,7 @@
 import { onMounted, ref } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { listUsers, reviewUserCertification } from '@/api/users'
-import { listRunners, reviewRunnerCert } from '@/api/runners'
+import { listRunners, reviewRunnerCertification } from '@/api/runners'
 
 const activeTab = ref('userCert')
 
@@ -121,7 +121,7 @@ async function fetchRunners() {
 
 async function approveRunner(row: any) {
   await ElMessageBox.confirm(`确认通过跑腿员 "${row.nickname}" 的认证？`, '提示', { type: 'success' })
-  await reviewRunnerCert(row.profileId, 2)
+  await reviewRunnerCertification(row.profileId, 2)
   ElMessage.success('已通过认证')
   fetchRunners()
 }
@@ -140,7 +140,7 @@ async function confirmReject() {
     await reviewUserCertification(rejectDialog.value.id, 3, rejectDialog.value.remark)
     fetchUsers()
   } else {
-    await reviewRunnerCert(rejectDialog.value.id, 3, rejectDialog.value.remark)
+    await reviewRunnerCertification(rejectDialog.value.id, 3, rejectDialog.value.remark)
     fetchRunners()
   }
   ElMessage.success('已驳回')

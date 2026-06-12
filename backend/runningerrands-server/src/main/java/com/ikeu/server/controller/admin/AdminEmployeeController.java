@@ -21,7 +21,7 @@ import org.springframework.web.bind.annotation.*;
  * @author ikeu
  * @since 2025/06/01
  */
-@Tag(name = "管理端-员工管理")
+@Tag(name = "管理端-员工管理接口")
 @RestController
 @RequestMapping("/admin")
 @RequiredArgsConstructor

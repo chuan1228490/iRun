@@ -7,7 +7,7 @@ import com.ikeu.model.vo.TaskDetailVO;
 import com.ikeu.model.vo.TaskListVO;
 import com.ikeu.server.annotation.OperationLog;
 import com.ikeu.server.annotation.RequireRole;
-import com.ikeu.server.service.AdminService;
+import com.ikeu.server.service.AdminTaskService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
@@ -18,13 +18,13 @@ import org.springframework.web.bind.annotation.*;
  * @author ikeu
  * @since 2025/06/02
  */
-@Tag(name = "管理端-任务管理")
+@Tag(name = "管理端-任务管理接口")
 @RestController
 @RequestMapping("/admin")
 @RequiredArgsConstructor
 public class AdminTaskController {
 
-    private final AdminService adminService;
+    private final AdminTaskService adminTaskService;
 
     @RequireRole({1, 2})
     @Operation(summary = "所有任务列表")
@@ -33,14 +33,14 @@ public class AdminTaskController {
             @RequestParam(required = false) Integer status,
             @RequestParam(defaultValue = "1") int page,
             @RequestParam(defaultValue = "10") int size) {
-        return Result.success(adminService.listAllTasks(status, page, size));
+        return Result.success(adminTaskService.listAllTasks(status, page, size));
     }
 
     @RequireRole({1, 2})
     @Operation(summary = "任务详情")
     @GetMapping("/tasks/{taskId}")
     public Result<TaskDetailVO> getTaskDetail(@PathVariable Long taskId) {
-        return Result.success(adminService.getTaskDetail(taskId));
+        return Result.success(adminTaskService.getTaskDetail(taskId));
     }
 
     @RequireRole({1})
@@ -49,7 +49,7 @@ public class AdminTaskController {
     @PutMapping("/tasks/{taskId}/status")
     public Result<Void> updateTaskStatus(@PathVariable Long taskId,
                                          @RequestParam Integer status) {
-        adminService.updateTaskStatus(taskId, status);
+        adminTaskService.updateTaskStatus(taskId, status);
         return Result.success(MessageConstant.TASK_STATUS_UPDATED);
     }
 }

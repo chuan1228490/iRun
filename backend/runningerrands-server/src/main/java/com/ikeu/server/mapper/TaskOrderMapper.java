@@ -2,6 +2,7 @@ package com.ikeu.server.mapper;
 
 import com.baomidou.mybatisplus.core.mapper.BaseMapper;
 import com.ikeu.model.entity.TaskOrder;
+import org.apache.ibatis.annotations.MapKey;
 import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Param;
 import org.apache.ibatis.annotations.Update;

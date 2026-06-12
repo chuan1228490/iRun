@@ -35,7 +35,7 @@ public interface RunnerProfileService {
     /** 获取指定配送员的表现数据（接单统计、评分等）。 */
     RunnerPerformanceVO getRunnerPerformance(Long runnerId);
 
-    /** 管理员获取配送员排行榜，支持按接单数或评分排序。 */
+    /** 获取配送员排行榜，支持按接单数或评分排序。 */
     List<RunnerRankingVO> getLeaderboard(String sortBy, int limit);
 
 }

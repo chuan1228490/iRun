@@ -19,12 +19,12 @@ public interface TaskService {
     /** 用户发布新任务，保存任务记录和图片列表。 */
     void publishTask(Long userId, TaskPublishDTO dto);
 
-    /** 配送员分页查询任务大厅列表，支持按类型、报酬范围和地理位置筛选。 */
+    /** 用户分页查询任务大厅列表，支持按类型、报酬范围和地理位置筛选。 */
     PageResult<TaskListVO> listTasksHall(String type, String subType, BigDecimal minReward,
                                      BigDecimal maxReward, BigDecimal lng, BigDecimal lat,
                                      int page, int size);
 
-    /** 查询当前用户发布的任务列表，支持按状态筛选。 */
+    /** 用户查询当前自己发布的任务列表，支持按状态筛选。 */
     PageResult<TaskListVO> listMyPublishedTasks(Long userId, Integer status, int page, int size);
 
     /** 查询任务详细信息，关联发布者信息和图片列表。 */
@@ -46,6 +46,6 @@ public interface TaskService {
     PageResult<TaskListVO> listTasksNearby(BigDecimal lng, BigDecimal lat, Double radiusKm,
                                            int page, int size);
 
-    /** 管理员统计用户发布任务的数量分布。 */
+    /** 统计当前用户发布任务的数量分布。 */
     TaskStatisticsVO getTaskStatistics(Long userId);
 }

@@ -6,7 +6,7 @@ import com.ikeu.common.result.Result;
 import com.ikeu.model.vo.UserInfoVO;
 import com.ikeu.server.annotation.OperationLog;
 import com.ikeu.server.annotation.RequireRole;
-import com.ikeu.server.service.AdminService;
+import com.ikeu.server.service.AdminUserService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
@@ -17,19 +17,19 @@ import org.springframework.web.bind.annotation.*;
  * @author ikeu
  * @since 2025/06/01
  */
-@Tag(name = "管理端-用户管理")
+@Tag(name = "管理端-用户管理接口")
 @RestController
 @RequestMapping("/admin")
 @RequiredArgsConstructor
 public class AdminUserController {
 
-    private final AdminService adminService;
+    private final AdminUserService adminUserService;
 
     @RequireRole({1, 2})
     @Operation(summary = "用户详情")
     @GetMapping("/users/{userId}")
     public Result<UserInfoVO> getUserDetail(@PathVariable Long userId) {
-        return Result.success(adminService.getUserDetail(userId));
+        return Result.success(adminUserService.getUserDetail(userId));
     }
 
     @RequireRole({1, 2})
@@ -41,7 +41,7 @@ public class AdminUserController {
             @RequestParam(required = false) String keyword,
             @RequestParam(defaultValue = "1") int page,
             @RequestParam(defaultValue = "10") int size) {
-        return Result.success(adminService.listUsers(status, isCertify, keyword, page, size));
+        return Result.success(adminUserService.listUsers(status, isCertify, keyword, page, size));
     }
 
     @RequireRole({1})
@@ -50,7 +50,7 @@ public class AdminUserController {
     @PutMapping("/users/{userId}/status")
     public Result<Void> toggleStatus(@PathVariable Long userId,
                                      @RequestParam boolean enabled) {
-        adminService.toggleUserStatus(userId, enabled);
+        adminUserService.toggleUserStatus(userId, enabled);
         return Result.success(MessageConstant.SUCCESS);
     }
 
@@ -62,7 +62,7 @@ public class AdminUserController {
             @PathVariable Long userId,
             @RequestParam Integer isCertify,
             @RequestParam(required = false) String remark) {
-        adminService.reviewUserCertification(userId, isCertify, remark);
+        adminUserService.reviewUserCertification(userId, isCertify, remark);
         return Result.success(MessageConstant.CERTIFY_REVIEWED);
     }
 }

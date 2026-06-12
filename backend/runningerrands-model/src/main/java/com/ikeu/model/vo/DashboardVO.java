@@ -10,6 +10,11 @@ import java.io.Serializable;
 import java.math.BigDecimal;
 import java.util.List;
 
+/**
+ * 管理端仪表盘汇总 VO，包含统计卡片数据和图表数据。
+ * @author ikeu
+ * @since 2025/06/01
+ */
 @Data
 @Builder
 @NoArgsConstructor
@@ -45,38 +50,14 @@ public class DashboardVO implements Serializable {
     private Long todayCompletedOrders;
 
     @Schema(description = "近7天新增用户趋势")
-    private List<TrendPoint> userTrend;
+    private List<TrendPointVO> userTrend;
 
     @Schema(description = "近7天收入趋势")
-    private List<TrendPoint> revenueTrend;
+    private List<TrendPointVO> revenueTrend;
 
     @Schema(description = "任务分类占比")
-    private List<CategoryPie> taskCategories;
+    private List<CategoryPieVO> taskCategories;
 
     @Schema(description = "订单状态分布")
-    private List<CategoryPie> orderStatusDistribution;
-
-    @Data
-    @Builder
-    @NoArgsConstructor
-    @AllArgsConstructor
-    @Schema(description = "趋势数据点")
-    public static class TrendPoint implements Serializable {
-        @Schema(description = "日期")
-        private String date;
-        @Schema(description = "数量")
-        private Long value;
-    }
-
-    @Data
-    @Builder
-    @NoArgsConstructor
-    @AllArgsConstructor
-    @Schema(description = "分类占比")
-    public static class CategoryPie implements Serializable {
-        @Schema(description = "分类名称")
-        private String name;
-        @Schema(description = "数量")
-        private Long value;
-    }
+    private List<CategoryPieVO> orderStatusDistribution;
 }

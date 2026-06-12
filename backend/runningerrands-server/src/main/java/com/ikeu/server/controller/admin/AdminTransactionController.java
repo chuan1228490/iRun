@@ -17,7 +17,7 @@ import java.time.LocalDateTime;
  * @author ikeu
  * @since 2025/06/01
  */
-@Tag(name = "管理端-资金流水")
+@Tag(name = "管理端-资金流水接口")
 @RestController
 @RequestMapping("/admin")
 @RequiredArgsConstructor
