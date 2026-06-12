@@ -68,6 +68,9 @@ public class MessageConstant {
     public static final String TASK_STATUS_ILLEGAL = "任务状态异常，操作失败";
     public static final String TASK_CANCEL_FAILED = "任务取消失败";
     public static final String TASK_CANCEL_NOT_BE_ALLOWED = "任务已被接单，请与接单员联系";
+    public static final String TASK_WAIT_CONFIRM_CANNOT_CANCEL = "任务正在等待确认收货，暂无法取消";
+    public static final String TASK_COMPLETED_CANNOT_CANCEL = "任务已完成，无法取消";
+    public static final String TASK_ALREADY_CANCELLED = "任务已取消，请勿重复操作";
     public static final String TASK_TIMEOUT_CANCEL = "任务超时无人接单，已自动取消";
     public static final String TASK_CANCEL_SUCCESS = "任务取消成功";
     public static final String NEED_SELECT_DELIVERY_ADDRESS = "该任务类型必须选择送达地址";
@@ -140,6 +143,7 @@ public class MessageConstant {
 
 
     // ========== 管理员相关 ==========
+    public static final String LOGIN_FAIL_LOCKED = "登录失败次数过多，请5分钟后再试";
     public static final String ACCESS_DENIED = "权限不足，无法执行此操作";
     public static final String RUNNER_NOT_IN_AUDITING_STATUS = "该跑腿员不在审核中状态";
     public static final String ADMIN_LOGIN_FAILED = "用户名或密码错误";
@@ -153,7 +157,6 @@ public class MessageConstant {
     public static final String CANNOT_DELETE_SELF = "不能删除自己的账户";
     public static final String CANNOT_DISABLE_SELF = "不能停用自己的账户";
     public static final String ADMIN_MUST_BE_NORMAL = "只能创建普通管理员";
-    public static final String ONLY_ONE_SUPER_ADMIN = "超级管理员只能有一人";
     public static final String TASK_STATUS_UPDATED = "任务状态已更新";
 
     // ========== 聊天消息相关 ==========

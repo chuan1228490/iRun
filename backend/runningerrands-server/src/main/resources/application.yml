@@ -45,7 +45,7 @@ runningerrands:
   admin:
     init:
       username: ${RUNNING_ERRANDS_ADMIN_USERNAME:admin}
-      password: ${RUNNING_ERRANDS_ADMIN_PASSWORD:admin123}
+      password: ${RUNNING_ERRANDS_ADMIN_PASSWORD:admin}
       name: ${RUNNING_ERRANDS_ADMIN_NAME:系统管理员}
 
   jwt:

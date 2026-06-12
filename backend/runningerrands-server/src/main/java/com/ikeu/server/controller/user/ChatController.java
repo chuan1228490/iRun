@@ -27,7 +27,7 @@ import java.util.Map;
  * @since 2025/05/26
  */
 @Slf4j
-@Tag(name = "用户端 - 聊天模块相关接口", description = "用户与配送员实时聊天")
+@Tag(name = "用户端-聊天模块接口", description = "用户与配送员实时聊天")
 @RestController
 @RequestMapping("/chat")
 @RequiredArgsConstructor

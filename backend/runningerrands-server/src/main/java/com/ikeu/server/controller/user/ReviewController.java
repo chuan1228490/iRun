@@ -21,7 +21,7 @@ import java.util.List;
  * @author ikeu
  * @since 2025/05/26
  */
-@Tag(name = "用户端 - 评价模块相关接口", description = "任务完成后的互评")
+@Tag(name = "用户端-评价模块接口", description = "任务完成后的互评")
 @RestController
 @RequestMapping("/review")
 @RequiredArgsConstructor

@@ -16,7 +16,7 @@ public class RedisConstant {
     public static final String USER_CERTIFY_CODE = "user:code:";                    // 验证码
     public static final String USER_LOGIN_FAIL_PREFIX = "user:login:fail:";         // 用户登录失败计数
     public static final String ADMIN_LOGIN_FAIL_PREFIX = "admin:login:fail:";       // 管理员登录失败计数
-    public static final long LOGIN_LOCK_SECONDS = 900;                              // 登录锁定时间-15分钟
+    public static final long LOGIN_LOCK_SECONDS = 300;                              // 登录锁定时间-5分钟
     public static final int LOGIN_MAX_FAIL_COUNT = 5;                               // 登录最大失败次数
 
     // ========== 订单相关锁 ==========
@@ -30,7 +30,7 @@ public class RedisConstant {
     public static final String NOTIFICATION_CLEANUP_LOCK_KEY = "notification:cleanup:lock"; // 通知清理锁
 
     // ========== 缓存击穿防护锁 ==========
-    public static final String TASK_HALL_LOCK_KEY = "task:hall:lock";               // 任务大厅缓存互斥锁
+    public static final String TASK_HALL_LOCK_KEY = "task:hall:lock:";              // 任务大厅分页缓存互斥锁前缀
     public static final String TASK_DETAIL_LOCK_PREFIX = "task:detail:lock:";       // 任务详情缓存互斥锁前缀
 
     // ========== 缓存穿透防护 ==========

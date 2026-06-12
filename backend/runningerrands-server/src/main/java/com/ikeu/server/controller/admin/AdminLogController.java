@@ -18,7 +18,7 @@ import java.time.LocalDateTime;
  * @author ikeu
  * @since 2025/06/01
  */
-@Tag(name = "管理端-操作日志")
+@Tag(name = "管理端-操作日志接口")
 @RestController
 @RequestMapping("/admin")
 @RequiredArgsConstructor

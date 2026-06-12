@@ -106,7 +106,7 @@
 <script setup lang="ts">
 import { onMounted, reactive, ref } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import { listRunners, getRunnerDetail, reviewRunnerCert, toggleRunnerBan } from '@/api/runners'
+import { listRunners, getRunnerDetail, reviewRunnerCertification, toggleRunnerBan } from '@/api/runners'
 
 const loading = ref(false)
 const tableData = ref<any[]>([])
@@ -153,7 +153,7 @@ function review(row: any, verifyStatus: number) {
 async function submitReview() {
   const action = dialog.verifyStatus === 2 ? '通过' : '驳回'
   await ElMessageBox.confirm(`确认${action}该跑腿员的认证？`, '提示', { type: 'warning' })
-  await reviewRunnerCert(dialog.profileId, dialog.verifyStatus, dialog.remark || undefined)
+  await reviewRunnerCertification(dialog.profileId, dialog.verifyStatus, dialog.remark || undefined)
   ElMessage.success('审核完成')
   dialog.visible = false
   fetchData()

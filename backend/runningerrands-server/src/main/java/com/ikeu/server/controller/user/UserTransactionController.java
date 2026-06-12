@@ -24,9 +24,9 @@ import java.time.LocalDateTime;
  * @author ikeu
  * @since 2025/05/26
  */
-@Tag(name = "用户端 - 我的账本相关接口", description = "收支明细查询")
+@Tag(name = "用户端-收支账本接口", description = "收支明细查询")
 @RestController
-@RequestMapping("/user/transaction")
+@RequestMapping("/user/transactions")
 @RequiredArgsConstructor
 public class UserTransactionController {
 

@@ -15,7 +15,7 @@ import org.springframework.web.bind.annotation.*;
  * @author ikeu
  * @since 2025/05/23
  */
-@Tag(name = "用户端 - 消息通知相关接口", description = "站内信查看与管理")
+@Tag(name = "用户端-消息通知接口", description = "站内信查看与管理")
 @RestController
 @RequestMapping("/notification")
 @RequiredArgsConstructor
@@ -75,18 +75,6 @@ public class NotificationController {
         Long userId = BaseContext.getCurrentId();
         notificationService.markAllAsRead(userId);
         return Result.success();
-    }
-
-    /**
-     * 获取当前用户的未读通知数量。
-     *
-     * @return 未读通知数量
-     */
-    @Operation(summary = "获取未读通知数量")
-    @GetMapping("/unread-count")
-    public Result<Long> unreadCount() {
-        Long userId = BaseContext.getCurrentId();
-        return Result.success(notificationService.getUnreadCount(userId));
     }
 
     /**

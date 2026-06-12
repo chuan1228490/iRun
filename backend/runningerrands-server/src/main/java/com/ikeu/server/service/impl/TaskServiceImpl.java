@@ -23,6 +23,7 @@ import com.ikeu.model.entity.*;
 import com.ikeu.model.vo.TaskDetailVO;
 import com.ikeu.model.vo.TaskListVO;
 import com.ikeu.model.vo.TaskStatisticsVO;
+import com.ikeu.server.annotation.RedisDefend;
 import com.ikeu.server.mapper.*;
 import com.ikeu.server.service.PaymentService;
 import com.ikeu.server.service.TaskService;
@@ -77,6 +78,16 @@ public class TaskServiceImpl extends ServiceImpl<TaskMapper, Task> implements Ta
     private String getDefaultDeliveryAddress(String subType) {
         if (subType == null || subType.isEmpty()) return null;
         return TaskTypeConstant.DEFAULT_DELIVERY_MAP.get(subType);
+    }
+
+    /**
+     * 确保 taskSpecs 不为空字符串，MyBatis-Plus 写入时需为有效 JSON。
+     */
+    private String mergeTaskSpecs(String taskSpecs) {
+        if (taskSpecs != null && !taskSpecs.isBlank()) {
+            return taskSpecs;
+        }
+        return "{}";
     }
 
     /**
@@ -137,7 +148,6 @@ public class TaskServiceImpl extends ServiceImpl<TaskMapper, Task> implements Ta
         vo.setTaskId(task.getId());
         vo.setPublishTime(task.getCreatedAt());
         vo.setIsOwner(isOwner);
-        vo.setCancelReason(task.getCancelReason());
         if (task.getStatus() != null && task.getStatus().equals(StatusConstant.TASK_CANCELLED)) {
             vo.setCancelTime(task.getUpdatedAt());
         }
@@ -194,8 +204,13 @@ public class TaskServiceImpl extends ServiceImpl<TaskMapper, Task> implements Ta
         if (user == null || Objects.equals(user.getStatus(), StatusConstant.DISABLE)) {
             throw new BusinessException(MessageConstant.USER_NOT_EXIST);
         }
+        // 计算合计支付金额（小费 + 配送费 + 预估商品费）
+        BigDecimal deliveryFee = taskPublishDTO.getDeliveryFee() != null ? taskPublishDTO.getDeliveryFee() : BigDecimal.ZERO;
+        BigDecimal productCost = taskPublishDTO.getProductCost() != null ? taskPublishDTO.getProductCost() : BigDecimal.ZERO;
+        BigDecimal totalAmount = taskPublishDTO.getTip().add(deliveryFee).add(productCost);
+
         // 校验余额
-        if (user.getBalance().compareTo(taskPublishDTO.getReward()) < 0) {
+        if (user.getBalance().compareTo(totalAmount) < 0) {
             throw new BusinessException(MessageConstant.BALANCE_NOT_ENOUGH);
         }
 
@@ -236,6 +251,12 @@ public class TaskServiceImpl extends ServiceImpl<TaskMapper, Task> implements Ta
 
         Task task = BeanUtil.copyProperties(taskPublishDTO, Task.class);
 
+        // reward 存储合计支付金额（小费 + 配送费 + 预估商品费）
+        task.setReward(totalAmount);
+        task.setTip(taskPublishDTO.getTip());
+        task.setDeliveryFee(deliveryFee);
+        task.setProductCost(productCost);
+
         task.setTaskNo(taskNo);
         task.setPublisherId(userId);
 
@@ -243,9 +264,7 @@ public class TaskServiceImpl extends ServiceImpl<TaskMapper, Task> implements Ta
             task.setSubType(taskPublishDTO.getSubType());
         }
 
-        if (taskPublishDTO.getTaskSpecs() != null) {
-            task.setTaskSpecs(taskPublishDTO.getTaskSpecs());
-        }
+        task.setTaskSpecs(mergeTaskSpecs(taskPublishDTO.getTaskSpecs()));
 
         if (taskPublishDTO.getImageUrls() != null) {
             task.setImageUrls(JSONUtil.toJsonStr(taskPublishDTO.getImageUrls()));
@@ -286,16 +305,22 @@ public class TaskServiceImpl extends ServiceImpl<TaskMapper, Task> implements Ta
             public void afterCommit() {
                 Objects.requireNonNull(cacheManager.getCache(RedisConstant.CACHE_TASK_HALL)).clear();
                 Objects.requireNonNull(cacheManager.getCache(RedisConstant.CACHE_TASK_DETAIL)).clear();
-                stringRedisTemplate.delete(RedisConstant.TASK_HALL_NULL_PREFIX + "default");
+                var nullKeys = stringRedisTemplate.keys(RedisConstant.TASK_HALL_NULL_PREFIX + "*");
+                if (nullKeys != null && !nullKeys.isEmpty()) stringRedisTemplate.delete(nullKeys);
             }
         });
     }
 
     /**
-     * 配送员获取任务大厅列表方法
-     *  逻辑：支持按类型、子类型、报酬范围条件筛选任务，
-     *  查询状态为"待接单"且未过期的任务，按发布时间倒序排列，
-     *  关联查询发布者信息填充昵称和头像，结果缓存到Redis
+     * 配送员获取任务大厅列表。
+     *
+     * <p>查询状态为“待接单”且未过期的任务，关联发布者信息填充昵称和头像。
+     * 支持按类型、子类型、报酬范围筛选，结果按发布时间倒序。
+     *
+     * <p>缓存策略：仅无筛选条件时缓存全部分页，
+     * 通过 {@code @RedisDefend} 标注使用 RedisDefendUtil 提供穿击+击穿防护
+     * （空标记防穿透、分布式锁防击穿、持锁后双检）。
+     * 接单/取消操作清除 task:hall 全部缓存和空标记。
      *
      * @param type 任务类型
      * @param subType 任务子类型
@@ -305,24 +330,25 @@ public class TaskServiceImpl extends ServiceImpl<TaskMapper, Task> implements Ta
      * @param lat 纬度（附近任务预留）
      * @param page 页码
      * @param size 每页条数
-     * @return PageResult<TaskListVO> 分页任务大厅列表
+     * @return 分页任务大厅列表
      */
     @Override
+    @RedisDefend
     public PageResult<TaskListVO> listTasksHall(String type, String subType, BigDecimal minReward,
                                             BigDecimal maxReward, BigDecimal lng, BigDecimal lat,
                                             int page, int size) {
         boolean canCache = type == null && subType == null && minReward == null
-                && maxReward == null && page == 1;
+                && maxReward == null;
 
         if (canCache) {
-            String cacheKey = "default";
+            String cacheKey = page + ":" + size;
             Cache cache = cacheManager.getCache(RedisConstant.CACHE_TASK_HALL);
             TypeReference<PageResult<TaskListVO>> typeRef = new TypeReference<>() {};
 
             PageResult<TaskListVO> result = redisDefendUtil.getOrLoad(
                     cache, cacheKey,
                     RedisConstant.TASK_HALL_NULL_PREFIX + cacheKey, RedisConstant.TASK_NOT_EXIST_TTL,
-                    RedisConstant.TASK_HALL_LOCK_KEY,
+                    RedisConstant.TASK_HALL_LOCK_KEY + page,
                     (long) RedisConstant.LOCK_WAIT_TIME, (long) RedisConstant.LOCK_EXPIRE,
                     typeRef.getType(),
                     () -> {
@@ -429,6 +455,7 @@ public class TaskServiceImpl extends ServiceImpl<TaskMapper, Task> implements Ta
      * @return TaskDetailVO 任务详情VO
      */
     @Override
+    @RedisDefend
     public TaskDetailVO getTaskDetail(Long taskId, Long currentUserId) {
         String cacheKey = String.valueOf(taskId);
         Cache cache = cacheManager.getCache(RedisConstant.CACHE_TASK_DETAIL);
@@ -458,7 +485,7 @@ public class TaskServiceImpl extends ServiceImpl<TaskMapper, Task> implements Ta
      *
      * <p>校验和实现逻辑：
      * <ol>
-     *   <li>Redisson 分布式锁并发控制</li>
+     *   <li>{@code @RedisDefend(Type.LOCK)} Redisson 分布式锁并发控制</li>
      *   <li>校验任务存在且当前用户为发布者</li>
      *   <li>若任务已被接单或配送中，拒绝取消，提示联系配送员先取消订单</li>
      *   <li>状态机验证通过后更新任务状态为已取消</li>
@@ -472,6 +499,7 @@ public class TaskServiceImpl extends ServiceImpl<TaskMapper, Task> implements Ta
      */
     @Override
     @Transactional
+    @RedisDefend(RedisDefend.Type.LOCK)
     public void cancelTask(Long userId, Long taskId, CancelTaskDTO cancelDTO) {
         String lockKey = RedisConstant.ORDER_LOCK_KEY + taskId;
         RLock lock = redissonClient.getLock(lockKey);
@@ -486,10 +514,20 @@ public class TaskServiceImpl extends ServiceImpl<TaskMapper, Task> implements Ta
             if (!task.getPublisherId().equals(userId)) {
                 throw new BusinessException(MessageConstant.TASK_CANCEL_FAILED);
             }
-            // 已被接单或配送中的任务不允许发布者直接取消，需由配送员先取消订单
+            // 已被接单/配送中 → 不允许发布者直接取消，需由配送员先取消订单
             if (StatusConstant.TASK_ACCEPTED.equals(task.getStatus())
                     || StatusConstant.TASK_DELIVERING.equals(task.getStatus())) {
                 throw new BusinessException(MessageConstant.TASK_CANCEL_NOT_BE_ALLOWED);
+            }
+            // 已完成/已取消/待确认 → 不允许取消
+            if (StatusConstant.TASK_COMPLETED.equals(task.getStatus())) {
+                throw new BusinessException(MessageConstant.TASK_COMPLETED_CANNOT_CANCEL);
+            }
+            if (StatusConstant.TASK_CANCELLED.equals(task.getStatus())) {
+                throw new BusinessException(MessageConstant.TASK_ALREADY_CANCELLED);
+            }
+            if (StatusConstant.TASK_WAIT_CONFIRM.equals(task.getStatus())) {
+                throw new BusinessException(MessageConstant.TASK_WAIT_CONFIRM_CANNOT_CANCEL);
             }
             TaskStateMachine.validate(task.getStatus(), StatusConstant.TASK_CANCELLED, "Task");
             task.setStatus(StatusConstant.TASK_CANCELLED);

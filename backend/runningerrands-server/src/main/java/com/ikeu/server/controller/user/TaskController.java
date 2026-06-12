@@ -24,7 +24,7 @@ import java.math.BigDecimal;
  * @author ikeu
  * @since 2025/05/23
  */
-@Tag(name = "用户端 - 任务模块相关接口", description = "任务发布、浏览、详情")
+@Tag(name = "用户端-任务模块接口", description = "任务发布、浏览、详情")
 @RestController
 @RequestMapping("/task")
 @RequiredArgsConstructor

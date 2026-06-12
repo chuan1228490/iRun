@@ -201,7 +201,7 @@ export function parseServiceDurationFromSpecs(specs) {
   if (!specs || !specs.服务时长) return null
   return {
     duration: specs.服务时长,
-    label: specs.时长标签 || `${specs.服务时长}分钟`,
+    label: `${specs.服务时长}分钟`,
     fee: specs.基础服务费 || 0
   }
 }
@@ -250,12 +250,31 @@ export function parsePrintSpecsFromSpecs(specs) {
 }
 
 /**
- * 从 task_specs 解析商家信息 (type=2 subType=23)
+ * 从 task_specs 解析商家 (type=2 subType=23)
  * @returns {string|null}
  */
 export function parseMerchantInfoFromSpecs(specs) {
-  if (!specs || !specs.商家信息) return null
-  return specs.商家信息
+  if (!specs || !specs.商家) return null
+  return specs.商家
+}
+
+/**
+ * 从 task_specs 解析餐品信息 (type=2)
+ * @returns {string|null}
+ */
+export function parseFoodItemsFromSpecs(specs) {
+  if (!specs || !specs.餐品) return null
+  return specs.餐品
+}
+
+/**
+ * 从 task_specs 解析额外费用 (type=5 通用代办)
+ * @returns {number|null}
+ */
+export function parseExtraFeeFromSpecs(specs) {
+  if (!specs || specs.额外费用 == null) return null
+  const val = Number(specs.额外费用)
+  return isNaN(val) ? null : val
 }
 
 /**

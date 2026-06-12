@@ -13,8 +13,8 @@ export function getRunnerDetail(profileId: number) {
   return request({ url: `/admin/runners/${profileId}`, method: 'get' })
 }
 
-export function reviewRunnerCert(profileId: number, verifyStatus: number, remark?: string) {
-  return request({ url: `/admin/reviews/${profileId}`, method: 'put', params: { verifyStatus, remark } })
+export function reviewRunnerCertification(profileId: number, verifyStatus: number, remark?: string) {
+  return request({ url: `/admin/runners/${profileId}/review`, method: 'put', params: { verifyStatus, remark } })
 }
 
 export function toggleRunnerBan(profileId: number, banned: boolean) {
