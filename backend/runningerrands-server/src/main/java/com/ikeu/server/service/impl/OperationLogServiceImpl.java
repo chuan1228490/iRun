@@ -3,7 +3,6 @@ package com.ikeu.server.service.impl;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
-import com.ikeu.common.constant.StatusConstant;
 import com.ikeu.common.context.BaseContext;
 import com.ikeu.common.result.PageResult;
 import com.ikeu.model.entity.Admin;
@@ -16,16 +15,17 @@ import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
 
-import static com.ikeu.common.constant.StatusConstant.ROLE_SUPER_ADMIN;
-
 /**
  * 操作日志服务实现，提供操作日志的分页条件查询。
+ * 超管可查看所有日志，普通管理员仅可查看自己的日志。
  * @author ikeu
  * @since 2026/06/03
  */
 @Service
 @RequiredArgsConstructor
 public class OperationLogServiceImpl extends ServiceImpl<OperationLogMapper, OperationLog> implements OperationLogService {
+
+    private static final int ROLE_SUPER_ADMIN = 1;
 
     private final AdminMapper adminMapper;
 
