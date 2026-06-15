@@ -62,19 +62,37 @@ mobile/
 TabBar (5 标签，毛玻璃效果)：
 ├── 首页      /pages/index/index
 ├── 任务大厅  /pages/task-hall/task-hall
-├── 发布      /pages/task-publish/task-publish
-├── 消息      /pages/chat/chat
-└── 我的      /pages/profile/profile
+├── 订单      /pages/orders/orders
+├── 消息      /pages/message/message
+└── 我的      /pages/userprofile/userprofile
 
 非 Tab 页面（navigateTo）：
-├── 任务详情   /pages/task-detail/task-detail?id=xxx
-├── 订单列表   /pages/order-list/order-list
-├── 订单详情   /pages/order-detail/order-detail?id=xxx
-├── 地址管理   /pages/address-list/address-list
+├── 登录       /pages/login/login
+├── 任务发布   /pages/service-publish/service-publish, general-publish/general-publish,
+│             coffee-order/coffee-order, print-order/print-order, paper-express/paper-express
+├── 订单等待   /pages/order-waiting/order-waiting
+├── 订单配送   /pages/order-delivering/order-delivering
+├── 订单完成   /pages/order-completed/order-completed
+├── 订单成功   /pages/order-success/order-success
+├── 地址列表   /pages/address-list/address-list
 ├── 地址编辑   /pages/address-edit/address-edit
-├── 认证中心   /pages/certification/certification
-├── 跑腿员中心 /pages/runner-center/runner-center
-├── ... (更多)
+├── 身份认证   /pages/identity-verify/identity-verify
+├── 实名认证   /pages/certify/certify
+├── 跑腿认证   /pages/rider-cert/rider-cert
+├── 跑腿面板   /pages/runner-dashboard/runner-dashboard
+├── 跑腿评价   /pages/runner-reviews/runner-reviews
+├── 骑手资料   /pages/rider-profile/rider-profile
+├── 聊天详情   /pages/chat-detail/chat-detail
+├── 通知中心   /pages/notifications/notifications
+├── 钱包       /pages/wallet/wallet
+├── 账单       /pages/bills/bills
+├── 隐私安全   /pages/privacy-security/privacy-security
+├── 个人设置   /pages/profile-settings/profile-settings
+├── 修改手机号 /pages/phone-edit/phone-edit
+├── 支付密码   /pages/pay-password-edit/pay-password-edit
+├── 驿站选择   /pages/station-select/station-select
+├── 取消原因   /pages/cancel-reason/cancel-reason
+└── (共 33 页)
 ```
 
 ### Step 3: 认证流程
