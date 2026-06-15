@@ -162,6 +162,13 @@
       }
     },
     {
+      "path": "pages/identity-verify/identity-verify",
+      "style": {
+        "navigationStyle": "custom",
+        "navigationBarTitleText": "身份认证"
+      }
+    },
+    {
       "path": "pages/pay-password-edit/pay-password-edit",
       "style": {
         "navigationStyle": "custom",
