@@ -179,55 +179,88 @@ application-prod.yml         # 生产环境配置（.gitignore，通过环境变
 
 ### 前端 API 地址配置
 
-**不推荐使用 ngrok 作为统一方案**。请按以下方式配置：
+项目支持两种开发模式：**本地直连**（推荐，最简单）和 **内网穿透**（需真机调试时使用）。
 
-#### 管理端（Vite 代理）
+#### 方式一：本地直连（默认）
+
+##### 管理端（Vite 代理）
 
 编辑 `admin/vite.config.ts`：
 
 ```typescript
-// 本地开发：代理到本地后端（默认，无需修改）
 server: {
   port: 3001,
   proxy: {
     '^/api/(admin|user/|common|ws)': {
-      target: 'http://localhost:8080',   // ← 改这里指向你的后端地址
+      target: 'http://localhost:8080',   // ← 指向你的后端地址
       changeOrigin: true,
     }
   }
 }
 ```
 
-如需连接远程后端（测试服务器），修改 `target` 为服务器地址即可，无需 ngrok。
+##### 移动端（本地调试）
 
-#### 移动端（环境自动切换）
+微信开发者工具内置了对 localhost 的支持，只需：
 
-编辑 `mobile/utils/config.js`，根据微信小程序运行版本自动选择后端地址：
+1. 开发者工具 → 详情 → 本地设置 → 勾选"不校验合法域名、web-view（业务域名）、TLS 版本以及 HTTPS 证书"
+2. `mobile/utils/config.js` 中 `develop` 环境指向 `http://localhost:8080`
 
 ```javascript
-const ENV_CONFIG = {
-  // 开发版（开发者工具 / 开发版）
-  develop: {
-    SERVER_ORIGIN: 'http://localhost:8080',        // ← 本地后端
-    // SERVER_ORIGIN: 'https://your-test-server.com', // ← 或测试服务器
-  },
-  // 体验版
-  trial: {
-    SERVER_ORIGIN: 'https://test-api.your-domain.com',  // ← 测试服务器
-  },
-  // 正式版
-  release: {
-    SERVER_ORIGIN: 'https://api.your-domain.com',       // ← 生产服务器
-  }
+develop: {
+  SERVER_ORIGIN: 'http://localhost:8080',
 }
-
-const envVersion = uni.getAccountInfoSync().miniProgram.envVersion
-const BASE_URL = ENV_CONFIG[envVersion].SERVER_ORIGIN + '/api'
-const WS_URL = ENV_CONFIG[envVersion].SERVER_ORIGIN.replace('https', 'wss')
-                  .replace('http', 'ws') + '/api/ws'
 ```
 
-**不需要 ngrok**：微信开发者工具支持直接连接局域网/localhost 后端，只需在工具中关闭"不校验合法域名"选项即可调试。
+#### 方式二：内网穿透（真机调试 / 外部设备访问）
+
+当需要用真机扫码测试、或外部设备无法直接访问开发机时，使用 ngrok / frp / localtunnel 等内网穿透工具。
+
+##### 1. 启动内网穿透
+
+以 ngrok 为例：
+
+```bash
+# 启动 ngrok 隧道 → 后端端口
+ngrok http 8080
+# 输出：Forwarding  https://xxxx.ngrok-free.dev -> http://localhost:8080
+```
+
+##### 2. 修改前端配置
+
+**管理端** `admin/vite.config.ts`：
+
+```typescript
+proxy
+  '^/api/(admin|user/|common|ws)': {
+    target: 'https://xxxx.ngrok-free.dev',   // ← 替换为你的 ngrok 地址
+    changeOrigin: true,
+    headers: {
+      'ngrok-skip-browser-warning': 'true'    // 跳过 ngrok 浏览器警告
+    }
+  }
+```
+
+**移动端** `mobile/utils/config.js`：
+
+```javascript
+develop: {
+  SERVER_ORIGIN: 'https://xxxx.ngrok-free.dev',   // ← 替换为你的 ngrok 地址
+}
+```
+
+移动端 `mobile/utils/request.js` 中 `BASE_URL` 和 `WS_URL` 会自动从 `SERVER_ORIGIN` 拼接。WebSocket 协议也会自动从 `https` 转为 `wss`。
+
+> **注意**：ngrok 地址每次重启会变化（免费版）。如需固定域名可使用 ngrok 付费版，或换用 frp 等自建隧道方案。隧道地址是个人临时使用的，**不要提交到 git**。
+
+##### 内网穿透方案对比
+
+| 方案 | 固定域名 | 费用 | 适用场景 |
+|------|---------|------|---------|
+| ngrok | 付费版支持 | 免费版足够调试 | 零配置快速穿透，推荐个人开发 |
+| frp | 需自建服务器 | 服务器费用 | 团队共享，可自定义域名 |
+| localtunnel | 免费 | 免费 | 临时分享，不稳定 |
+| Cloudflare Tunnel | 需域名备案 | 免费 | 长期稳定隧道 |
 
 ### 移动端微信小程序 AppID 配置
 
