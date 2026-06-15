@@ -38,6 +38,19 @@ spring:
       enabled: true
       additional-paths: src/main/java
 
+# ===== Knife4j/Swagger API 文档（仅开发环境启用） =====
+springdoc:
+  api-docs:
+    enabled: true
+    path: /v3/api-docs
+  swagger-ui:
+    enabled: true
+    path: /swagger-ui.html
+knife4j:
+  enable: true
+  setting:
+    language: zh_cn
+
 # ===== 个人/环境相关覆盖 =====
 # 以下配置因开发者或环境不同而异，覆盖 application.yml 中的对应项
 runningerrands:
