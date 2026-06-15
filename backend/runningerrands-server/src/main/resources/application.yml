@@ -59,10 +59,9 @@ runningerrands:
     user-token-name: authentication
 
   alioss:
-    endpoint: oss-cn-beijing.aliyuncs.com
     access-key-id: ${ALIYUN_ACCESS_KEY_ID:}
     access-key-secret: ${ALIYUN_ACCESS_KEY_SECRET:}
-    bucket-name: runningerrands-ikeu
+    # endpoint 和 bucket-name 请在 application-dev.yml 中配置
 
   wechat:
     app-id: ${WECHAT_APP_ID:}
