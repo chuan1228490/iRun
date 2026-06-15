@@ -121,7 +121,7 @@ const entered = ref(false)
 const detail = reactive<any>({})
 
 function statusTag(s: number) {
-  const map: Record<number, string> = { 1: 'info', 2: '', 3: 'warning', 4: '', 5: 'success', 6: 'danger' }
+  const map: Record<number, string> = { 1: 'info', 2: 'warning', 3: 'warning', 4: 'primary', 5: 'success', 6: 'danger' }
   return map[s] ?? 'info'
 }
 

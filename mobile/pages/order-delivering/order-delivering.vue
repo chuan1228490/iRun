@@ -216,10 +216,11 @@
 
 <script setup>
 import { ref, computed } from 'vue'
-import { onLoad, onUnload } from '@dcloudio/uni-app'
+import { onLoad } from '@dcloudio/uni-app'
 import { orderApi } from '@/api'
-import { TASK_TYPES, TASK_TYPE_META, TYPE_FROM_API, isQueueWaitType } from '@/utils/constants.js'
-import { parseTaskSpecs, parseExpressPackagesFromSpecs, parseBookCountFromSpecs, parsePrintSpecsFromSpecs, parseMerchantInfoFromSpecs, parseItemExpressFromSpecs, parseFoodItemsFromSpecs, parseServiceDurationFromSpecs, parseExtraFeeFromSpecs } from '@/utils/campus-data.js'
+import { TASK_TYPES, TASK_TYPE_META, isQueueWaitType } from '@/utils/constants.js'
+import { parseExpressPackagesFromSpecs } from '@/utils/campus-data.js'
+import { useTaskSpecs } from '@/utils/useTaskSpecs.js'
 import { useSubmitLock } from '@/utils/submit-guard'
 import UploadGrid from '@/components/upload-grid/upload-grid.vue'
 import { showToast } from '@/utils/toast'
@@ -246,51 +247,11 @@ const { lock: actionLock, unlock: actionUnlock, locked: actionLocked } = useSubm
 const uploadedPickupImages = ref([])
 const uploadedDeliverImages = ref([])
 
-const rewardText = computed(() => Number(order.value.reward || 0).toFixed(2))
-const taskSpecs = computed(() => parseTaskSpecs(order.value.taskSpecs))
+const { taskSpecs, taskTypeCode, typeLabel, rewardText, typeIcon, typeIconColor, typeColor, isQueueWait, isPaperExpress, pickupSectionTitle, pickupAddressLabel, pickupCodeLabel, foodItems, serviceDuration, extraFee, productFeeText, productTags, bookCount, printSpecs, merchantTag, itemExpress } = useTaskSpecs(order)
+
 const stepActive = computed(() => {
   const s = order.value.orderStatus
   return s === 1 ? 0 : s === 2 ? 1 : s === 3 ? 2 : s >= 4 ? 3 : 0
-})
-
-const taskTypeCode = computed(() => typeof order.value.type === 'number' ? order.value.type : (TYPE_FROM_API[order.value.type] || 1))
-
-const typeLabel = computed(() => TASK_TYPES[taskTypeCode.value] || '任务')
-const typeMeta = computed(() => TASK_TYPE_META[taskTypeCode.value] || TASK_TYPE_META[1])
-const typeIcon = computed(() => typeMeta.value.icon)
-const typeIconColor = computed(() => typeMeta.value.color)
-const typeColor = computed(() => ({ 1: 'blue', 2: 'orange', 3: 'green', 4: 'teal' }[taskTypeCode.value] || 'blue'))
-const isQueueWait = computed(() => isQueueWaitType(order.value.subType))
-const isPaperExpress = computed(() => taskTypeCode.value === 4 && order.value.subType === '纸品速达')
-
-const pickupSectionTitle = computed(() => {
-  if (isQueueWait.value) return '代办信息'
-  if (taskTypeCode.value === 2) return '取餐信息'
-  if (taskTypeCode.value === 4 && !isPaperExpress.value) return '代购信息'
-  return '取件信息'
-})
-const pickupAddressLabel = computed(() => {
-  if (isQueueWait.value) return '代办地址'
-  if (taskTypeCode.value === 2) return '取餐地址'
-  if (taskTypeCode.value === 4 && !isPaperExpress.value) return '代购地址'
-  return '取件地址'
-})
-const pickupCodeLabel = computed(() => {
-  if (taskTypeCode.value === 2) return '取餐码'
-  return '取件码'
-})
-
-const foodItems = computed(() => {
-  if (taskTypeCode.value !== 2) return null
-  return parseFoodItemsFromSpecs(taskSpecs.value)
-})
-const serviceDuration = computed(() => {
-  if (!isQueueWait.value) return null
-  return parseServiceDurationFromSpecs(taskSpecs.value)
-})
-const extraFee = computed(() => {
-  if (taskTypeCode.value !== 5) return null
-  return parseExtraFeeFromSpecs(taskSpecs.value)
 })
 
 // 用户端：已接单(1)和配送中(2)统一显示"配送中"
@@ -399,63 +360,11 @@ const displayDescription = computed(() => {
       if (desc) text += `\n需求描述：${desc}`
       return text
     }
-    if (desc.startsWith('packageSize:')) {
-      const idx = desc.indexOf('；description：')
-      if (idx !== -1) {
-        const sizes = desc.substring('packageSize:'.length, idx)
-        let innerDesc = desc.substring(idx + '；description：'.length)
-        if (innerDesc === 'null') innerDesc = ''
-        let text = `包裹：${sizes}`
-        if (innerDesc) text += `\n需求描述：${innerDesc}`
-        return text
-      }
-    }
   }
   if (taskTypeCode.value === 4) {
     return desc || '暂无描述'
   }
   return desc || '暂无描述'
-})
-
-const productFeeText = computed(() => {
-  if (taskTypeCode.value !== 4) return null
-  const specs = taskSpecs.value
-  if (specs && specs.预估商品费 != null) return Number(specs.预估商品费)
-  return null
-})
-
-const productTags = computed(() => {
-  if (taskTypeCode.value !== 4) return []
-  const specs = taskSpecs.value
-  if (specs && specs.商品列表) {
-    return specs.商品列表.map(item => item.规格 ? `${item.名称}x${item.数量}（${item.规格}）` : `${item.名称}x${item.数量}`)
-  }
-  const val = order.value.subType || ''
-  if (!val) return []
-  if (val.startsWith('[')) {
-    try { return JSON.parse(val) } catch (e) { return [] }
-  }
-  return val.split('、')
-})
-
-const bookCount = computed(() => {
-  if (taskTypeCode.value !== 3) return null
-  return parseBookCountFromSpecs(taskSpecs.value)
-})
-
-const printSpecs = computed(() => {
-  if (taskTypeCode.value !== 3) return null
-  return parsePrintSpecsFromSpecs(taskSpecs.value)
-})
-
-const merchantTag = computed(() => {
-  if (taskTypeCode.value !== 2) return null
-  return parseMerchantInfoFromSpecs(taskSpecs.value)
-})
-
-const itemExpress = computed(() => {
-  if (taskTypeCode.value !== 3) return null
-  return parseItemExpressFromSpecs(taskSpecs.value)
 })
 
 const stepItems = computed(() => {
