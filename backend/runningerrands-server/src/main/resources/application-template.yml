@@ -58,3 +58,13 @@ runningerrands:
   alioss:
     endpoint: ${ALIYUN_OSS_ENDPOINT:oss-cn-beijing.aliyuncs.com}
     bucket-name: ${ALIYUN_OSS_BUCKET:你的OSS桶名}
+
+  # 阿里云短信验证服务
+  # 如不需要短信功能可删除此段；如需使用请替换下方 <...> 占位符为实际值
+  sms:
+    access-key-id: ${ALIYUN_ACCESS_KEY_ID:}
+    access-key-secret: ${ALIYUN_ACCESS_KEY_SECRET:}
+    sign-name: <你的短信签名>
+    template-code: <你的模板CODE>
+    region-id: <你的区域ID，如 cn-chengdu>
+    endpoint: <你的短信服务端点，如 dypnsapi.aliyuncs.com>
