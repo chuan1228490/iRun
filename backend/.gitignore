@@ -13,7 +13,7 @@ target/
 application-dev.yml
 application-prod.yml
 application-*.yml
-!application-*.yml.example
+!application-template.yml
 
 ### Office temp files ###
 ~$*
