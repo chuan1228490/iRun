@@ -301,7 +301,7 @@
 </template>
 
 <script setup>
-import { ref, computed } from 'vue'
+import { ref, computed, onUnmounted } from 'vue'
 import { onLoad } from '@dcloudio/uni-app'
 import { useStore } from '@/store/index.js'
 import { taskApi, orderApi } from '@/api'

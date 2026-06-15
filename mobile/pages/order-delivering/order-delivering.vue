@@ -216,7 +216,7 @@
 
 <script setup>
 import { ref, computed } from 'vue'
-import { onLoad } from '@dcloudio/uni-app'
+import { onLoad, onUnload } from '@dcloudio/uni-app'
 import { orderApi } from '@/api'
 import { TASK_TYPES, TASK_TYPE_META, isQueueWaitType } from '@/utils/constants.js'
 import { parseExpressPackagesFromSpecs } from '@/utils/campus-data.js'
