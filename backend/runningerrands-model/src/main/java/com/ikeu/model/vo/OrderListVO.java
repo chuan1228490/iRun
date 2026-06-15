@@ -16,6 +16,7 @@ import java.time.LocalDateTime;
 @AllArgsConstructor
 @Schema(description = "订单列表信息VO")
 public class OrderListVO implements Serializable {
+
     @Schema(description = "订单ID")
     private Long orderId;
 
