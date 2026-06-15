@@ -27,37 +27,48 @@
           </view>
         </template>
 
-        <!-- 编辑模式：结构化地址选择 -->
+        <!-- 编辑模式：地址类型切换 + 表单 -->
         <template v-else>
-          <view class="form-field">
-            <text class="field-label">地点</text>
-            <picker mode="selector" :range="areaNames" :value="selectedAreaIndex" @change="onAreaChange">
-              <view class="field-select"><text :class="{ 'field-select-placeholder': selectedAreaIndex < 0 }">{{ selectedAreaIndex >= 0 ? areaNames[selectedAreaIndex] : '请选择校区及区域' }}</text><text class="select-arrow">▼</text></view>
-            </picker>
-          </view>
-          <view class="form-field" v-if="selectedAreaIndex >= 0">
-            <text class="field-label">{{ areaBuildingLabel }}</text>
-            <picker mode="selector" :range="buildingNames" :value="selectedBuildingIndex" @change="onBuildingChange">
-              <view class="field-select"><text :class="{ 'field-select-placeholder': selectedBuildingIndex < 0 }">{{ selectedBuildingIndex >= 0 ? buildingNames[selectedBuildingIndex] : '请选择具体位置' }}</text><text class="select-arrow">▼</text></view>
-            </picker>
-          </view>
-          <view class="form-field" v-if="selectedBuildingIndex >= 0">
-            <text class="field-label">楼层</text>
-            <picker mode="selector" :range="floorOptions" :value="selectedFloor - 1" @change="onFloorChange">
-              <view class="field-select"><text>{{ selectedFloor + '层' }}</text><text class="select-arrow">▼</text></view>
-            </picker>
-          </view>
-          <view class="form-field" v-if="selectedBuildingIndex >= 0">
-            <text class="field-label">详细地址</text>
-            <input class="field-input" v-model="roomDetail" placeholder="请输入具体地址门牌号信息" />
+          <view class="address-type-toggle">
+            <view class="toggle-item" :class="{ 'toggle-item--active': addressType === 'preset' }" @click="addressType = 'preset'">
+              <text>校园地址</text>
+            </view>
+            <view class="toggle-item" :class="{ 'toggle-item--active': addressType === 'custom' }" @click="addressType = 'custom'">
+              <text>自定义</text>
+            </view>
           </view>
 
-          <!-- 旧版地址兜底（无法解析时显示原始文本框） -->
-          <view class="form-field form-field--last" v-if="showLegacyFallback">
-            <text class="field-label">详细地址（旧版格式）</text>
-            <textarea class="field-textarea" v-model="legacyDetail" placeholder="请输入详细地址" />
-            <text class="field-hint">该地址为旧版格式，保存后将更新为新版结构化格式</text>
-          </view>
+          <template v-if="addressType === 'preset'">
+            <view class="form-field">
+              <text class="field-label">地点</text>
+              <picker mode="selector" :range="areaNames" :value="selectedAreaIndex" @change="onAreaChange">
+                <view class="field-select"><text :class="{ 'field-select-placeholder': selectedAreaIndex < 0 }">{{ selectedAreaIndex >= 0 ? areaNames[selectedAreaIndex] : '请选择校区及区域' }}</text><text class="select-arrow">▼</text></view>
+              </picker>
+            </view>
+            <view class="form-field" v-if="selectedAreaIndex >= 0">
+              <text class="field-label">{{ areaBuildingLabel }}</text>
+              <picker mode="selector" :range="buildingNames" :value="selectedBuildingIndex" @change="onBuildingChange">
+                <view class="field-select"><text :class="{ 'field-select-placeholder': selectedBuildingIndex < 0 }">{{ selectedBuildingIndex >= 0 ? buildingNames[selectedBuildingIndex] : '请选择具体位置' }}</text><text class="select-arrow">▼</text></view>
+              </picker>
+            </view>
+            <view class="form-field" v-if="selectedBuildingIndex >= 0">
+              <text class="field-label">楼层</text>
+              <picker mode="selector" :range="floorOptions" :value="selectedFloor - 1" @change="onFloorChange">
+                <view class="field-select"><text>{{ selectedFloor + '层' }}</text><text class="select-arrow">▼</text></view>
+              </picker>
+            </view>
+            <view class="form-field" v-if="selectedBuildingIndex >= 0">
+              <text class="field-label">详细地址</text>
+              <input class="field-input" v-model="roomDetail" placeholder="请输入具体地址门牌号信息" />
+            </view>
+          </template>
+
+          <template v-if="addressType === 'custom'">
+            <view class="form-field form-field--last">
+              <text class="field-label">详细地址</text>
+              <textarea class="field-textarea" v-model="form.detail" placeholder="请输入自定义地址" />
+            </view>
+          </template>
         </template>
 
         <view class="form-field form-field--last" v-if="!isView">
@@ -95,8 +106,7 @@ const selectedAreaIndex = ref(-1)
 const selectedBuildingIndex = ref(-1)
 const selectedFloor = ref(1)         // 楼层数值 1-6，默认1层
 const roomDetail = ref('')
-const showLegacyFallback = ref(false)
-const legacyDetail = ref('')
+const addressType = ref('preset') // 'preset' | 'custom'
 
 const areaNames = CAMPUS_AREAS.map(a => a.name)
 
@@ -147,6 +157,7 @@ async function loadAddress(id) {
       // 尝试反向解析结构化地址（仅编辑模式需要）
       const parsed = reverseParseAddress(addr.detail || '')
       if (parsed && parsed.areaIdx >= 0) {
+        addressType.value = 'preset'
         selectedAreaIndex.value = parsed.areaIdx
         updateFloorOptions(CAMPUS_AREAS[parsed.areaIdx])
         if (parsed.buildingIdx >= 0) {
@@ -154,11 +165,9 @@ async function loadAddress(id) {
           selectedFloor.value = parsed.floor || 1
           roomDetail.value = parsed.roomDetail || ''
         }
-        showLegacyFallback.value = false
       } else if (addr.detail) {
-        // 旧版格式，显示原始文本框兜底
-        showLegacyFallback.value = true
-        legacyDetail.value = addr.detail
+        addressType.value = 'custom'
+        form.detail = addr.detail
       }
     }
   } catch (e) { /* handled */ }
@@ -188,12 +197,9 @@ async function onSave() {
   if (!form.contactName.trim()) { uni.showToast({ title: '请输入联系人', icon: 'none' }); return }
   if (!form.contactPhone.trim()) { uni.showToast({ title: '请输入联系电话', icon: 'none' }); return }
 
-  // 旧版格式：直接使用原始文本
-  if (showLegacyFallback.value) {
-    if (!legacyDetail.value.trim()) { uni.showToast({ title: '请输入详细地址', icon: 'none' }); return }
-    form.detail = legacyDetail.value.trim()
+  if (addressType.value === 'custom') {
+    if (!form.detail.trim()) { uni.showToast({ title: '请输入详细地址', icon: 'none' }); return }
   } else {
-    // 新版结构化地址
     if (selectedAreaIndex.value < 0) { uni.showToast({ title: '请选择地点', icon: 'none' }); return }
     if (selectedBuildingIndex.value < 0) { uni.showToast({ title: '请选择具体位置', icon: 'none' }); return }
     const area = CAMPUS_AREAS[selectedAreaIndex.value]
@@ -221,6 +227,9 @@ function onBack() { uni.navigateBack() }
 .page{width:100%;height:100vh;display:flex;flex-direction:column;background:var(--background);overflow:hidden}
 .main-scroll{box-sizing:border-box;width:100%;padding:0 32rpx;padding-bottom:60rpx}
 .form-card{background:var(--surface-raised);border-radius:var(--radius-lg);padding:0;margin-top:16rpx;box-shadow:var(--shadow-sm);overflow:hidden}
+.address-type-toggle{display:flex;margin:0 32rpx;padding:8rpx;background:var(--surface);border-radius:14rpx;gap:8rpx}
+.toggle-item{flex:1;text-align:center;padding:16rpx 0;border-radius:12rpx;font-size:26rpx;color:var(--text-secondary);transition:all .2s}
+.toggle-item--active{background:var(--primary);color:#fff;font-weight:600}
 .form-field{padding:28rpx 32rpx;border-bottom:1rpx solid var(--outline-light)}
 .form-field--last{border-bottom:none}
 .field-label{font-size:26rpx;color:var(--text-secondary);display:block;margin-bottom:12rpx}

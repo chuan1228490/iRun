@@ -130,6 +130,7 @@ import PayPasswordDialog from '@/components/pay-password-dialog/pay-password-dia
 import { promptPayPassword } from '@/utils/pay-password.js'
 import { guideToSetPayPassword } from '@/utils/error'
 import { useSubmitLock } from '@/utils/submit-guard'
+import { useDraftSave } from '@/utils/draft-save'
 
 const sysInfo = uni.getSystemInfoSync()
 const scrollHeight = sysInfo.windowHeight - sysInfo.statusBarHeight - 44
@@ -151,6 +152,11 @@ const showCustomTip = ref(false)
 const extraFee = ref(0)
 const uploadedUrls = ref([])
 const { lock, unlock, locked: submitting } = useSubmitLock()
+const { clearDraft, restoreDraft } = useDraftSave('draft_general_publish', {
+  description, privateDescription, pickupAddress, requirePickupCode, pickupCode,
+  deliveryAddressId, deliveryLabel, deliveryContactName, deliveryContactPhone,
+  requireSex, reward, customTip, showCustomTip, extraFee, uploadedUrls
+})
 
 const pageTitle = computed(() => taskTypeString.value || '发布需求')
 
@@ -162,6 +168,7 @@ const totalReward = computed(() => {
 
 onLoad((options) => {
   if (options?.type) taskTypeString.value = options.type
+  if (restoreDraft()) uni.showToast({ title: '已恢复未发布的草稿', icon: 'none', duration: 2000 })
 })
 
 onUnmounted(() => {
@@ -243,6 +250,7 @@ async function onSubmit() {
     }
 
     await taskApi.publishTask(payload)
+    clearDraft()
     uni.showToast({ title: '发布成功', icon: 'success' })
     setTimeout(() => {
       uni.redirectTo({ url: `/pages/order-success/order-success?reward=${totalReward.value}&type=通用代办` })

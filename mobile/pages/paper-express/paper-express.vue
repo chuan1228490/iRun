@@ -113,10 +113,12 @@
 
 <script setup>
 import { ref, computed, onUnmounted } from 'vue'
+import { onLoad } from '@dcloudio/uni-app'
 import { taskApi } from '@/api'
 import UploadGrid from '@/components/upload-grid/upload-grid.vue'
 import { TYPE_TO_API, SUBTYPE_TO_VALUE } from '@/utils/constants.js'
 import { promptPayPassword } from '@/utils/pay-password.js'
+import { useDraftSave } from '@/utils/draft-save'
 import PayPasswordDialog from '@/components/pay-password-dialog/pay-password-dialog.vue'
 
 const sysInfo = uni.getSystemInfoSync()
@@ -139,12 +141,21 @@ const deliveryContactPhone = ref('')
 const requireSex = ref(undefined)
 const estimatedProductFee = ref(0)
 const submitting = ref(false)
+const { clearDraft, restoreDraft } = useDraftSave('draft_paper_express', {
+  description, remark, itemSpec, itemQty, pickupAddress, customPickupAddress,
+  deliveryAddressId, deliveryLabel, deliveryContactName, deliveryContactPhone,
+  reward, customTip, showCustomTip, requireSex, estimatedProductFee, uploadedUrls
+})
 
 const baseFee = 5
 const totalPrice = computed(() => {
   const tip = showCustomTip.value ? customTip.value || 0 : reward.value
   const productFee = estimatedProductFee.value || 0
   return baseFee + productFee + tip
+})
+
+onLoad(() => {
+  if (restoreDraft()) uni.showToast({ title: '已恢复未发布的草稿', icon: 'none', duration: 2000 })
 })
 
 function setReward(val) {
@@ -230,6 +241,7 @@ async function onSubmit() {
       requireSex: requireSex.value,
       imageUrls: uploadedUrls.value.length > 0 ? [...uploadedUrls.value] : undefined
     })
+    clearDraft()
     uni.showToast({ title: '发布成功', icon: 'success' })
     setTimeout(() => uni.navigateBack(), 1000)
   } catch (e) {

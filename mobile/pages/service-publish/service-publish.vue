@@ -192,8 +192,8 @@
         </view>
         <view v-if="subType === 32" class="form-card">
           <view class="card-title">联系信息 <text class="required">*</text></view>
-          <input class="form-input" placeholder="联系人姓名" style="margin-bottom:16rpx" v-model="deliveryContactName" />
-          <input class="form-input" placeholder="联系电话" type="number" v-model="deliveryContactPhone" />
+          <input class="form-input" placeholder="联系人姓名" style="margin-bottom:16rpx" v-model="deliveryContactName" @focus="onContactNameFocus" />
+          <input class="form-input" placeholder="联系电话" type="number" v-model="deliveryContactPhone" @focus="onContactPhoneFocus" />
         </view>
         <!-- 帮扔杂物 subType=34 -->
         <view v-if="subType === 34" class="form-card">
@@ -206,8 +206,8 @@
         </view>
         <view v-if="subType === 34" class="form-card">
           <view class="card-title">联系信息 <text class="required">*</text></view>
-          <input class="form-input" placeholder="联系人姓名" style="margin-bottom:16rpx" v-model="deliveryContactName" />
-          <input class="form-input" placeholder="联系电话" type="number" v-model="deliveryContactPhone" />
+          <input class="form-input" placeholder="联系人姓名" style="margin-bottom:16rpx" v-model="deliveryContactName" @focus="onContactNameFocus" />
+          <input class="form-input" placeholder="联系电话" type="number" v-model="deliveryContactPhone" @focus="onContactPhoneFocus" />
         </view>
         <!-- 办事代排 subType=35 -->
         <template v-if="subType === 35">
@@ -248,8 +248,8 @@
           </view>
           <view class="form-card">
             <view class="card-title">联系信息 <text class="required">*</text></view>
-            <input class="form-input" placeholder="联系人姓名" style="margin-bottom:16rpx" v-model="deliveryContactName" />
-            <input class="form-input" placeholder="联系电话" type="number" v-model="deliveryContactPhone" />
+            <input class="form-input" placeholder="联系人姓名" style="margin-bottom:16rpx" v-model="deliveryContactName" @focus="onContactNameFocus" />
+            <input class="form-input" placeholder="联系电话" type="number" v-model="deliveryContactPhone" @focus="onContactPhoneFocus" />
           </view>
         </template>
 
@@ -462,12 +462,12 @@
 <script setup>
 import { ref, computed, onUnmounted } from 'vue'
 import { onLoad } from '@dcloudio/uni-app'
-import { taskApi } from '@/api'
+import { taskApi, addressApi } from '@/api'
 import { TASK_TYPES, TYPE_TO_API, SUBTYPE_TO_VALUE } from '@/utils/constants.js'
-// encodeDescription removed — backend reads publicDesc + privateNote directly
 import { promptPayPassword } from '@/utils/pay-password.js'
 import { guideToSetPayPassword } from '@/utils/error'
 import { useSubmitLock } from '@/utils/submit-guard'
+import { useDraftSave } from '@/utils/draft-save'
 import PayPasswordDialog from '@/components/pay-password-dialog/pay-password-dialog.vue'
 import UploadGrid from '@/components/upload-grid/upload-grid.vue'
 
@@ -515,6 +515,14 @@ const estimatedProductFee = ref(0)
 const productItems = ref([{ name: '', qty: 1 }])
 const { lock, unlock, locked: submitting } = useSubmitLock()
 const showCustomTip = ref(false)
+const { clearDraft, restoreDraft } = useDraftSave('draft_service_publish', {
+  description, privateDescription, remark, privateRemark, pickupCode,
+  pickupAddress, customPickupAddress, merchantInfo, deliveryLabel,
+  deliveryAddressId, deliveryContactName, deliveryContactPhone,
+  requireSex, reward, customTip, showCustomTip, subType, selectedDuration,
+  customMinutes, packageQtys, productItems, bookCount,
+  estimatedProductFee, deadlineDate, deadlineTime, uploadedUrls
+})
 
 // 办事代排 subType=35 服务时长
 const serviceDurationOptions = [
@@ -594,7 +602,48 @@ onLoad((options) => {
   const defaultSubMap = { 1: 11, 2: 21, 3: 33, 4: 43 }
   subType.value = defaultSubMap[t] || 11
   if (t === 2) pickupAddress.value = ''
+  if (restoreDraft()) uni.showToast({ title: '已恢复未发布的草稿', icon: 'none', duration: 2000 })
+  if (t === 3) fetchAddressList()
 })
+
+const addressList = ref([])
+
+async function fetchAddressList() {
+  try {
+    const list = await addressApi.getAddressList()
+    if (list && list.length > 0) {
+      addressList.value = list
+      if (!deliveryContactName.value) deliveryContactName.value = list[0].contactName || ''
+      if (!deliveryContactPhone.value) deliveryContactPhone.value = list[0].contactPhone || ''
+    }
+  } catch (_) { /* 静默失败 */ }
+}
+
+const contactSheetOpen = ref(false)
+
+function onContactNameFocus() {
+  if (contactSheetOpen.value || addressList.value.length === 0) return
+  contactSheetOpen.value = true
+  uni.showActionSheet({
+    itemList: addressList.value.map(a => a.contactName || ''),
+    success: (res) => {
+      deliveryContactName.value = addressList.value[res.tapIndex].contactName || ''
+    },
+    complete: () => { contactSheetOpen.value = false }
+  })
+}
+
+function onContactPhoneFocus() {
+  if (contactSheetOpen.value || addressList.value.length === 0) return
+  contactSheetOpen.value = true
+  uni.showActionSheet({
+    itemList: addressList.value.map(a => a.contactPhone || ''),
+    success: (res) => {
+      deliveryContactPhone.value = addressList.value[res.tapIndex].contactPhone || ''
+    },
+    complete: () => { contactSheetOpen.value = false }
+  })
+}
 
 function setReward(val) {
   showCustomTip.value = false
@@ -897,6 +946,7 @@ async function onSubmit() {
     }
 
     await taskApi.publishTask(payload)
+    clearDraft()
     uni.showToast({ title: '发布成功', icon: 'success' })
     setTimeout(() => {
       uni.redirectTo({
