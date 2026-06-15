@@ -499,6 +499,9 @@ const serviceDurationOptions = [
 const selectedDuration = ref(10)
 const customMinutes = ref(10)
 
+// 代取快递批量选择
+const packageQtys = ref({ small: 0, medium: 0, large: 0 })
+
 const { clearDraft, restoreDraft } = useDraftSave('draft_service_publish', {
   description, privateDescription, remark, privateRemark, pickupCode,
   pickupAddress, customPickupAddress, merchantInfo, deliveryLabel,
@@ -525,7 +528,6 @@ const packageSizes = [
   { key: 'medium', label: '中件', baseFee: 6 },
   { key: 'large', label: '大件', baseFee: 10 }
 ]
-const packageQtys = ref({ small: 0, medium: 0, large: 0 })
 const totalPackageQty = computed(() => packageQtys.value.small + packageQtys.value.medium + packageQtys.value.large)
 function increaseQty(key) {
   if (totalPackageQty.value >= 3) return
@@ -630,8 +632,6 @@ function toggleCustomReward() {
     customTip.value = reward.value
   }
 }
-
-function onCustomTipInput() { /* 自定义小费由 totalReward 计算 */ }
 
 function onRestaurantChange(e) {
   pickupAddress.value = restaurants[Number(e.detail.value)]

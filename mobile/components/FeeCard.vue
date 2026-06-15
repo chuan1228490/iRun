@@ -27,7 +27,7 @@
     </view>
     <view class="custom-tip-row" v-if="showCustomTip">
       <text class="custom-tip-unit">¥</text>
-      <input class="custom-tip-input" name="digit" v-model.number="customTipModel" placeholder="输入小费金额" @input="$emit('update:customTip', $event.target.value)" />
+      <input class="custom-tip-input" name="digit" v-model.number="customTipModel" placeholder="输入小费金额" />
     </view>
     <view class="fee-divider"></view>
     <view class="fee-row fee-row--total">
@@ -51,7 +51,7 @@ const props = defineProps({
   estimatedProductFee: { type: Number, default: 0 },
 })
 
-defineEmits(['update:reward', 'update:customTip', 'update:estimatedProductFee', 'toggleCustomTip'])
+const emit = defineEmits(['update:reward', 'update:customTip', 'update:estimatedProductFee', 'toggleCustomTip'])
 
 const productFeeModel = computed({
   get: () => props.estimatedProductFee,
@@ -61,8 +61,6 @@ const customTipModel = computed({
   get: () => props.customTip,
   set: (val) => emit('update:customTip', val)
 })
-
-const emit = defineEmits(['update:reward', 'update:customTip', 'update:estimatedProductFee', 'toggleCustomTip'])
 
 const feeLabel = computed(() =>
   props.taskType === 3 && props.subType === 35 ? '基础服务费' : '基础配送费')
