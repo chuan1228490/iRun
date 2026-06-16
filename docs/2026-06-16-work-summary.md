@@ -48,15 +48,17 @@
 
 ### 3. 缺陷修复
 
-#### 草稿自动保存三连修
+#### 草稿自动保存 — 完整修复
 
-| # | 问题 | 修复 |
-|---|------|------|
-| 1 | 每个发布页弹窗"已恢复未发布的草稿" | 5 个页面 `restoreDraft()` 改为静默调用 |
-| 2 | 30 分钟 TTL（原 24h 过长，原注释不匹配） | `DRAFT_TTL_MS = 30 * 60 * 1000`，注释同步 |
-| 3 | 页面 pop 后 watcher/timer/草稿残留 → 穿透 | `onUnload` → `dispose()` 同步清除 watcher + timer + localStorage |
-
-根因：`dispose()` 只清理了 watcher 和 timer，未调 `clearDraft()`。页面 `onUnload` 后 localStorage 中草稿数据残留，下次进入同一页面仍在 TTL 内被恢复。修复后 `dispose()` 三步清理：timer → watchers → localStorage。
+| # | 问题 | 根因 | 修复 |
+|---|------|------|------|
+| 1 | 退出再返回草稿丢失 | `onUnload` 未调 `persist()`，navigateBack/switchTab 路径草稿从未写入 | `onUnload` 补 `persist()` → `dispose()` |
+| 2 | 切 tab 回来草稿丢失 | `dispose()` 内 `clearDraft()` 误删持久化数据 | `dispose()` 移除 `clearDraft()`，草稿生命周期由 TTL 管理 |
+| 3 | 不同子页面草稿穿透 | 共享 ref 未重置 + subType 变化触发 auto-save 把旧值写入新 key | 动态 key `draft_sp_${type}_${subType}` 隔离 + 切换时重置 22 个共享 ref + 删除旧 key |
+| 4 | 3 个字段未被草稿跟踪 | `privateExpressNote`/`privateFoodNote`/`itemWeight` 漏加入 `formRefs` | 补入 formRefs 和 reset 列表 |
+| 5 | `subType` 在 formRefs 中有重入风险 | restoreDraft 写 subType 会触发 watch 循环 | 从 formRefs 移除（key 已编码 subType） |
+| 6 | `deadlineDate`/`deadlineTime` 切换时未重置 | 漏加入 reset 列表 | 补入 |
+| 7 | catch 块静默吞错 | 4 处 `catch(_){}` 无日志 | 改为 `console.warn('[draft-save]', e.message)` |
 
 #### 组件 CSS 丢失
 
