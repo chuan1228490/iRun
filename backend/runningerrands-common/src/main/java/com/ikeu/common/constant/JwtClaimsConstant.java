@@ -6,7 +6,9 @@ package com.ikeu.common.constant;
  * <p>令牌类型区分：access token 用于鉴权（短有效期），refresh token 用于续签（长有效期，
  * 携带 jti 唯一标识以支持 Redis 跟踪和令牌轮换）。
  */
-public class JwtClaimsConstant {
+public final class JwtClaimsConstant {
+
+    private JwtClaimsConstant() {}
 
     /** 管理端用户 ID */
     public static final String ADMIN_ID = "adminId";

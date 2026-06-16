@@ -3,7 +3,9 @@ package com.ikeu.common.constant;
 /**
  * Redis 键前缀常量
  */
-public class RedisConstant {
+public final class RedisConstant {
+
+    private RedisConstant() {}
 
     // ========== 认证 / 令牌 ==========
     /** 用户 refresh token，实际 key = {@code user:refresh:token:{userId}:{jti}} */

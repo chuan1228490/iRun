@@ -7,7 +7,7 @@ import java.util.Set;
  * 任务类型常量
  * type 为单值大类，subType 为 JSON 数组
  */
-public class TaskTypeConstant {
+public final class TaskTypeConstant {
 
     private TaskTypeConstant() {}
 
