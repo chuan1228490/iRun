@@ -246,3 +246,35 @@ b201b4b refactor: make all constant classes final with private constructors
 ### 已知注意事项
 
 - `docs/test_local_log.md` 含真实 IP 已加 `.gitignore`，但历史版本仍可见 — 需评估 `git filter-branch` 清理
+
+### P0 — 安全加固 ✅ 已完成
+
+| # | 内容 | 状态 |
+|---|------|:--:|
+| S1 | SMS 验证码 Redis key 操作作用域化 | ✅ `20365cc` |
+| S2 | 密码重置端点暴力破解防护 | ✅ `20365cc` |
+| M1 | 后端异常消息统一封装为 MessageConstant | ✅ `20365cc` |
+| 4 | Docker 自动化测试 Agent | ✅ `039c477` |
+
+### 📅 明日 (06/17) — 信用分 + 技术债清理
+
+| # | 内容 | 预估 |
+|---|------|:--:|
+| 1 | 跑腿员信用分机制（初始100，超时扣分，<60冻结，credit_log表） | 中 |
+| 6 | FeeCard/GenderRestriction 与 service-publish CSS 去重 | 小 |
+| 7 | service-publish.vue onSubmit 拆分（~220 行） | 中 |
+| 8 | displayDescription 3 种变体统一 | 小 |
+| 9 | order-waiting vs 其他详情页 VO 类型不一致 | 小 |
+| 10 | 各页未使用 import 清理 | 小 |
+
+### 📅 后天 (06/18) — 管理端完善
+
+| # | 内容 | 预估 |
+|---|------|:--:|
+| 2 | 管理端跑腿员详情页 /runners/:id | 小 |
+| 3 | 管理端系统设置页 /settings | 小 |
+| 5 | 订单详情页任务类型视觉区分（CSS 已就绪） | 小 |
+
+### P3 — 长期规划
+
+地图 API、智能推荐、微信推送、数据看板、纠纷处理、评价体系、批量发布、CI/CD
