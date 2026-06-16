@@ -1,4 +1,4 @@
-# 2026/06/16 — 支付密码重构 + 常量类规范化 + 缺陷修复
+# 2026/06/16 — 支付密码重构 + 常量类规范化 + 安全加固 + Docker 部署
 
 ## 完成工作
 
@@ -48,7 +48,7 @@
 
 ### 3. 缺陷修复
 
-#### 草稿自动保存 — 完整修复
+#### 草稿自动保存 — 完整修复（7 项）
 
 | # | 问题 | 根因 | 修复 |
 |---|------|------|------|
@@ -73,86 +73,176 @@
 
 `v-model.number` 清空输入时 emit `NaN` → `isNaN(val) ? 0 : val` 守卫。
 
-### 4. 文档同步
+提交：`aef7f2b` / `e88fe23`
 
-- `docs/2026-06-09-fix-summary.md` — P0/P1/P2 全部标记完成，P3 更新状态
-- `docs/2026-06-10-refactor-summary.md` — P0/P1b/P3 标记完成，其余标记进行中
-- `docs/2026-06-15-work-summary.md` — P0 标记完成，新增 P0.5 安全加固计划（S1/S2），Git 记录补充
+### 4. 安全加固
 
-### 5. 代码审查（2 轮）
+#### S1 — SMS 验证码操作作用域化
+
+- `SendCodeDTO` ➕ `operation` 字段，`sendCode()` 内 `VALID_CODE_OPERATIONS` 白名单校验
+- Redis key 从 `user:code:{phone}` → `user:code:{operation}:{phone}`（5 种操作隔离）
+- 5 个消费者（register/login/changePhone/resetPassword/resetPayPassword）各读各的 key
+- 前端 4 个调用点传入对应 operation
+
+#### S2 — 密码重置暴力破解防护
+
+- `resetPassword`/`resetPayPassword` 新增失败计数锁定（`user:reset:pwd:fail:{userId}` / `user:reset:paypwd:fail:{userId}`）
+- 参照 `login()` 模式：5 次/300s 锁定，成功后清除计数
+- 复用 `LOGIN_MAX_FAIL_COUNT` / `LOGIN_LOCK_SECONDS`
+
+#### Minor — 登录锁定文案修复
+
+"请15分钟后再试" → `LOGIN_FAIL_LOCKED_USER` 常量（"请5分钟后再试"），与 `LOGIN_LOCK_SECONDS=300` 一致。
+
+#### M1 — 后端异常消息统一封装
+
+10 处硬编码 → `MessageConstant`，新增 9 个常量，涉及 5 文件：
+
+| 文件 | 替换处 |
+|------|:--:|
+| `UserServiceImpl` | 1 |
+| `WeChatAuthUtil` | 2 |
+| `ChatServiceImpl` | 1 |
+| `OrderStateMachine` | 3 |
+| `TaskStateMachine` | 3 |
+| `RunnerProfileServiceImpl` | 2 |
+
+提交：`20365cc`
+
+Docker 实测通过：S1 跨操作拒绝 ✅ / S2 5 次锁定 ✅ / 密码重置 ✅
+
+### 5. Docker 部署
+
+**新建文件：**
+
+| 文件 | 用途 |
+|------|------|
+| `backend/Dockerfile` | 多阶段构建：Maven 3.9 + Temurin 21 → JRE 21 Alpine，含 Healthcheck |
+| `backend/.dockerignore` | 排除 target/.git/node_modules 等 |
+| `docker/docker-compose.yml` | MySQL 8 + Redis 7 Alpine + Backend，网络隔离，端口 3308/6381 |
+| `docker/.env.example` | 全部可配环境变量模板 |
+| `docker/README.md` | Docker 部署指南（快速启动/预置账号/API 测试/Redis 注入验证码） |
+| `backend/.../application-docker.yml` | Docker profile：容器主机名、跳过 SMS/OSS/微信 |
+| `backend/.../config/DockerTestDataInitializer.java` | `@Profile("docker")` 启动时创建 testuser/testuser2/admin |
+
+**预置测试账号：**
+
+| 用户名 | 密码 | 手机号 | 跑腿员 | 支付密码 |
+|--------|------|--------|:-----:|:------:|
+| `testuser` | `123456` | `13800000001` | ✅ | ✅ |
+| `testuser2` | `123456` | `13800000002` | ❌ | ✅ |
+| `admin` | `admin` | — | — | — |
+
+提交：`cb9df90` / `6444143`
+
+### 6. 代码审查（2 轮）
 
 **第 1 轮** — `deep-code-reviewer`：8 项发现（1 CRITICAL 为设计决策，2 项已修复，2 项已记录为安全加固计划）
 
 **第 2 轮** — 前端审查 `agent-skills:code-reviewer`：8 项发现（2 项已修复 — 注释更正 + NaN 守卫，2 项后续优化 — CSS 去重 + TTL 可配置）
 
+### 7. 文档同步
+
+- `docs/2026-06-09-fix-summary.md` — P0/P1/P2 全部标记完成，P3 更新状态
+- `docs/2026-06-10-refactor-summary.md` — P0/P1b/P3 标记完成，其余标记进行中
+- `docs/2026-06-15-work-summary.md` — P0 标记完成，新增 P0.5 安全加固计划，Git 记录补充
+- `docs/2026-06-16-work-summary.md` — 本文件（含汇总）
+- `.claude/CLAUDE.md` — 同步 Docker、安全规范、SMS 作用域等最新约定
+
+---
+
 ## 涉及文件
 
 ```
 backend/
+  Dockerfile / .dockerignore / runningerrands.sql
   runningerrands-common/.../constant/
-    MessageConstant.java              (+3 常量)
-    StatusConstant.java               (final + 私有构造器)
-    RedisConstant.java                (final + 私有构造器)
+    MessageConstant.java              (+10 常量，安全加固 + M1)
+    RedisConstant.java                (+2 常量，S2)
+    StatusConstant.java               (final)
     TaskTypeConstant.java             (final)
-    JwtClaimsConstant.java            (final + 私有构造器)
+    JwtClaimsConstant.java            (final)
+  runningerrands-common/.../enums/
+    TaskStateMachine.java             (硬编码→MessageConstant)
+    OrderStateMachine.java            (硬编码→MessageConstant)
+  runningerrands-common/.../utils/
+    WeChatAuthUtil.java               (硬编码→MessageConstant)
   runningerrands-model/.../dto/
-    SetPayPasswordDTO.java            (精简, @Pattern)
+    SendCodeDTO.java                  (+operation, S1)
+    SetPayPasswordDTO.java            (精简)
     ResetPasswordDTO.java             (新建 — 复用)
   runningerrands-server/.../
+    config/DockerTestDataInitializer.java (新建)
+    config/AdminInitializer.java
     controller/user/UserController.java  (+2 端点)
     service/UserService.java             (+2 方法签名)
-    service/impl/UserServiceImpl.java    (精简 + 2 新方法 + 3 处 null 守卫)
+    service/impl/UserServiceImpl.java    (S1+S2 核心 + M1)
+    service/impl/ChatServiceImpl.java    (M1)
+    service/impl/RunnerProfileServiceImpl.java (M1)
+
+docker/
+  docker-compose.yml / .env.example / README.md
 
 mobile/
-  api/user.js                        (setPayPassword 精简, +resetPassword, +resetPayPassword)
-  pages/pay-password-edit/           (set/change/login/forgot 四模式重构)
+  api/user.js                        (sendCode 签名 +2 新函数)
+  pages/login/login.vue              (sendCode +operation)
+  pages/pay-password-edit/           (四模式重构 + sendCode +operation)
+  pages/phone-edit/phone-edit.vue    (sendCode +operation)
+  pages/service-publish/service-publish.vue  (草稿隔离)
   components/
     FeeCard.vue                      (scoped CSS + NaN 守卫)
     GenderRestriction.vue            (scoped CSS)
-  utils/draft-save.js                (TTL + onUnload + clearDraft)
-  pages/*/ (5 个发布页)               (移除 draft toast)
-  utils/campus-data.js               (删除重复函数)
+  utils/draft-save.js                (TTL + onUnload + 隔离)
 
 docs/
-  2026-06-09-fix-summary.md          (标记完成)
-  2026-06-10-refactor-summary.md     (标记完成)
-  2026-06-15-work-summary.md         (标记完成 + 安全加固计划)
-  2026-06-16-work-summary.md         (本文件)
+  2026-06-09-fix-summary.md / 2026-06-10-refactor-summary.md
+  2026-06-15-work-summary.md / 2026-06-16-work-summary.md
+
+.claude/
+  CLAUDE.md                          (同步最新状态)
+.gitignore                           (+!application-docker.yml +docs/test_local_log.md)
 ```
 
 ## Git 记录
 
 ```
+6444143 docs: create docker/ directory with compose, env template, and deployment README
+cb9df90 feat: add Docker deployment with test data initializer and automated test support
+20365cc fix: scope SMS codes by operation, add brute-force protection on password reset, unify hardcoded messages
+aef7f2b fix: draft-save persist on unload, isolate sub-page drafts, fix missing fields
+e88fe23 fix: draft-save cross-page contamination, missing component CSS, NaN guard
 4c4b8e2 feat: refactor password system — first-time pay password skip verification, add forgot password (login + pay) via SMS
 b201b4b refactor: make all constant classes final with private constructors
 ```
 
+---
+
 ## 后续计划
 
-### P0 — 安全加固（06/16 审查发现）
+### P1 — 功能开发
 
-| # | 内容 |
-|---|------|
-| S1 | 短信验证码 Redis key 操作作用域化（注册/登录/重置共用 `user:code:{phone}` 可跨操作复用） |
-| S2 | 密码重置端点暴力破解防护（缺少失败计数锁定） |
+| # | 内容 | 来源 | 预估 |
+|---|------|------|:--:|
+| 1 | **跑腿员信用分机制** — 初始 100，超时/投诉扣分，<60 冻结，`credit_log` 表 | 06-10 P2 | 中 |
+| 2 | 管理端跑腿员详情页 `/runners/:id` | 06-15 P1 | 小 |
+| 3 | 管理端系统设置页 `/settings` | 06-15 P1 | 小 |
+| 4 | **Docker 自动化测试 Agent** — 启动容器→注入验证码→跑 API 测试→报告 | 06/16 新 | 中 |
+| 5 | 订单详情页任务类型视觉区分（CSS 已就绪，待接线） | 06-15 P1 | 小 |
 
-### P1 — 往期遗留
+### P2 — 技术债务
 
-| # | 内容 | 来源 |
-|---|------|------|
-| — | 跑腿员信用分机制 | 06-10 P2 |
-| — | 管理端跑腿员详情页 / 系统设置页 | 06-15 P1 |
-| — | 订单详情页任务类型视觉区分 | 06-15 P1 #7 |
-| — | 未使用 import 清理 | 06-15 P1 #8 |
-
-### P2 — 前端优化
-
-| # | 内容 | 来源 |
-|---|------|------|
-| — | `FeeCard`/`GenderRestriction` 与 `service-publish.vue` CSS 去重 | 06/16 审查 |
-| — | `service-publish.vue` onSubmit 拆分 | 多期遗留 |
-| — | `displayDescription` 3 种变体统一 | 多期遗留 |
+| # | 内容 | 预估 |
+|---|------|:--:|
+| 6 | `FeeCard`/`GenderRestriction` 与 `service-publish.vue` CSS 去重 | 小 |
+| 7 | `service-publish.vue` onSubmit 拆分（~220 行） | 中 |
+| 8 | `displayDescription` 3 种变体统一 | 小 |
+| 9 | `order-waiting` 用 `TaskDetailVO`，其他两页用 `OrderDetailVO`，字段访问不一致 | 小 |
+| 10 | 各页未使用 import 清理 | 小 |
 
 ### P3 — 长期规划
 
-同 06-15 P3（地图 API、智能推荐、消息推送、数据看板、纠纷处理、评价体系、批量发布、CI/CD）
+地图 API 接入、任务大厅智能推荐、微信订阅消息推送、数据看板增强、订单纠纷处理、评价体系完善、批量发布/接单、CI/CD
+
+### 已知注意事项
+
+- `docs/test_local_log.md` 含真实 IP 已加 `.gitignore`，但历史版本仍可见 — 需评估 `git filter-branch` 清理

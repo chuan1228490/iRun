@@ -21,11 +21,17 @@ F:/ikeu_runningerrands/
 │   ├── runningerrands-common/            # 共享工具：constant, context, enums, exception, properties, result, utils
 │   ├── runningerrands-model/             # 数据模型：entity, dto, vo
 │   ├── runningerrands-server/            # Spring Boot 应用：controller, service, mapper, config, interceptor, aspect
-│   └── runningerrands.sql               # 数据库建表脚本
+│   ├── runningerrands.sql               # 数据库建表脚本
+│   ├── Dockerfile                        # 多阶段 Docker 构建
+│   └── .dockerignore
 ├── admin/                                # 管理端（Vue 3 + TS + Element Plus）
 ├── mobile/                               # 移动端（uni-app 微信小程序）
+├── docker/                               # Docker 部署配置
+│   ├── docker-compose.yml               # MySQL 8 + Redis 7 + Backend
+│   ├── .env.example                     # 环境变量模板
+│   └── README.md                        # Docker 部署指南
 ├── docs/                                 # 开发文档 & 工作记录
-├── .agent/                               # 子代理定义
+├── .agent/                               # 子代理定义（13 个）
 └── .claude/
     ├── CLAUDE.md                         # ← 本文件
     └── settings.local.json               # 本地命令自动批准
@@ -49,6 +55,9 @@ F:/ikeu_runningerrands/
   - *登录保护* — Redis 失败计数，5 次错误锁定 300s
 - **SQL 同步**: 实体字段变更时同步更新 `runningerrands.sql`（CREATE TABLE + ALTER TABLE 语句）
 - **日志安全**: 不在日志中打印 token 明文、密码等敏感信息
+- **异常消息**: 所有 `throw new BusinessException(...)` 等异常消息必须使用 `MessageConstant` 中定义的常量，禁止硬编码字符串（工具类中动态拼接的运行时异常除外）
+- **SMS 验证码**: Redis key 格式为 `user:code:{operation}:{phone}`，operation 取值 `login`/`register`/`change_phone`/`reset_password`/`reset_pay_password`，`sendCode()` 内 `VALID_CODE_OPERATIONS` 白名单校验，5 个消费者各读各的 key 防跨操作复用
+- **密码重置保护**: `resetPassword()`/`resetPayPassword()` 有失败计数锁定（`user:reset:pwd:fail:{userId}` / `user:reset:paypwd:fail:{userId}`），5 次/300s 锁定，与登录保护同模式
 - **注释**: 采用JavaDoc注释，遵循阿里巴巴注释规范，类注释写明类的作用，标注作者(`@author`)和创建日期(`@since`)，方法注释注明方法逻辑，参数(`@param`)以及返回值(`@return`)，重要方法嵌入HTML标签详细描述
 
 ### Vue 3 管理端
@@ -137,6 +146,17 @@ npm run dev           # http://localhost:3001 (代理后端 API: /api/admin|user
 npx vue-tsc --noEmit  # 类型检查
 npx vite build         # 构建 → dist/
 # 构建后部署到后端: cp -r dist/* ../backend/runningerrands-server/src/main/resources/static/
+
+# ===== Docker 部署 =====
+cd F:/ikeu_runningerrands/docker
+
+docker compose up -d       # 启动全部服务（MySQL 8 + Redis 7 + Backend）
+docker compose ps           # 查看服务状态
+docker compose logs -f backend  # 查看后端日志
+docker compose down -v      # 停止并清理数据
+
+# 注入验证码测试（Docker 环境无阿里云 SMS）
+docker exec rr-redis redis-cli -n 1 SET "user:code:reset_password:13800000001" "888888" EX 300
 
 # ===== 移动端 =====
 # 在 HBuilderX 中打开 mobile/，运行 → 微信小程序
