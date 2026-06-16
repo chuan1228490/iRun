@@ -118,6 +118,7 @@ F:/ikeu_runningerrands/
 | 安全审查 | `security-auditor` | 漏洞检测、威胁建模 |
 | Java 注释规范化 | `java-comment-enforcer` | Alibaba 规范 Javadoc |
 | 测试生成 | `autonomous-test-generator` | 自动生成 + 迭代调试 |
+| Docker API 自动化测试 | `docker-test-agent` | 启动容器 → 注入数据 → 跑测试 → 报告 |
 | 错误排查 | `sre-debugger` | 堆栈跟踪分析、根因定位 |
 | 多文件重构 | `Plan` agent | 先设计方案再编码 |
 | 文档同步 | `doc-sync-monitor` | 接口变更后自动更新文档 |
