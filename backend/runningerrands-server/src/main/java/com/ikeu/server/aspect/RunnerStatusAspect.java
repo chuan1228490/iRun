@@ -17,7 +17,7 @@ import java.util.Objects;
 /**
  * 配送员状态切面，处理登录自动上线和退出登录自动离线逻辑。
  * @author ikeu
- * @date 2026/05/16
+ * @since 2026/05/16
  */
 @Slf4j
 @Aspect

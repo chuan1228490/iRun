@@ -3,7 +3,9 @@ package com.ikeu.common.constant;
 /**
  * 通用状态常量
  */
-public class StatusConstant {
+public final class StatusConstant {
+
+    private StatusConstant() {}
 
     // ========== 通用启用/禁用 ==========
     public static final Integer ENABLE = 1;

@@ -3,7 +3,9 @@ package com.ikeu.common.constant;
 /**
  * 消息提示常量类
  */
-public class MessageConstant {
+public final class MessageConstant {
+
+    private MessageConstant() {}
 
     // ========== 通用消息 ==========
     public static final String SUCCESS = "操作成功";
