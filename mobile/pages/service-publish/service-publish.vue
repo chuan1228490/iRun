@@ -395,52 +395,23 @@
       </view>
 
       <!-- ===== 接单限制 ===== -->
-      <view class="form-card">
-        <view class="card-title">接单限制</view>
-        <view class="chip-row">
-          <view class="chip" :class="{ 'chip--active': requireSex === undefined }" @click="requireSex = undefined">不限</view>
-          <view class="chip" :class="{ 'chip--active': requireSex === '男' }" @click="requireSex = '男'">仅男生</view>
-          <view class="chip" :class="{ 'chip--active': requireSex === '女' }" @click="requireSex = '女'">仅女生</view>
-        </view>
-      </view>
+      <GenderRestriction v-model="requireSex" />
 
       <!-- ===== 费用 ===== -->
-      <view class="form-card form-card--pay">
-        <view class="card-title">费用明细</view>
-        <view class="fee-row">
-          <text class="fee-label">{{ taskType === 3 && subType === 35 ? '基础服务费' : '基础配送费' }}</text>
-          <text class="fee-value">¥ {{ baseFee.toFixed(2) }}</text>
-        </view>
-        <template v-if="taskType === 4">
-          <view class="form-label" style="margin-top:18rpx">预估商品费</view>
-          <view class="custom-tip-row">
-            <text class="custom-tip-unit">¥</text>
-            <input class="custom-tip-input" name="digit" v-model.number="estimatedProductFee" placeholder="输入预估商品费用" />
-          </view>
-          <view class="info-hint" style="margin-top:12rpx">
-            <iconpark-icon name="info" size="18" color="#FF6B4A" />
-            <text>配送员垫付商品费，送达后当面结算</text>
-          </view>
-          <view class="fee-divider"></view>
-        </template>
-        <view class="fee-divider" v-if="taskType !== 4"></view>
-        <view class="form-label">小费（提高接单率）</view>
-        <view class="chip-row tip-chips">
-          <view class="chip" :class="{ 'chip--active': reward === 2 && !showCustomTip }" @click="setReward(2)">¥2</view>
-          <view class="chip" :class="{ 'chip--active': reward === 5 && !showCustomTip }" @click="setReward(5)">¥5</view>
-          <view class="chip" :class="{ 'chip--active': reward === 10 && !showCustomTip }" @click="setReward(10)">¥10</view>
-          <view class="chip" :class="{ 'chip--active': showCustomTip }" @click="toggleCustomReward">自定义</view>
-        </view>
-        <view class="custom-tip-row" v-if="showCustomTip">
-          <text class="custom-tip-unit">¥</text>
-          <input class="custom-tip-input" name="digit" v-model.number="customTip" placeholder="输入小费金额" @input="onCustomTipInput" />
-        </view>
-        <view class="fee-divider"></view>
-        <view class="fee-row fee-row--total">
-          <text class="fee-label">合计支付</text>
-          <text class="fee-total">¥ {{ totalReward.toFixed(2) }}</text>
-        </view>
-      </view>
+      <FeeCard
+        :task-type="taskType"
+        :sub-type="subType"
+        :base-fee="baseFee"
+        :total-reward="totalReward"
+        :reward="reward"
+        :custom-tip="customTip"
+        :show-custom-tip="showCustomTip"
+        :estimated-product-fee="estimatedProductFee"
+        @update:reward="setReward"
+        @update:custom-tip="customTip = $event"
+        @update:estimated-product-fee="estimatedProductFee = $event"
+        @toggle-custom-tip="toggleCustomReward"
+      />
 
       <view class="bottom-placeholder"></view>
     </scroll-view>
@@ -470,6 +441,8 @@ import { useSubmitLock } from '@/utils/submit-guard'
 import { useDraftSave } from '@/utils/draft-save'
 import PayPasswordDialog from '@/components/pay-password-dialog/pay-password-dialog.vue'
 import UploadGrid from '@/components/upload-grid/upload-grid.vue'
+import FeeCard from '@/components/FeeCard.vue'
+import GenderRestriction from '@/components/GenderRestriction.vue'
 
 const sysInfo = uni.getSystemInfoSync()
 const scrollHeight = sysInfo.windowHeight - sysInfo.statusBarHeight - 44
@@ -515,14 +488,6 @@ const estimatedProductFee = ref(0)
 const productItems = ref([{ name: '', qty: 1 }])
 const { lock, unlock, locked: submitting } = useSubmitLock()
 const showCustomTip = ref(false)
-const { clearDraft, restoreDraft } = useDraftSave('draft_service_publish', {
-  description, privateDescription, remark, privateRemark, pickupCode,
-  pickupAddress, customPickupAddress, merchantInfo, deliveryLabel,
-  deliveryAddressId, deliveryContactName, deliveryContactPhone,
-  requireSex, reward, customTip, showCustomTip, subType, selectedDuration,
-  customMinutes, packageQtys, productItems, bookCount,
-  estimatedProductFee, deadlineDate, deadlineTime, uploadedUrls
-})
 
 // 办事代排 subType=35 服务时长
 const serviceDurationOptions = [
@@ -533,6 +498,18 @@ const serviceDurationOptions = [
 ]
 const selectedDuration = ref(10)
 const customMinutes = ref(10)
+
+// 代取快递批量选择
+const packageQtys = ref({ small: 0, medium: 0, large: 0 })
+
+const { clearDraft, restoreDraft } = useDraftSave('draft_service_publish', {
+  description, privateDescription, remark, privateRemark, pickupCode,
+  pickupAddress, customPickupAddress, merchantInfo, deliveryLabel,
+  deliveryAddressId, deliveryContactName, deliveryContactPhone,
+  requireSex, reward, customTip, showCustomTip, subType, selectedDuration,
+  customMinutes, packageQtys, productItems, bookCount,
+  estimatedProductFee, deadlineDate, deadlineTime, uploadedUrls
+})
 const customDurationOptions = Array.from({ length: 12 }, (_, i) => `${(i + 1) * 10}分钟`)
 function onCustomDuration(e) {
   customMinutes.value = (Number(e.detail.value) + 1) * 10
@@ -551,7 +528,6 @@ const packageSizes = [
   { key: 'medium', label: '中件', baseFee: 6 },
   { key: 'large', label: '大件', baseFee: 10 }
 ]
-const packageQtys = ref({ small: 0, medium: 0, large: 0 })
 const totalPackageQty = computed(() => packageQtys.value.small + packageQtys.value.medium + packageQtys.value.large)
 function increaseQty(key) {
   if (totalPackageQty.value >= 3) return
@@ -656,8 +632,6 @@ function toggleCustomReward() {
     customTip.value = reward.value
   }
 }
-
-function onCustomTipInput() { /* 自定义小费由 totalReward 计算 */ }
 
 function onRestaurantChange(e) {
   pickupAddress.value = restaurants[Number(e.detail.value)]
@@ -891,9 +865,6 @@ async function onSubmit() {
       })
     }
 
-    // 办事代排不传 deliveryAddressId，后端标记无需送达
-    const skipDeliveryPayload = taskType.value === 3 && subType.value === 35
-
     // 公开描述 & 私密备注（新字段，优先于 description）
     let publicDesc, privateNote
     if (taskType.value === 1) {
@@ -937,7 +908,7 @@ async function onSubmit() {
       payPassword: pw,
       pickupCode: pickupCode.value || undefined,
       pickupAddress: actualPickupAddress || undefined,
-      deliveryAddressId: skipDeliveryPayload ? undefined : (deliveryAddressId.value || undefined),
+      deliveryAddressId: skipDelivery.value ? undefined : (deliveryAddressId.value || undefined),
       expireMinutes: expireMinutes || undefined,
       contactName: deliveryContactName.value || undefined,
       contactPhone: deliveryContactPhone.value || undefined,

@@ -3,6 +3,7 @@ package com.ikeu.server.aspect;
 import cn.hutool.json.JSONObject;
 import cn.hutool.json.JSONUtil;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.ikeu.common.constant.TaskSpecKeys;
 import com.ikeu.common.constant.TaskTypeConstant;
 import com.ikeu.model.entity.Task;
 import com.ikeu.model.entity.TaskOrder;
@@ -60,7 +61,7 @@ public class QueueWaitAspect {
             }
 
             JSONObject specs = JSONUtil.parseObj(taskSpecs);
-            String serviceEndTimeStr = specs.getStr("服务截止时间");
+            String serviceEndTimeStr = specs.getStr(TaskSpecKeys.SERVICE_END_TIME);
             if (serviceEndTimeStr == null || serviceEndTimeStr.isBlank()) {
                 log.warn("办事代排任务 {} 的 taskSpecs 未包含 serviceEndTime，跳过调整", taskId);
                 return;

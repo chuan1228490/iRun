@@ -139,7 +139,7 @@
           </view>
           <view class="card-row">
             <text class="row-label">收货人</text>
-            <text class="row-value">{{ deliveryFullName }}</text>
+            <text class="row-value">{{ deliveryContactName }}</text>
           </view>
           <view class="card-row" v-if="deliveryContactPhone">
             <text class="row-label">联系电话</text>
@@ -305,8 +305,9 @@ import { ref, computed, onUnmounted } from 'vue'
 import { onLoad } from '@dcloudio/uni-app'
 import { useStore } from '@/store/index.js'
 import { taskApi, orderApi } from '@/api'
-import { TASK_STATUS, TASK_TYPES, TASK_TYPE_META, TYPE_FROM_API, isQueueWaitType } from '@/utils/constants.js'
-import { parseDeliveryAddress, parseTaskSpecs, parseExpressPackagesFromSpecs, parseBookCountFromSpecs, parsePrintSpecsFromSpecs, parseMerchantInfoFromSpecs, parseFoodItemsFromSpecs, parseItemExpressFromSpecs, parseServiceDurationFromSpecs, parseExtraFeeFromSpecs } from '@/utils/campus-data.js'
+import { TASK_STATUS, TASK_TYPES, TASK_TYPE_META, isQueueWaitType } from '@/utils/constants.js'
+import { parseDeliveryAddress, parseExpressPackagesFromSpecs } from '@/utils/campus-data.js'
+import { useTaskSpecs } from '@/utils/useTaskSpecs.js'
 import { useSubmitLock } from '@/utils/submit-guard'
 import { SERVER_ORIGIN } from '@/utils/config'
 
@@ -334,47 +335,7 @@ const isAcceptedRunner = computed(() => {
   return isRunner.value && runnerInfo.value.id && String(runnerInfo.value.id) === String(store.userId)
 })
 
-const taskTypeCode = computed(() => typeof task.value.type === 'number' ? task.value.type : (TYPE_FROM_API[task.value.type] || 1))
-
-const typeLabel = computed(() => TASK_TYPES[taskTypeCode.value] || '任务')
-const rewardText = computed(() => Number(task.value.reward || 0).toFixed(2))
-const taskSpecs = computed(() => parseTaskSpecs(task.value.taskSpecs))
-
-const productFeeText = computed(() => {
-  if (taskTypeCode.value !== 4) return null
-  const specs = taskSpecs.value
-  if (specs && specs.预估商品费 != null) return Number(specs.预估商品费)
-  return null
-})
-const productTags = computed(() => {
-  if (taskTypeCode.value !== 4) return []
-  const specs = taskSpecs.value
-  if (specs && specs.商品列表) {
-    return specs.商品列表.map(item => item.规格 ? `${item.名称}x${item.数量}（${item.规格}）` : `${item.名称}x${item.数量}`)
-  }
-  const val = task.value.subType || ''
-  if (!val) return []
-  if (val.startsWith('[')) {
-    try { return JSON.parse(val) } catch (e) { return [] }
-  }
-  return val.split('、')
-})
-const bookCount = computed(() => {
-  if (taskTypeCode.value !== 3) return null
-  return parseBookCountFromSpecs(taskSpecs.value)
-})
-const printSpecs = computed(() => {
-  if (taskTypeCode.value !== 3) return null
-  return parsePrintSpecsFromSpecs(taskSpecs.value)
-})
-const merchantTag = computed(() => {
-  if (taskTypeCode.value !== 2) return null
-  return parseMerchantInfoFromSpecs(taskSpecs.value)
-})
-const typeMeta = computed(() => TASK_TYPE_META[taskTypeCode.value] || TASK_TYPE_META[1])
-const typeIcon = computed(() => typeMeta.value.icon)
-const typeIconColor = computed(() => typeMeta.value.color)
-const typeColor = computed(() => ({ 1: 'blue', 2: 'orange', 3: 'green', 4: 'teal' }[taskTypeCode.value] || 'blue'))
+const { taskSpecs, taskTypeCode, typeLabel, rewardText, typeIcon, typeIconColor, typeColor, isQueueWait, isPaperExpress, pickupSectionTitle, pickupAddressLabel, pickupCodeLabel, foodItems, serviceDuration, itemExpress, extraFee, productFeeText, productTags, bookCount, printSpecs, merchantTag } = useTaskSpecs(task)
 
 const statusMap = {
   1: { style: 'waiting', icon: 'search', iconName: 'pending-confirm', color: '#FF6B4A', title: '等待接单中', desc: '任务已发布，正在为您匹配跑腿同学' },
@@ -411,7 +372,7 @@ const rawContactName = computed(() => {
 })
 
 // 收货人全名（含性别后缀），仅接单方/发布者可见
-const deliveryFullName = computed(() => {
+const deliveryContactName = computed(() => {
   const name = rawContactName.value
   if (!name) return "未知"
   const gender = task.value.deliveryGender
@@ -462,43 +423,6 @@ const displayDescription = computed(() => {
     return (publicDesc + (privateNote ? '\n[仅接单方可见] ' + privateNote : '')) || '暂无描述'
   }
   return publicDesc || '暂无描述'
-})
-
-const isQueueWait = computed(() => isQueueWaitType(task.value.subType))
-const isPaperExpress = computed(() => taskTypeCode.value === 4 && task.value.subType === '纸品速达')
-
-const pickupSectionTitle = computed(() => {
-  if (isQueueWait.value) return '代办信息'
-  if (taskTypeCode.value === 2) return '取餐信息'
-  if (taskTypeCode.value === 4 && !isPaperExpress.value) return '代购信息'
-  return '取件信息'
-})
-const pickupAddressLabel = computed(() => {
-  if (isQueueWait.value) return '代办地址'
-  if (taskTypeCode.value === 2) return '取餐地址'
-  if (taskTypeCode.value === 4 && !isPaperExpress.value) return '代购地址'
-  return '取件地址'
-})
-const pickupCodeLabel = computed(() => {
-  if (taskTypeCode.value === 2) return '取餐码'
-  return '取件码'
-})
-
-const foodItems = computed(() => {
-  if (taskTypeCode.value !== 2) return null
-  return parseFoodItemsFromSpecs(taskSpecs.value)
-})
-const serviceDuration = computed(() => {
-  if (!isQueueWait.value) return null
-  return parseServiceDurationFromSpecs(taskSpecs.value)
-})
-const itemExpress = computed(() => {
-  if (taskTypeCode.value !== 3) return null
-  return parseItemExpressFromSpecs(taskSpecs.value)
-})
-const extraFee = computed(() => {
-  if (taskTypeCode.value !== 5) return null
-  return parseExtraFeeFromSpecs(taskSpecs.value)
 })
 
 const stepItems = computed(() => {
