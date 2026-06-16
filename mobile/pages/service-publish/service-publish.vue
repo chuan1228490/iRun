@@ -431,7 +431,7 @@
 </template>
 
 <script setup>
-import { ref, computed, onUnmounted } from 'vue'
+import { ref, computed, watch, onUnmounted } from 'vue'
 import { onLoad } from '@dcloudio/uni-app'
 import { taskApi, addressApi } from '@/api'
 import { TASK_TYPES, TYPE_TO_API, SUBTYPE_TO_VALUE } from '@/utils/constants.js'
@@ -502,13 +502,53 @@ const customMinutes = ref(10)
 // 代取快递批量选择
 const packageQtys = ref({ small: 0, medium: 0, large: 0 })
 
-const { clearDraft, restoreDraft } = useDraftSave('draft_service_publish', {
+const draftKey = computed(() => `draft_sp_${taskType.value}_${subType.value ?? 'x'}`)
+
+const { clearDraft, restoreDraft } = useDraftSave(draftKey, {
   description, privateDescription, remark, privateRemark, pickupCode,
   pickupAddress, customPickupAddress, merchantInfo, deliveryLabel,
   deliveryAddressId, deliveryContactName, deliveryContactPhone,
-  requireSex, reward, customTip, showCustomTip, subType, selectedDuration,
-  customMinutes, packageQtys, productItems, bookCount,
-  estimatedProductFee, deadlineDate, deadlineTime, uploadedUrls
+  requireSex, reward, customTip, showCustomTip, selectedDuration,
+  customMinutes, packageQtys, productItems, bookCount, itemWeight,
+  estimatedProductFee, privateExpressNote, privateFoodNote,
+  deadlineDate, deadlineTime, uploadedUrls
+})
+
+// 切换子页面时：清除旧草稿 + 重置共享字段 + 恢复新草稿
+let subTypeInited = false
+let lastDraftKey = ''
+watch([taskType, subType], ([newType, newSub]) => {
+  const newKey = `draft_sp_${newType}_${newSub ?? 'x'}`
+  if (subTypeInited) {
+    // 清除旧子页面的草稿
+    uni.removeStorageSync(lastDraftKey)
+    // 重置跨子页面共享的表单字段，防止旧值被 auto-save 写入新 key
+    description.value = ''
+    privateDescription.value = ''
+    remark.value = ''
+    privateRemark.value = ''
+    pickupCode.value = ''
+    pickupAddress.value = ''
+    customPickupAddress.value = ''
+    merchantInfo.value = ''
+    deliveryLabel.value = ''
+    selectedDuration.value = 10
+    customMinutes.value = 10
+    packageQtys.value = { small: 0, medium: 0, large: 0 }
+    productItems.value = [{ name: '', qty: 1 }]
+    bookCount.value = 1
+    estimatedProductFee.value = 0
+    itemWeight.value = '< 1kg'
+    privateExpressNote.value = ''
+    privateFoodNote.value = ''
+    deadlineDate.value = ''
+    deadlineTime.value = ''
+    uploadedUrls.value = []
+    // 恢复新子页面的草稿（如果存在）
+    restoreDraft()
+  }
+  subTypeInited = true
+  lastDraftKey = newKey
 })
 const customDurationOptions = Array.from({ length: 12 }, (_, i) => `${(i + 1) * 10}分钟`)
 function onCustomDuration(e) {
@@ -578,7 +618,7 @@ onLoad((options) => {
   const defaultSubMap = { 1: 11, 2: 21, 3: 33, 4: 43 }
   subType.value = defaultSubMap[t] || 11
   if (t === 2) pickupAddress.value = ''
-  if (restoreDraft()) uni.showToast({ title: '已恢复未发布的草稿', icon: 'none', duration: 2000 })
+  restoreDraft()
   if (t === 3) fetchAddressList()
 })
 

@@ -55,13 +55,34 @@ const emit = defineEmits(['update:reward', 'update:customTip', 'update:estimated
 
 const productFeeModel = computed({
   get: () => props.estimatedProductFee,
-  set: (val) => emit('update:estimatedProductFee', val)
+  set: (val) => emit('update:estimatedProductFee', isNaN(val) ? 0 : val)
 })
 const customTipModel = computed({
   get: () => props.customTip,
-  set: (val) => emit('update:customTip', val)
+  set: (val) => emit('update:customTip', isNaN(val) ? 0 : val)
 })
 
 const feeLabel = computed(() =>
   props.taskType === 3 && props.subType === 35 ? '基础服务费' : '基础配送费')
 </script>
+
+<style scoped>
+.form-card{background:var(--surface-raised);border-radius:var(--radius-lg);padding:28rpx;margin-bottom:20rpx;box-shadow:var(--shadow-sm);border:1rpx solid var(--outline-light)}
+.form-card--pay{border:2rpx solid var(--primary-container)}
+.form-label{font-size:24rpx;font-weight:500;color:var(--text-secondary);margin-bottom:10rpx;margin-top:18rpx}
+.form-label:first-child{margin-top:0}
+.fee-row{display:flex;align-items:center;justify-content:space-between;padding:8rpx 0}
+.fee-row--total{margin-top:8rpx}
+.fee-label{font-size:28rpx;color:var(--text-primary)}
+.fee-value{font-size:28rpx;font-weight:600;color:var(--text-secondary)}
+.fee-total{font-size:38rpx;font-weight:700;color:var(--primary)}
+.fee-divider{height:1rpx;background:rgba(0,0,0,.04);margin:20rpx 0}
+.custom-tip-row{display:flex;align-items:center;margin-top:16rpx;background:var(--surface);border-radius:20rpx;padding:14rpx 24rpx}
+.custom-tip-unit{font-size:32rpx;font-weight:700;color:var(--primary);margin-right:8rpx}
+.custom-tip-input{flex:1;font-size:28rpx;color:var(--text-primary);background:transparent}
+.chip-row{display:flex;flex-wrap:wrap;gap:14rpx}
+.chip{padding:14rpx 28rpx;border-radius:48rpx;font-size:26rpx;font-weight:500;color:var(--text-secondary);background:var(--surface);text-align:center}
+.chip--active{background:var(--primary);color:#fff;font-weight:600}
+.info-hint{display:flex;align-items:center;gap:10rpx;padding:16rpx;background:var(--primary-container);border-radius:12rpx}
+.info-hint text{font-size:24rpx;color:var(--primary)}
+</style>

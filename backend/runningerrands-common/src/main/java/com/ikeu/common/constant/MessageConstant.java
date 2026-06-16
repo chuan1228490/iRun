@@ -46,6 +46,9 @@ public final class MessageConstant {
     public static final String OLD_PASSWORD_INCORRECT = "旧密码不正确";
     public static final String PHONE_CHANGE_SUCCESS = "手机号修改成功";
     public static final String PASSWORD_CHANGE_SUCCESS = "密码修改成功";
+    public static final String PHONE_NOT_MATCH = "手机号与当前账户不匹配";
+    public static final String PASSWORD_RESET_SUCCESS = "登录密码重置成功";
+    public static final String PAY_PASSWORD_RESET_SUCCESS = "支付密码重置成功";
     public static final String CERTIFY_SUBMITTED = "实名认证提交成功，请等待审核";
     public static final String CERTIFY_CHECKING = "实名认证正在审核中，请勿重复提交";
     public static final String CERTIFY_SUCCESS = "您已完成实名认证";

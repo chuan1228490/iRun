@@ -464,7 +464,7 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements Us
     }
 
     /**
-     * 修改密码方法
+     * 修改登录密码方法
      *  校验：原密码正确
      *  逻辑：更新用户密码为新密码（加密存储）
      *
@@ -483,7 +483,7 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements Us
 
         user.setPassword(passwordEncoder.encode(changePasswordDTO.getNewPassword()));
         updateById(user);
-        log.info("用户 {} 修改密码成功", userId);
+        log.info("用户 {} 修改登录密码成功", userId);
     }
 
     /**
@@ -560,8 +560,8 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements Us
 
     /**
      * 首次设置支付密码方法
-     *  校验：用户存在，支付密码未设置，登录密码正确
-     *  逻辑：加密存储支付密码
+     *  校验：用户存在，支付密码未设置
+     *  逻辑：直接加密存储支付密码，无需身份校验
      *
      * @param userId 用户ID
      * @param dto 设置支付密码DTO
@@ -569,33 +569,12 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements Us
     @Override
     @Transactional
     public void setPayPassword(Long userId, SetPayPasswordDTO dto) {
+        if (userId == null) throw new UnauthorizedException(MessageConstant.USER_NOT_LOGIN);
         User user = getById(userId);
         if (user == null) throw new NotFoundException(MessageConstant.USER_NOT_EXIST);
         if (user.getPayPassword() != null) {
             throw new BusinessException(MessageConstant.PAY_PASSWORD_ALREADY_SET);
         }
-
-        boolean isWeChatUser = Objects.equals(user.getRegisterType(), 2);
-
-        if (isWeChatUser && dto.getCode() != null && !dto.getCode().isBlank()) {
-            if (user.getPhone() == null || user.getPhone().isBlank()) {
-                throw new BusinessException("请先绑定手机号");
-            }
-            String cachedCode = redisTemplate.opsForValue()
-                    .get(RedisConstant.USER_CERTIFY_CODE + user.getPhone());
-            if (cachedCode == null || !cachedCode.equals(dto.getCode())) {
-                throw new BusinessException(MessageConstant.CODE_ERROR);
-            }
-            redisTemplate.delete(RedisConstant.USER_CERTIFY_CODE + user.getPhone());
-        } else {
-            if (dto.getLoginPassword() == null || dto.getLoginPassword().isBlank()) {
-                throw new BusinessException("登录密码或验证码不能为空");
-            }
-            if (!passwordEncoder.matches(dto.getLoginPassword(), user.getPassword())) {
-                throw new BusinessException(MessageConstant.INVALID_CREDENTIALS);
-            }
-        }
-
         user.setPayPassword(passwordEncoder.encode(dto.getPayPassword()));
         updateById(user);
         log.info("用户 {} 设置了支付密码", userId);
@@ -609,9 +588,66 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements Us
      */
     @Override
     public boolean hasPayPassword(Long userId) {
+        if (userId == null) throw new UnauthorizedException(MessageConstant.USER_NOT_LOGIN);
         User user = getById(userId);
         if (user == null) throw new NotFoundException(MessageConstant.USER_NOT_EXIST);
         return user.getPayPassword() != null;
+    }
+
+    /**
+     * 重置登录密码方法（忘记登录密码）
+     *  校验：用户存在，短信验证码正确，手机号归属当前用户
+     *  逻辑：通过手机号验证码验证身份后，加密存储新登录密码
+     *
+     * @param userId 用户ID
+     * @param dto 重置密码DTO（手机号、验证码、新密码）
+     */
+    @Override
+    @Transactional
+    public void resetPassword(Long userId, ResetPasswordDTO dto) {
+        if (userId == null) throw new UnauthorizedException(MessageConstant.USER_NOT_LOGIN);
+        User user = getById(userId);
+        if (user == null) throw new NotFoundException(MessageConstant.USER_NOT_EXIST);
+        if (user.getPhone() == null || !user.getPhone().equals(dto.getPhone())) {
+            throw new BusinessException(MessageConstant.PHONE_NOT_MATCH);
+        }
+        String cachedCode = redisTemplate.opsForValue()
+                .get(RedisConstant.USER_CERTIFY_CODE + dto.getPhone());
+        if (cachedCode == null || !cachedCode.equals(dto.getCode())) {
+            throw new BusinessException(MessageConstant.CODE_ERROR);
+        }
+        redisTemplate.delete(RedisConstant.USER_CERTIFY_CODE + dto.getPhone());
+        user.setPassword(passwordEncoder.encode(dto.getNewPassword()));
+        updateById(user);
+        log.info("用户 {} 通过忘记密码重置了登录密码", userId);
+    }
+
+    /**
+     * 重置支付密码方法（忘记支付密码）
+     *  校验：用户存在，短信验证码正确，手机号归属当前用户
+     *  逻辑：通过手机号验证码验证身份后，加密存储新支付密码
+     *
+     * @param userId 用户ID
+     * @param dto 重置密码DTO（手机号、验证码、新密码）
+     */
+    @Override
+    @Transactional
+    public void resetPayPassword(Long userId, ResetPasswordDTO dto) {
+        if (userId == null) throw new UnauthorizedException(MessageConstant.USER_NOT_LOGIN);
+        User user = getById(userId);
+        if (user == null) throw new NotFoundException(MessageConstant.USER_NOT_EXIST);
+        if (user.getPhone() == null || !user.getPhone().equals(dto.getPhone())) {
+            throw new BusinessException(MessageConstant.PHONE_NOT_MATCH);
+        }
+        String cachedCode = redisTemplate.opsForValue()
+                .get(RedisConstant.USER_CERTIFY_CODE + dto.getPhone());
+        if (cachedCode == null || !cachedCode.equals(dto.getCode())) {
+            throw new BusinessException(MessageConstant.CODE_ERROR);
+        }
+        redisTemplate.delete(RedisConstant.USER_CERTIFY_CODE + dto.getPhone());
+        user.setPayPassword(passwordEncoder.encode(dto.getNewPassword()));
+        updateById(user);
+        log.info("用户 {} 通过忘记密码重置了支付密码", userId);
     }
 
     /**
@@ -625,6 +661,7 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements Us
     @Override
     @Transactional
     public void changePayPassword(Long userId, ChangePayPasswordDTO dto) {
+        if (userId == null) throw new UnauthorizedException(MessageConstant.USER_NOT_LOGIN);
         User user = getById(userId);
         if (user == null) throw new NotFoundException(MessageConstant.USER_NOT_EXIST);
         if (user.getPayPassword() == null) {

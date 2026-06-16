@@ -48,11 +48,19 @@ export function updatePassword(oldPassword, newPassword) {
   return put('/user/password', { oldPassword, newPassword })
 }
 
-/** 设置支付密码（首次，需验证登录密码；微信用户可传code走短信验证） */
-export function setPayPassword(loginPassword, payPassword, code) {
-  const payload = { loginPassword, payPassword }
-  if (code) payload.code = code
-  return put('/user/pay-password', payload)
+/** 重置登录密码（忘记密码，短信验证码验证） */
+export function resetPassword(phone, code, newPassword) {
+  return put('/user/password/reset', { phone, code, newPassword })
+}
+
+/** 重置支付密码（忘记支付密码，短信验证码验证） */
+export function resetPayPassword(phone, code, newPassword) {
+  return put('/user/pay-password/reset', { phone, code, newPassword })
+}
+
+/** 设置支付密码（首次，无需身份校验） */
+export function setPayPassword(payPassword) {
+  return put('/user/pay-password', { payPassword })
 }
 
 /** 修改支付密码 */

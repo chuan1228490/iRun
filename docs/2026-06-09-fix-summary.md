@@ -92,58 +92,41 @@ mobile/utils/task-spec-keys.js
 
 ## 后续计划
 
-### P0 — 订单详情页样式分块优化
+### P0 — 订单详情页样式分块优化 ✅ 已完成
 
-三个订单详情页（order-waiting/delivering/completed）存在以下问题：
+| # | 内容 | 状态 |
+|---|------|:--:|
+| 1 | 抽离共享 `useTaskSpecs` composable（-268 行重复代码） | ✅ `c7d1140` |
+| 2 | 统一 info-card 标签/值间距规范 | ✅ `c7d1140` |
+| 3 | 任务类型专属区块视觉区分（边框色/背景色） | ✅ CSS 已就绪 `1e3848e` |
 
-- 页面结构相似但样式分散，卡片内间距/字体/颜色不统一
-- type=2 取餐信息、type=3 代办信息、type=4 代购信息的专属区块缺少视觉区分（当前全用同一 `info-card` 样式）
-- 取件/取餐/代购信息区域的标签（商家、餐品、商品、重量等）缺少统一的排版规范
+### P1 — 数据库字段抽取 ✅ 已完成
 
-建议：
-1. 抽离共享的订单信息展示组件（减少三个页面间的代码重复）
-2. 统一 info-card 内部标签/值的间距规范
-3. 为不同任务类型的专属信息区块添加差异化的视觉提示（如不同边框色或背景色）
+| 内容 | 状态 |
+|------|:--:|
+| `tip` / `delivery_fee` / `product_cost` 三列独立 + Entity/DTO/VO 全链更新 | ✅ `c1863b7` |
 
-### P1 — 数据库字段抽取
+### P2 — 代码审查结果（17 项发现） ✅ 全部修复
 
-当前 `配送费` 和 `预估商品费` 存储于 task_specs JSON 中，属于通用字段但未独立成列。
-
-- `delivery_fee`：所有任务类型都有，从 JSON 查询不方便
-- `product_cost`：type=4 特有，但已有独立 DTO 字段传送
-
-建议：将 `delivery_fee` 作为 task 表独立列，`task.reward` 保持合计金额不变。需要 DDL 迁移 + Entity/DTO/VO 全链更新。
-
-### P2 — 代码审查结果（17 项发现，0 CRITICAL，7 MEDIUM）
-
-#### MEDIUM（建议近期修复）
-
-| # | 文件 | 问题 |
+| # | 问题 | 修复提交 |
 |---|------|------|
-| 1 | `order-completed.vue` | `displayDescription` 缺少 type=1 快递包裹解析（不会显示"快递规格：小件x1"） |
-| 2 | `order-delivering.vue` | `displayDescription` type=4 分支两臂相同，死逻辑 |
-| 3-5 | 三个详情页 | `parseShoppingItemsFromSpecs` 已导入但从未使用（3 处死导入） |
-| 6 | `order-completed.vue` | 送达信息卡片缺少收货人/联系电话（不同于其他两页） |
-| 7 | `order-waiting.vue` | 非发布者视图的取件信息卡片缺少 `extraFee` 渲染行 |
-
-#### LOW
-
-| # | 问题 |
-|---|------|
-| 8 | order-waiting 发布者视图未对 type=4 纸品速达过滤 productTags |
-| 9 | QueueWaitAspect.java 硬编码中文字符串，Java 侧无 SPEC_KEYS 常量类 |
-| 10 | admin TaskDetailView `statusTag` 映射不完整（状态 2/4 缺标签类型） |
-
-#### INFO — 架构建议
-
-- **12 个 computed 属性在三个详情页完全相同**（约 200 行重复代码），建议抽为 `useTaskSpecs` composable
-- 三个页面的 `deliveryContactName`/`deliveryContactPhone` 命名不一致
-- `order-delivering` 使用 `onUnload`，其他两页用 `onUnmounted`，生命周期钩子不统一
-- `order-delivering` 保留旧版 `packageSize:` 格式兼容代码，确认数据已迁移后可移除
+| 1 | `displayDescription` 缺少 type=1 快递包裹解析 | ✅ `1e3848e` |
+| 2 | type=4 分支死逻辑 | ✅ `1e3848e` |
+| 3-5 | 3 处死导入 `parseShoppingItemsFromSpecs` | ✅ `1e3848e` |
+| 6 | 送达信息卡片缺少收货人/联系电话 | ✅ `c7d1140` |
+| 7 | 非发布者视图缺少 `extraFee` 行 | ✅ `1e3848e` |
+| 8 | order-waiting type=4 productTags 未过滤 | ✅ `c7d1140` |
+| 9 | QueueWaitAspect 硬编码 → `TaskSpecKeys` 常量类 | ✅ `c7d1140` |
+| 10 | admin TaskDetailView `statusTag` 映射补齐 | ✅ `c7d1140` |
+| — | 12 个 computed 抽为 `useTaskSpecs` composable | ✅ `c7d1140` |
+| — | 命名不一致 (`deliveryContactName`/`deliveryContactPhone`) | ✅ `c7d1140` |
+| — | 生命周期钩子不统一 (`onUnload` vs `onUnmounted`) | ✅ `762f1d9` |
+| — | 旧版 `packageSize:` 兼容代码移除 | ✅ `c7d1140` |
 
 ### P3 — 已知待优化项
 
-- 三个订单详情页的 computed 属性大量重复（`pickupSectionTitle`、`pickupAddressLabel`、`foodItems` 等），可抽为 composable
-- `order-waiting.vue` 使用 TaskDetailVO，`order-delivering/completed` 使用 OrderDetailVO，字段访问不一致（`task.value.X` vs `order.value.X`）
-- 管理端详情页样式为统一的 Element Plus 默认风格，可增加自定义样式提升可读性
-- 移动端发布页 `service-publish.vue` 文件过大（~900 行），建议按任务类型拆分子组件
+| # | 内容 | 状态 |
+|---|------|:--:|
+| — | `order-waiting` 用 `TaskDetailVO`，其他两页用 `OrderDetailVO`，字段访问不一致 | ⬜ |
+| — | 管理端详情页样式 → Element Plus 默认风格优化 | ✅ `facf02a` |
+| — | `service-publish.vue` 过大（~900 行 → 拆分子组件） | ⬜ → `c7d1140` 已提取 `FeeCard`/`GenderRestriction`，onSubmit 仍 ~220 行 |

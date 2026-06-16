@@ -13,3 +13,10 @@
 defineProps({ modelValue: { type: [String, undefined], default: undefined } })
 defineEmits(['update:modelValue'])
 </script>
+
+<style scoped>
+.form-card{background:var(--surface-raised);border-radius:var(--radius-lg);padding:28rpx;margin-bottom:20rpx;box-shadow:var(--shadow-sm);border:1rpx solid var(--outline-light)}
+.chip-row{display:flex;flex-wrap:wrap;gap:14rpx}
+.chip{padding:14rpx 28rpx;border-radius:48rpx;font-size:26rpx;font-weight:500;color:var(--text-secondary);background:var(--surface);text-align:center}
+.chip--active{background:var(--primary);color:#fff;font-weight:600}
+</style>

@@ -168,7 +168,7 @@ const totalReward = computed(() => {
 
 onLoad((options) => {
   if (options?.type) taskTypeString.value = options.type
-  if (restoreDraft()) uni.showToast({ title: '已恢复未发布的草稿', icon: 'none', duration: 2000 })
+  restoreDraft()
 })
 
 onUnmounted(() => {

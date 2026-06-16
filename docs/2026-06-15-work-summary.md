@@ -94,21 +94,32 @@ c7d1140 refactor: extract useTaskSpecs composable and fix code review items
 0c04455 docs: add ngrok/tunnel-based dev environment alongside localhost approach
 c64d3c4 docs: rewrite README with current project structure and unified dev environment guide
 983c25a feat: add 8 specialized agents with SKILL.md + references, consolidate and de-duplicate
+60a5c8c docs: sync README_EN with latest Chinese README structure
+762f1d9 fix: restore onUnmounted/onUnload imports removed during refactoring
+b201b4b refactor: make all constant classes final with private constructors
 ```
 
 ---
 
 ## 后续计划
 
-### P0 — 支付密码重构
+### P0 — 支付密码重构 ✅ 已完成（06/16）
 
-| # | 内容 |
-|---|------|
-| 1 | 首次设置支付密码 → 取消校验（直接设置） |
-| 2 | 修改支付密码 → 保持校验（登录密码/短信验证码） |
-| 3 | 新增忘记密码 → 手机号短信验证码校验后重置 |
+| # | 内容 | 状态 |
+|---|------|:--:|
+| 1 | 首次设置支付密码 → 取消校验（直接设置） | ✅ |
+| 2 | 修改支付密码/登录密码 → 保持旧密码校验 | ✅ |
+| 3 | 新增忘记登录密码 → 手机号短信验证码校验后重置 | ✅ |
+| 3b | 新增忘记支付密码 → 手机号短信验证码校验后重置 | ✅ |
 
-涉及：`SetPayPasswordDTO`、`UserController`、`UserServiceImpl`、`pay-password-edit.vue`、`pay-password-dialog`
+涉及：`SetPayPasswordDTO`、`ResetPasswordDTO`、`UserController`、`UserServiceImpl`、`pay-password-edit.vue`、`privacy-security.vue`、`api/user.js`
+
+### P0.5 — 安全加固计划（06/16 代码审查发现）
+
+| # | 内容 | 说明 |
+|---|------|------|
+| S1 | 短信验证码 Redis key 操作作用域化 | 注册/登录/重置共用 `user:code:{phone}` 可跨操作复用验证码，需加操作类型前缀（如 `user:code:reset:password:{phone}`）并扩展 `sendCode` 参数 |
+| S2 | 密码重置端点暴力破解防护 | `resetPassword`/`resetPayPassword` 缺少失败计数锁定（登录端点已有 5 次/300s 机制），需加基于 userId 的限流 |
 
 ### P1 — 本次遗留项
 
@@ -120,14 +131,14 @@ c64d3c4 docs: rewrite README with current project structure and unified dev envi
 | 7 | 订单详情页 info-card 任务类型视觉区分（CSS 已就绪） |
 | 8 | 各页未使用 import 清理 |
 
-### P2 — docs/ 工作总结遗留（06-09/06-10）
+### P2 — docs/ 工作总结遗留（06-09/06-10 → 06-15 已部分消化）
 
-| # | 内容 | 来源 |
-|---|------|------|
-| 9 | 订单详情页 `useTaskSpecs` composable 已抽取，但 `displayDescription` 仍有 3 种变体待统一 | 06-09 P0 |
-| 10 | `service-publish.vue` onSubmit 函数过长（~220 行），可进一步拆分验证/spec/描述 | 06-10 P1 |
+| # | 内容 | 来源 | 状态 |
+|---|------|------|:--:|
+| 9 | `displayDescription` 仍有 3 种变体待统一 | 06-09 P0 | ⬜ |
+| 10 | `service-publish.vue` onSubmit 函数过长（~220 行），可进一步拆分验证/spec/描述 | 06-10 P1 | ⬜ |
 
-### P3 — 长期规划
+### P3 — 长期规划（待排期）
 
 | # | 内容 | 说明 |
 |---|------|------|

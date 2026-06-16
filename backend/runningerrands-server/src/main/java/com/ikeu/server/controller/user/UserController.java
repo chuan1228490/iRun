@@ -195,10 +195,10 @@ public class UserController {
     /**
      * 首次设置支付密码。
      *
-     * <p>委托 {@link UserService#setPayPassword} 校验用户存在、支付密码未设置、
-     * 登录密码正确后，将支付密码加密存储。
+     * <p>委托 {@link UserService#setPayPassword} 校验用户存在、支付密码未设置后，
+     * 直接将支付密码加密存储，无需身份校验。
      *
-     * @param dto 设置支付密码DTO（支付密码、登录密码）
+     * @param dto 设置支付密码DTO（支付密码）
      * @return 操作结果
      */
     @Operation(summary = "设置支付密码")
@@ -224,6 +224,40 @@ public class UserController {
         Long userId = BaseContext.getCurrentId();
         userService.changePayPassword(userId, dto);
         return Result.success(MessageConstant.PAY_PASSWORD_CHANGE_SUCCESS);
+    }
+
+    /**
+     * 重置登录密码（忘记密码）。
+     *
+     * <p>委托 {@link UserService#resetPassword} 校验短信验证码正确后，
+     * 将登录密码加密存储为新密码。
+     *
+     * @param dto 重置密码DTO（手机号、验证码、新密码）
+     * @return 操作结果
+     */
+    @Operation(summary = "重置登录密码（忘记密码）")
+    @PutMapping("/password/reset")
+    public Result<Void> resetPassword(@Valid @RequestBody ResetPasswordDTO dto) {
+        Long userId = BaseContext.getCurrentId();
+        userService.resetPassword(userId, dto);
+        return Result.success(MessageConstant.PASSWORD_RESET_SUCCESS);
+    }
+
+    /**
+     * 重置支付密码（忘记支付密码）。
+     *
+     * <p>委托 {@link UserService#resetPayPassword} 校验短信验证码正确后，
+     * 将支付密码加密存储为新密码。
+     *
+     * @param dto 重置密码DTO（手机号、验证码、新密码）
+     * @return 操作结果
+     */
+    @Operation(summary = "重置支付密码（忘记支付密码）")
+    @PutMapping("/pay-password/reset")
+    public Result<Void> resetPayPassword(@Valid @RequestBody ResetPasswordDTO dto) {
+        Long userId = BaseContext.getCurrentId();
+        userService.resetPayPassword(userId, dto);
+        return Result.success(MessageConstant.PAY_PASSWORD_RESET_SUCCESS);
     }
 
     /**
