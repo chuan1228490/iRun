@@ -44,6 +44,7 @@ application-*.yml
 !application-*.yml.example
 .env
 .env.*
+!.env.example
 
 # ===== OS =====
 .DS_Store
