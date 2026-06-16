@@ -150,7 +150,7 @@ const totalPrice = computed(() => {
 })
 
 onLoad(() => {
-  if (restoreDraft()) uni.showToast({ title: '已恢复未发布的草稿', icon: 'none', duration: 2000 })
+  restoreDraft()
 })
 
 function setReward(val) {

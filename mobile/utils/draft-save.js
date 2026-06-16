@@ -12,9 +12,10 @@
  *   // 提交成功后: clearDraft()
  */
 import { watch } from 'vue'
-import { onHide } from '@dcloudio/uni-app'
+import { onHide, onUnload } from '@dcloudio/uni-app'
 
 const DRAFT_VERSION = 1
+const DRAFT_TTL_MS = 30 * 60 * 1000 // 30分钟过期
 
 export function useDraftSave(storageKey, formRefs, options = {}) {
   const { debounceMs = 2000 } = options
@@ -57,9 +58,14 @@ export function useDraftSave(storageKey, formRefs, options = {}) {
     persist()
   })
 
+  onUnload(() => {
+    dispose()
+  })
+
   function dispose() {
     if (timer) clearTimeout(timer)
     stopFns.forEach(fn => fn())
+    clearDraft()
   }
 
   function restoreDraft() {
@@ -67,6 +73,11 @@ export function useDraftSave(storageKey, formRefs, options = {}) {
       const saved = uni.getStorageSync(storageKey)
       if (!saved || saved.__v !== DRAFT_VERSION) {
         if (saved) clearDraft()
+        return false
+      }
+      // 超过30分钟自动清除
+      if (saved.__t && Date.now() - saved.__t > DRAFT_TTL_MS) {
+        clearDraft()
         return false
       }
       for (const key of Object.keys(formRefs)) {

@@ -578,7 +578,7 @@ onLoad((options) => {
   const defaultSubMap = { 1: 11, 2: 21, 3: 33, 4: 43 }
   subType.value = defaultSubMap[t] || 11
   if (t === 2) pickupAddress.value = ''
-  if (restoreDraft()) uni.showToast({ title: '已恢复未发布的草稿', icon: 'none', duration: 2000 })
+  restoreDraft()
   if (t === 3) fetchAddressList()
 })
 
