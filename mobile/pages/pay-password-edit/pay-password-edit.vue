@@ -206,7 +206,10 @@ async function onSendCode() {
     return
   }
   try {
-    await userApi.sendCode(phone)
+    const operation = mode.value === 'forgot'
+      ? (forgotTarget.value === 'pay' ? 'reset_pay_password' : 'reset_password')
+      : 'reset_password'
+    await userApi.sendCode(phone, operation)
     counting.value = true
     countdown.value = 60
     const timer = setInterval(() => {

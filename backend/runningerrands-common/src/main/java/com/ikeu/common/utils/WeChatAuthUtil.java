@@ -2,6 +2,7 @@ package com.ikeu.common.utils;
 
 import cn.hutool.json.JSONObject;
 import cn.hutool.json.JSONUtil;
+import com.ikeu.common.constant.MessageConstant;
 import com.ikeu.common.exception.BusinessException;
 import com.ikeu.common.properties.WeChatProperties;
 import lombok.RequiredArgsConstructor;
@@ -40,7 +41,7 @@ public class WeChatAuthUtil {
             if (json.containsKey("errcode") && json.getInt("errcode") != 0) {
                 log.warn("微信登录失败: errcode={}, errmsg={}",
                         json.getInt("errcode"), json.getStr("errmsg"));
-                throw new BusinessException("微信登录失败: " + json.getStr("errmsg"));
+                throw new BusinessException(MessageConstant.WECHAT_LOGIN_FAILED + ": " + json.getStr("errmsg"));
             }
 
             return json;
@@ -48,7 +49,7 @@ public class WeChatAuthUtil {
             throw e;
         } catch (Exception e) {
             log.error("微信 code2Session 调用异常", e);
-            throw new BusinessException("微信服务不可用，请稍后重试");
+            throw new BusinessException(MessageConstant.WECHAT_SERVICE_UNAVAILABLE);
         }
     }
 }

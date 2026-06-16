@@ -14,6 +14,7 @@ application-dev.yml
 application-prod.yml
 application-*.yml
 !application-template.yml
+!application-docker.yml
 
 ### Office temp files ###
 ~$*

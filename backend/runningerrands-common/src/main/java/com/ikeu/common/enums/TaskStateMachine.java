@@ -1,5 +1,6 @@
 package com.ikeu.common.enums;
 
+import com.ikeu.common.constant.MessageConstant;
 import com.ikeu.common.constant.StatusConstant;
 import com.ikeu.common.exception.BusinessException;
 
@@ -48,16 +49,16 @@ public enum TaskStateMachine {
 
     public static void validate(Integer currentStatus, Integer targetStatus, String entityName) {
         if (currentStatus == null || targetStatus == null) {
-            throw new BusinessException("任务状态异常，请刷新后重试");
+            throw new BusinessException(MessageConstant.TASK_STATUS_NEED_REFRESH);
         }
         for (TaskStateMachine state : values()) {
             if (state.currentStatus == currentStatus) {
                 if (state.allowedNext.contains(targetStatus)) {
                     return;
                 }
-                throw new BusinessException("当前任务状态不允许此操作");
+                throw new BusinessException(MessageConstant.TASK_STATUS_NOT_ALLOW);
             }
         }
-        throw new BusinessException("任务状态异常，请刷新后重试");
+        throw new BusinessException(MessageConstant.TASK_STATUS_NEED_REFRESH);
     }
 }

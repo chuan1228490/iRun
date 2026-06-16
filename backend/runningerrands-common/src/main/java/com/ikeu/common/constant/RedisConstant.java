@@ -18,6 +18,8 @@ public final class RedisConstant {
     public static final String USER_CERTIFY_CODE = "user:code:";                    // 验证码
     public static final String USER_LOGIN_FAIL_PREFIX = "user:login:fail:";         // 用户登录失败计数
     public static final String ADMIN_LOGIN_FAIL_PREFIX = "admin:login:fail:";       // 管理员登录失败计数
+    public static final String USER_RESET_PWD_FAIL_PREFIX = "user:reset:pwd:fail:";         // 用户重置登录密码失败计数
+    public static final String USER_RESET_PAY_PWD_FAIL_PREFIX = "user:reset:paypwd:fail:";  // 用户重置支付密码失败计数
     public static final long LOGIN_LOCK_SECONDS = 300;                              // 登录锁定时间-5分钟
     public static final int LOGIN_MAX_FAIL_COUNT = 5;                               // 登录最大失败次数
 

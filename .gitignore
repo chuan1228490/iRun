@@ -44,6 +44,10 @@ application-*.yml
 !application-*.yml.example
 .env
 .env.*
+!.env.example
+
+# ===== 敏感文档 =====
+docs/test_local_log.md
 
 # ===== OS =====
 .DS_Store
