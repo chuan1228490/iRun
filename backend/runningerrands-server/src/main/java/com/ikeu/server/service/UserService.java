@@ -48,7 +48,7 @@ public interface UserService {
     /** 微信小程序登录，首次自动注册，返回双令牌。 */
     UserLoginVO weChatLogin(WeChatLoginDTO dto);
 
-    /** 首次设置支付密码，需校验登录密码。 */
+    /** 首次设置支付密码，无需身份校验。 */
     void setPayPassword(Long userId, SetPayPasswordDTO dto);
 
     /** 修改支付密码，需校验原支付密码。 */
@@ -56,6 +56,12 @@ public interface UserService {
 
     /** 查询用户是否已设置支付密码。 */
     boolean hasPayPassword(Long userId);
+
+    /** 重置登录密码（忘记密码），通过短信验证码验证身份。 */
+    void resetPassword(Long userId, ResetPasswordDTO dto);
+
+    /** 重置支付密码（忘记支付密码），通过短信验证码验证身份。 */
+    void resetPayPassword(Long userId, ResetPasswordDTO dto);
 
     /** 查询用户实名认证状态和配送员认证状态。 */
     CertifyStatusVO getCertifyStatus(Long userId);

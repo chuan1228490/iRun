@@ -7,7 +7,8 @@ package com.ikeu.common.constant;
  */
 public final class TaskSpecKeys {
 
+    private TaskSpecKeys() {}
+
     public static final String SERVICE_END_TIME = "服务截止时间";
 
-    private TaskSpecKeys() {}
 }

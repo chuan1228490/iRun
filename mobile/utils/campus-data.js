@@ -277,11 +277,3 @@ export function parseExtraFeeFromSpecs(specs) {
   return isNaN(val) ? null : val
 }
 
-/**
- * 从 task_specs 解析额外费用 (type=5 通用代办)
- * @returns {number|null}
- */
-export function parseExtraFeeFromSpecs(specs) {
-  if (!specs || specs.额外费用 == null) return null
-  return Number(specs.额外费用) || null
-}
