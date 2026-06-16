@@ -56,7 +56,7 @@ public class ChatServiceImpl implements ChatService {
     @Transactional
     public void sendMessage(Long senderId, Long receiverId, String content, Integer messageType) {
         if (senderId == null) {
-            throw new IllegalArgumentException(MessageConstant.SENDER_ID_NULL);
+            throw new BusinessException(MessageConstant.SENDER_ID_NULL);
         }
         ChatMessage msg = ChatMessage.builder()
                 .senderId(senderId)
