@@ -49,7 +49,7 @@ async function onSendCode() {
     return
   }
   try {
-    await userApi.sendCode(newPhone.value)
+    await userApi.sendCode(newPhone.value, 'change_phone')
     uni.showToast({ title: '验证码已发送', icon: 'success' })
     countdown.value = 60
     const timer = setInterval(() => {

@@ -34,6 +34,7 @@ import org.springframework.transaction.annotation.Transactional;
 import java.math.BigDecimal;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Set;
 import java.util.concurrent.TimeUnit;
 import java.time.LocalDateTime;
 
@@ -63,6 +64,9 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements Us
     private static final String DEFAULT_RAW_PASSWORD = "123456";
     /** 默认头像路径（Spring Boot 静态资源，context-path=/api，对应 static/imgs/default_avatar.jpg） */
     private static final String DEFAULT_AVATAR_URL = "/api/imgs/default_avatar.jpg";
+    /** 合法的短信验证码操作类型 */
+    private static final Set<String> VALID_CODE_OPERATIONS = Set.of(
+            "login", "register", "change_phone", "reset_password", "reset_pay_password");
 
     /**
      * 生成双 Token（access + refresh）并构建登录 VO。
@@ -104,13 +108,17 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements Us
     @Override
     public void sendCode(SendCodeDTO sendCodeDTO) {
         String phone = sendCodeDTO.getPhone();
+        String operation = sendCodeDTO.getOperation();
+        if (!VALID_CODE_OPERATIONS.contains(operation)) {
+            throw new BusinessException(MessageConstant.PARAM_ERROR);
+        }
         // 生成6位数字验证码
         String code = RandomUtil.randomNumbers(6);
         try {
             smsUtil.sendVerifyCode(phone, code);
-            // 将验证码存入 Redis，有效期5分钟
+            // 将验证码存入 Redis，key 包含操作类型防止跨操作复用，有效期5分钟
             redisTemplate.opsForValue().set(
-                    RedisConstant.USER_CERTIFY_CODE + phone,
+                    RedisConstant.USER_CERTIFY_CODE + operation + ":" + phone,
                     code,
                     RedisConstant.CODE_EXPIRE,
                     TimeUnit.SECONDS
@@ -119,7 +127,7 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements Us
             log.error("短信发送异常", e);
             throw new BusinessException(MessageConstant.CODE_SEND_FAILED);
         }
-        log.info("向手机号 {} 发送了验证码", phone);
+        log.info("向手机号 {} 发送了验证码，操作类型：{}", phone, operation);
     }
 
     /**
@@ -135,7 +143,7 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements Us
     public UserLoginVO register(UserRegisterDTO userRegisterDTO) {
 
         // 校验验证码
-        String cachedCode = redisTemplate.opsForValue().get(RedisConstant.USER_CERTIFY_CODE + userRegisterDTO.getPhone());
+        String cachedCode = redisTemplate.opsForValue().get(RedisConstant.USER_CERTIFY_CODE + "register:" + userRegisterDTO.getPhone());
         if (cachedCode == null || !cachedCode.equals(userRegisterDTO.getCode())) {
             throw new BusinessException(MessageConstant.CODE_ERROR);
         }
@@ -176,7 +184,7 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements Us
         log.info("新用户注册成功，手机号：{}，用户ID：{}", user.getPhone(), user.getId());
 
         // 删除验证码
-        redisTemplate.delete(RedisConstant.USER_CERTIFY_CODE + userRegisterDTO.getPhone());
+        redisTemplate.delete(RedisConstant.USER_CERTIFY_CODE + "register:" + userRegisterDTO.getPhone());
 
         // 生成双Token并返回VO
         return buildLoginVO(user);
@@ -205,7 +213,7 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements Us
             String failKey = RedisConstant.USER_LOGIN_FAIL_PREFIX + account;
             String failCount = redisTemplate.opsForValue().get(failKey);
             if (failCount != null && Integer.parseInt(failCount) >= RedisConstant.LOGIN_MAX_FAIL_COUNT) {
-                throw new BusinessException("登录失败次数过多，请15分钟后再试");
+                throw new BusinessException(MessageConstant.LOGIN_FAIL_LOCKED_USER);
             }
 
             user = lambdaQuery().eq(User::getUsername, account).one();
@@ -226,7 +234,7 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements Us
             if (userLoginDTO.getPhone() == null || userLoginDTO.getCode() == null) {
                 throw new UnauthorizedException(MessageConstant.LOGIN_FAILED);
             }
-            String cachedCode = redisTemplate.opsForValue().get(RedisConstant.USER_CERTIFY_CODE + userLoginDTO.getPhone());
+            String cachedCode = redisTemplate.opsForValue().get(RedisConstant.USER_CERTIFY_CODE + "login:" + userLoginDTO.getPhone());
             if (cachedCode == null || !cachedCode.equals(userLoginDTO.getCode())) {
                 throw new UnauthorizedException(MessageConstant.CODE_ERROR);
             }
@@ -234,7 +242,7 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements Us
             if (user == null) {
                 throw new NotFoundException(MessageConstant.USER_NOT_EXIST);
             }
-            redisTemplate.delete(RedisConstant.USER_CERTIFY_CODE + userLoginDTO.getPhone());
+            redisTemplate.delete(RedisConstant.USER_CERTIFY_CODE + "login:" + userLoginDTO.getPhone());
         } else {
             throw new UnauthorizedException(MessageConstant.INVALID_LOGIN_TYPE);
         }
@@ -444,7 +452,7 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements Us
         String code = changePhoneDTO.getCode();
 
         // 校验验证码
-        String cachedCode = redisTemplate.opsForValue().get(RedisConstant.USER_CERTIFY_CODE + newPhone);
+        String cachedCode = redisTemplate.opsForValue().get(RedisConstant.USER_CERTIFY_CODE + "change_phone:" + newPhone);
         if (cachedCode == null || !cachedCode.equals(code)) {
             throw new UnauthorizedException(MessageConstant.CODE_ERROR);
         }
@@ -459,7 +467,7 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements Us
         User user = getById(userId);
         user.setPhone(newPhone);
         updateById(user);
-        redisTemplate.delete(RedisConstant.USER_CERTIFY_CODE + newPhone);
+        redisTemplate.delete(RedisConstant.USER_CERTIFY_CODE + "change_phone:" + newPhone);
         log.info("用户 {} 修改手机号为 {}", userId, newPhone);
     }
 
@@ -611,12 +619,25 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements Us
         if (user.getPhone() == null || !user.getPhone().equals(dto.getPhone())) {
             throw new BusinessException(MessageConstant.PHONE_NOT_MATCH);
         }
+
+        // 暴力破解防护：失败计数检查
+        String failKey = RedisConstant.USER_RESET_PWD_FAIL_PREFIX + userId;
+        String failCount = redisTemplate.opsForValue().get(failKey);
+        if (failCount != null && Integer.parseInt(failCount) >= RedisConstant.LOGIN_MAX_FAIL_COUNT) {
+            throw new BusinessException(MessageConstant.RESET_PWD_FAIL_LOCKED);
+        }
+
         String cachedCode = redisTemplate.opsForValue()
-                .get(RedisConstant.USER_CERTIFY_CODE + dto.getPhone());
+                .get(RedisConstant.USER_CERTIFY_CODE + "reset_password:" + dto.getPhone());
         if (cachedCode == null || !cachedCode.equals(dto.getCode())) {
+            redisTemplate.opsForValue().increment(failKey);
+            redisTemplate.expire(failKey, RedisConstant.LOGIN_LOCK_SECONDS, TimeUnit.SECONDS);
             throw new BusinessException(MessageConstant.CODE_ERROR);
         }
-        redisTemplate.delete(RedisConstant.USER_CERTIFY_CODE + dto.getPhone());
+
+        // 验证成功，清除失败计数和验证码
+        redisTemplate.delete(failKey);
+        redisTemplate.delete(RedisConstant.USER_CERTIFY_CODE + "reset_password:" + dto.getPhone());
         user.setPassword(passwordEncoder.encode(dto.getNewPassword()));
         updateById(user);
         log.info("用户 {} 通过忘记密码重置了登录密码", userId);
@@ -639,12 +660,25 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements Us
         if (user.getPhone() == null || !user.getPhone().equals(dto.getPhone())) {
             throw new BusinessException(MessageConstant.PHONE_NOT_MATCH);
         }
+
+        // 暴力破解防护：失败计数检查
+        String failKey = RedisConstant.USER_RESET_PAY_PWD_FAIL_PREFIX + userId;
+        String failCount = redisTemplate.opsForValue().get(failKey);
+        if (failCount != null && Integer.parseInt(failCount) >= RedisConstant.LOGIN_MAX_FAIL_COUNT) {
+            throw new BusinessException(MessageConstant.RESET_PWD_FAIL_LOCKED);
+        }
+
         String cachedCode = redisTemplate.opsForValue()
-                .get(RedisConstant.USER_CERTIFY_CODE + dto.getPhone());
+                .get(RedisConstant.USER_CERTIFY_CODE + "reset_pay_password:" + dto.getPhone());
         if (cachedCode == null || !cachedCode.equals(dto.getCode())) {
+            redisTemplate.opsForValue().increment(failKey);
+            redisTemplate.expire(failKey, RedisConstant.LOGIN_LOCK_SECONDS, TimeUnit.SECONDS);
             throw new BusinessException(MessageConstant.CODE_ERROR);
         }
-        redisTemplate.delete(RedisConstant.USER_CERTIFY_CODE + dto.getPhone());
+
+        // 验证成功，清除失败计数和验证码
+        redisTemplate.delete(failKey);
+        redisTemplate.delete(RedisConstant.USER_CERTIFY_CODE + "reset_pay_password:" + dto.getPhone());
         user.setPayPassword(passwordEncoder.encode(dto.getNewPassword()));
         updateById(user);
         log.info("用户 {} 通过忘记密码重置了支付密码", userId);

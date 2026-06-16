@@ -175,7 +175,7 @@ let codeTimer = null
 async function onSendCode() {
   if (countdown.value > 0 || !phoneValid.value) return
   try {
-    await userApi.sendCode(phone.value)
+    await userApi.sendCode(phone.value, 'login')
     uni.showToast({ title: '验证码已发送', icon: 'success' })
     countdown.value = 60
     codeTimer = setInterval(() => {
@@ -253,7 +253,7 @@ let regCodeTimer = null
 async function onSendRegCode() {
   if (regCountdown.value > 0 || !regPhoneValid.value) return
   try {
-    await userApi.sendCode(regPhone.value)
+    await userApi.sendCode(regPhone.value, 'register')
     uni.showToast({ title: '验证码已发送', icon: 'success' })
     regCountdown.value = 60
     regCodeTimer = setInterval(() => {

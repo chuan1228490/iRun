@@ -6,9 +6,9 @@ import { get, post, put, del } from '@/utils/request'
 
 // ---------- 无需鉴权 ----------
 
-/** 发送短信验证码 */
-export function sendCode(phone) {
-  return post('/user/send', { phone }, { auth: 'none' })
+/** 发送短信验证码，operation: login/register/change_phone/reset_password/reset_pay_password */
+export function sendCode(phone, operation) {
+  return post('/user/send', { phone, operation }, { auth: 'none' })
 }
 
 /** 密码 / 验证码登录 */

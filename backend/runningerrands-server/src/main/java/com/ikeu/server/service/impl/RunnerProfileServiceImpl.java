@@ -84,10 +84,10 @@ public class RunnerProfileServiceImpl extends ServiceImpl<RunnerProfileMapper, R
                 new LambdaQueryWrapper<RunnerProfile>().eq(RunnerProfile::getUserId, userId));
         if (existing != null) {
             if (Objects.equals(existing.getVerifyStatus(), StatusConstant.CERTIFY_AUDITING)) {
-                throw new BusinessException("配送员申请正在审核中，请勿重复提交");
+                throw new BusinessException(MessageConstant.RUNNER_APPLY_AUDITING);
             }
             if (Objects.equals(existing.getVerifyStatus(), StatusConstant.CERTIFY_APPROVED)) {
-                throw new BusinessException("您已是认证配送员");
+                throw new BusinessException(MessageConstant.RUNNER_ALREADY_CERTIFIED);
             }
             // 驳回后重新申请
             existing.setVerifyStatus(StatusConstant.CERTIFY_AUDITING);

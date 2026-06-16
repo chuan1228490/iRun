@@ -35,6 +35,7 @@ public final class MessageConstant {
     public static final String USERNAME_CANNOT_BE_NULL = "用户名不能为空";
     public static final String PASSWORD_CANNOT_BE_NULL = "密码不能为空";
     public static final String INVALID_CREDENTIALS = "用户名或密码错误";
+    public static final String LOGIN_FAIL_LOCKED_USER = "登录失败次数过多，请5分钟后再试";
     public static final String INVALID_LOGIN_TYPE = "无效的登录方式";
     public static final String USER_DISABLED = "账号已被禁用";
     public static final String CODE_SEND_SUCCESS = "短信验证码发送成功";
@@ -49,6 +50,7 @@ public final class MessageConstant {
     public static final String PHONE_NOT_MATCH = "手机号与当前账户不匹配";
     public static final String PASSWORD_RESET_SUCCESS = "登录密码重置成功";
     public static final String PAY_PASSWORD_RESET_SUCCESS = "支付密码重置成功";
+    public static final String RESET_PWD_FAIL_LOCKED = "密码重置尝试次数过多，请5分钟后再试";
     public static final String CERTIFY_SUBMITTED = "实名认证提交成功，请等待审核";
     public static final String CERTIFY_CHECKING = "实名认证正在审核中，请勿重复提交";
     public static final String CERTIFY_SUCCESS = "您已完成实名认证";
@@ -71,6 +73,8 @@ public final class MessageConstant {
     public static final String TASK_EXPIRED = "任务已过期";
     public static final String TASK_CANNOT_ACCEPT_SELF = "您不能接取自己发布的任务";
     public static final String TASK_STATUS_ILLEGAL = "任务状态异常，操作失败";
+    public static final String TASK_STATUS_NEED_REFRESH = "任务状态异常，请刷新后重试";
+    public static final String TASK_STATUS_NOT_ALLOW = "当前任务状态不允许此操作";
     public static final String TASK_CANCEL_FAILED = "任务取消失败";
     public static final String TASK_CANCEL_NOT_BE_ALLOWED = "任务已被接单，请与接单员联系";
     public static final String TASK_WAIT_CONFIRM_CANNOT_CANCEL = "任务正在等待确认收货，暂无法取消";
@@ -87,6 +91,8 @@ public final class MessageConstant {
     public static final String ORDER_ACCEPTED_FAIL = "接单失败，当前订单可能已被接取或已取消";
     public static final String ORDER_STATUS_CHANGED = "订单状态已变更";
     public static final String ORDER_STATUS_ILLEGAL = "订单状态异常，操作失败";
+    public static final String ORDER_STATUS_NEED_REFRESH = "订单状态异常，请刷新后重试";
+    public static final String ORDER_STATUS_NOT_ALLOW = "当前订单状态不允许此操作";
     public static final String ORDER_ACCEPT_SUCCESS = "接单成功";
     public static final String ORDER_PICKUP_SUCCESS = "已确认取货";
     public static final String ORDER_DELIVERED_SUCCESS = "订单已确认送达";
@@ -110,6 +116,8 @@ public final class MessageConstant {
     public static final String RUNNER_LOW_CREDIT = "信用分不足，暂时无法接单";
     public static final String RUNNER_IS_BANNED = "您已被禁止接单，请联系管理员";
     public static final String GENDER_RESTRICTION_NOT_MATCH = "任务对配送员性别有要求，您不符合条件";
+    public static final String RUNNER_APPLY_AUDITING = "配送员申请正在审核中，请勿重复提交";
+    public static final String RUNNER_ALREADY_CERTIFIED = "您已是认证配送员";
 
 
     // ========== 余额相关 ==========
@@ -165,6 +173,7 @@ public final class MessageConstant {
     public static final String TASK_STATUS_UPDATED = "任务状态已更新";
 
     // ========== 聊天消息相关 ==========
+    public static final String SENDER_ID_NULL = "发送者ID不能为空";
     public static final String MESSAGE_NOT_FOUND = "消息不存在";
     public static final String MESSAGE_NOT_YOURS = "只能操作自己发送的消息";
     public static final String MESSAGE_ALREADY_DELETED = "消息已被删除";
@@ -177,5 +186,9 @@ public final class MessageConstant {
     public static final String UPLOAD_FAILED = "上传失败";
     public static final String FILE_EMPTY = "文件不能为空";
     public static final String FILE_SIZE_EXCEED = "文件大小超出限制";
+
+    // ========== 微信相关 ==========
+    public static final String WECHAT_SERVICE_UNAVAILABLE = "微信服务不可用，请稍后重试";
+    public static final String WECHAT_LOGIN_FAILED = "微信登录失败";
 
 }
