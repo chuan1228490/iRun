@@ -152,7 +152,7 @@
           <view class="accept-btn" :class="{ 'accept-btn--disabled': accepting }" @click.stop="onAccept(item)" v-if="item.canAccept && store.isCertifiedRunner && !store.isCreditFrozen">
             <text>{{ accepting ? '接单中…' : '接单' }}</text>
           </view>
-          <view class="accept-btn accept-btn--frozen" @click.stop="onAcceptBlocked(item)" v-else-if="item.canAccept && store.isCertifiedRunner && store.isCreditFrozen">
+          <view class="accept-btn accept-btn--frozen" @click.stop="onAcceptBlocked(item)" v-else-if="item.canAccept && store.isCreditFrozen">
             <text>限制接单</text>
           </view>
           <view class="accept-btn accept-btn--lock" @click.stop="onAcceptBlocked(item)" v-else-if="item.canAccept && !store.isCertifiedRunner">

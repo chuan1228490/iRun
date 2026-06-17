@@ -112,6 +112,22 @@ export function useTaskSpecs(source) {
     return '取件码'
   })
 
+  // --- 描述文本 ---
+
+  const displayDescription = computed(() => {
+    const desc = source.value.publicDesc || ''
+    const specs = taskSpecs.value
+    if (taskTypeCode.value === 1) {
+      const pkgSpecs = parseExpressPackagesFromSpecs(specs)
+      if (pkgSpecs) {
+        let text = `快递规格：${pkgSpecs.sizes}`
+        if (desc) text += `\n需求描述：${desc}`
+        return text
+      }
+    }
+    return desc || '暂无描述'
+  })
+
   return {
     taskSpecs, taskTypeCode, typeLabel, rewardText,
     typeMeta, typeIcon, typeIconColor, typeColor,
@@ -119,5 +135,6 @@ export function useTaskSpecs(source) {
     productFeeText, productTags, bookCount, printSpecs, merchantTag,
     foodItems, serviceDuration, itemExpress, extraFee,
     pickupSectionTitle, pickupAddressLabel, pickupCodeLabel,
+    displayDescription,
   }
 }

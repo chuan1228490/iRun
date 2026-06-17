@@ -286,8 +286,6 @@
 import { ref, computed } from 'vue'
 import { onLoad } from '@dcloudio/uni-app'
 import { orderApi, reviewApi, taskApi } from '@/api'
-import { TASK_TYPES, TASK_TYPE_META, isQueueWaitType } from '@/utils/constants.js'
-import { parseExpressPackagesFromSpecs } from '@/utils/campus-data.js'
 import { useTaskSpecs } from '@/utils/useTaskSpecs.js'
 import { useSubmitLock } from '@/utils/submit-guard'
 import { SERVER_ORIGIN } from '@/utils/config'
@@ -328,7 +326,7 @@ const replyingTo = ref(null) // 当前正在回复的评价ID
 const { lock: reviewLock, unlock: reviewUnlock, locked: reviewSubmitting } = useSubmitLock()
 const { lock: deleteLock, unlock: deleteUnlock, locked: deleteSubmitting } = useSubmitLock()
 
-const { taskSpecs, taskTypeCode, typeLabel, rewardText, typeIcon, typeIconColor, typeColor, isQueueWait, isPaperExpress, pickupSectionTitle, pickupAddressLabel, pickupCodeLabel, foodItems, serviceDuration, extraFee, productFeeText, productTags, bookCount, printSpecs, merchantTag, itemExpress } = useTaskSpecs(order)
+const { taskSpecs, taskTypeCode, typeLabel, rewardText, typeIcon, typeIconColor, typeColor, isQueueWait, isPaperExpress, pickupSectionTitle, pickupAddressLabel, pickupCodeLabel, foodItems, serviceDuration, extraFee, productFeeText, productTags, bookCount, printSpecs, merchantTag, itemExpress, displayDescription } = useTaskSpecs(order)
 
 const cancelMethodText = computed(() => {
   const reason = order.value.cancelReason || ''
@@ -364,22 +362,6 @@ const otherParty = computed(() => {
   return {}
 })
 
-const displayDescription = computed(() => {
-  const desc = order.value.publicDesc || ''
-  const specs = taskSpecs.value
-  if (taskTypeCode.value === 1) {
-    const pkgSpecs = parseExpressPackagesFromSpecs(specs)
-    if (pkgSpecs) {
-      let text = `快递规格：${pkgSpecs.sizes}`
-      if (desc) text += `\n需求描述：${desc}`
-      return text
-    }
-  }
-  if (taskTypeCode.value === 4) {
-    return desc || '暂无描述'
-  }
-  return desc || '暂无描述'
-})
 
 const deliveryContactName = computed(() => {
   const name = order.value.contactName || ''
@@ -447,6 +429,8 @@ async function loadData() {
           taskDescription: taskData.description,
           description: taskData.description,
           reward: taskData.reward,
+          publicDesc: taskData.description || '',
+          taskSpecs: taskData.taskSpecs || '',
           pickupAddress: taskData.pickupAddress,
           deliveryAddress: taskData.deliveryAddress,
           pickupCode: taskData.pickupCode,
