@@ -29,13 +29,51 @@ public interface RunnerProfileMapper extends BaseMapper<RunnerProfile> {
                                                   @Param("keyword") String keyword);
 
     /**
-     * 原子更新信用分，消除 read-before-write 竞态。结果不小于0。
+     * 原子更新信用分并自动冻结/解冻（仅信用分冻结，不影响管理员手动封禁）。
+     * 新信用分低于冻结阈值时自动设置 is_banned=1 + ban_until，
+     * 回到阈值以上时仅清除由信用分冻结触发的封禁（ban_until IS NOT NULL）。
      *
      * @param userId 用户ID
      * @param delta 信用分增量（可为负数）
+     * @param freezeThreshold 冻结阈值（低于该值触发冻结）
+     * @param banUntil 冻结截止时间（高于阈值时传 null 清除冻结状态）
      */
-    @Update("UPDATE runner_profile SET credit_score = GREATEST(0, credit_score + #{delta}) WHERE user_id = #{userId}")
-    void updateCreditScore(@Param("userId") Long userId, @Param("delta") int delta);
+    @Update("UPDATE runner_profile SET " +
+            "credit_score = GREATEST(0, credit_score + #{delta}), " +
+            "is_banned = CASE " +
+            "WHEN GREATEST(0, credit_score + #{delta}) < #{freezeThreshold} THEN 1 " +
+            "WHEN GREATEST(0, credit_score + #{delta}) >= #{freezeThreshold} AND is_banned = 1 AND ban_until IS NOT NULL THEN 0 " +
+            "ELSE is_banned END, " +
+            "ban_until = #{banUntil} " +
+            "WHERE user_id = #{userId}")
+    void updateCreditScoreAndFreeze(@Param("userId") Long userId, @Param("delta") int delta,
+                                    @Param("freezeThreshold") int freezeThreshold,
+                                    @Param("banUntil") java.time.LocalDateTime banUntil);
+
+    /**
+     * 原子恢复信用分并解冻（仅对冻结期满的跑腿员生效）。
+     * score ⇐ targetScore 时设为 targetScore，否则保持原值，
+     * 防止并发读写导致 TOCTOU 竞态。
+     *
+     * @param userId 用户ID
+     * @param targetScore 目标恢复分值
+     * @return 影响的记录行数（0 表示该跑腿员未处于冻结期满状态）
+     */
+    @Update("UPDATE runner_profile SET " +
+            "credit_score = CASE WHEN credit_score < #{targetScore} THEN #{targetScore} ELSE credit_score END, " +
+            "is_banned = 0, ban_until = NULL " +
+            "WHERE user_id = #{userId} AND is_banned = 1 AND ban_until IS NOT NULL AND ban_until < NOW()")
+    int restoreCreditAndUnfreeze(@Param("userId") Long userId, @Param("targetScore") int targetScore);
+
+    /**
+     * 原子切换跑腿员封禁状态，仅修改 is_banned 和 ban_until，
+     * 不触及 credit_score 等其他字段，防止与信用分更新产生丢失更新。
+     *
+     * @param userId 用户ID
+     * @param banned 是否封禁（1-封禁，0-解封）
+     */
+    @Update("UPDATE runner_profile SET is_banned = #{banned}, ban_until = NULL WHERE user_id = #{userId}")
+    void toggleBan(@Param("userId") Long userId, @Param("banned") int banned);
 
     /**
      * 原子更新配送员订单统计（总单+1、成功+1、当前接单-1）。

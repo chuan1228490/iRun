@@ -32,6 +32,7 @@ public final class RedisConstant {
     public static final String ORDER_TIMEOUT_LOCK_KEY = "order:timeout:lock";               // 订单超时取消检查锁
     public static final String ORDER_AUTO_COMPLETE_LOCK_KEY = "order:autoComplete:lock";    // 24h自动结算锁
     public static final String NOTIFICATION_CLEANUP_LOCK_KEY = "notification:cleanup:lock"; // 通知清理锁
+    public static final String CREDIT_RECOVERY_LOCK_KEY = "credit:recovery:lock"; // 信用分恢复定时任务锁
 
     // ========== 缓存击穿防护锁 ==========
     public static final String TASK_HALL_LOCK_KEY = "task:hall:lock:";              // 任务大厅分页缓存互斥锁前缀

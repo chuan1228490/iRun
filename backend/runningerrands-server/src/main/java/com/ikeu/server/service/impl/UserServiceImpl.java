@@ -327,11 +327,13 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements Us
 
         UserInfoVO userInfo = BeanUtil.copyProperties(user, UserInfoVO.class);
 
-        // 查询跑腿员认证状态
+        // 查询跑腿员认证状态及信用分信息
         RunnerProfile profile = runnerProfileMapper.selectOne(
                 new LambdaQueryWrapper<RunnerProfile>().eq(RunnerProfile::getUserId, userId));
         if (profile != null) {
             userInfo.setVerifyStatus(profile.getVerifyStatus());
+            userInfo.setCreditScore(profile.getCreditScore());
+            userInfo.setBanUntil(profile.getBanUntil());
         }
 
         return userInfo;

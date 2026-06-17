@@ -45,6 +45,8 @@ export const useStore = defineStore('main', {
       balance: 0,
       isCertify: 0,
       verifyStatus: 0,
+      creditScore: 100,
+      banUntil: null,
       registerType: 1,
       campus: '',
       signature: '',
@@ -71,6 +73,10 @@ export const useStore = defineStore('main', {
     },
     isCertified: (state) => state.userInfo.isCertify === 2,
     isCertifiedRunner: (state) => state.userInfo.verifyStatus === 2,
+    isCreditFrozen: (state) => {
+      if (!state.userInfo.banUntil) return false
+      return new Date(state.userInfo.banUntil) > new Date()
+    },
     balanceText: (state) => `¥ ${(state.userInfo.balance || 0).toFixed(2)}`,
     certifyStatusLabel: (state) => {
       const map = { 0: '未认证', 1: '审核中', 2: '已认证', 3: '已驳回' }
@@ -170,7 +176,7 @@ export const useStore = defineStore('main', {
       this.userId = null
       this.userInfo = {
         id: null, username: '', nickname: '', avatarUrl: '', phone: '',
-        realName: '', studentId: '', balance: 0, isCertify: 0, verifyStatus: 0, registerType: 1,
+        realName: '', studentId: '', balance: 0, isCertify: 0, verifyStatus: 0, creditScore: 100, banUntil: null, registerType: 1,
         campus: '', signature: '', sex: '', certifyImg: '', certifyRemark: ''
       }
       this.hasPayPassword = false

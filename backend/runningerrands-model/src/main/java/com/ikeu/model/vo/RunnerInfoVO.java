@@ -7,6 +7,7 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 
 import java.io.Serializable;
+import java.time.LocalDateTime;
 
 @Data
 @Builder
@@ -50,4 +51,7 @@ public class RunnerInfoVO implements Serializable {
 
     @Schema(description = "当前进行中的订单数")
     private Integer currentOrders;
+
+    @Schema(description = "禁止接单截止时间（信用分冻结）")
+    private LocalDateTime banUntil;
 }

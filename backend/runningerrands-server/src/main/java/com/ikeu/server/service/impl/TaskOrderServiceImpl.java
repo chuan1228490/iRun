@@ -6,6 +6,7 @@ import cn.hutool.json.JSONUtil;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
+import com.ikeu.common.constant.CreditConstant;
 import com.ikeu.common.constant.MessageConstant;
 import com.ikeu.common.constant.RedisConstant;
 import com.ikeu.common.constant.StatusConstant;
@@ -178,7 +179,7 @@ public class TaskOrderServiceImpl extends ServiceImpl<TaskOrderMapper, TaskOrder
         if (runner.getCurrentOrders() >= runner.getMaxConcurrentOrders()) {
             throw new BusinessException(MessageConstant.RUNNER_MAX_ORDERS);
         }
-        if (runner.getCreditScore() != null && runner.getCreditScore() < 60) {
+        if (runner.getCreditScore() != null && runner.getCreditScore() < CreditConstant.CREDIT_FREEZE_THRESHOLD) {
             throw new BusinessException(MessageConstant.RUNNER_LOW_CREDIT);
         }
         if (Objects.equals(runner.getIsBanned(), 1)) {
