@@ -16,9 +16,10 @@ public final class TaskTypeConstant {
     public static final String TYPE_MEAL_PICKUP = "代拿餐食";
     public static final String TYPE_CAMPUS_ERRAND = "校内代办";
     public static final String TYPE_CAMPUS_EXPRESS = "代购物品";
+    public static final String TYPE_GENERAL_ERRAND = "通用代办";
 
     public static final Set<String> ALL_TYPES = Set.of(
-            TYPE_EXPRESS_PICKUP, TYPE_MEAL_PICKUP, TYPE_CAMPUS_ERRAND, TYPE_CAMPUS_EXPRESS);
+            TYPE_EXPRESS_PICKUP, TYPE_MEAL_PICKUP, TYPE_CAMPUS_ERRAND, TYPE_CAMPUS_EXPRESS, TYPE_GENERAL_ERRAND);
 
     // ========== 任务小类 — 代取快递 ==========
     public static final String SUB_SMALL_PACKAGE = "小件快递";
