@@ -68,7 +68,7 @@
       </el-select>
       <template #footer>
         <el-button @click="statusDialog.visible = false">取消</el-button>
-        <el-button type="primary" @click="confirmStatus">确认</el-button>
+        <el-button type="primary" @click="confirmStatus" :disabled="saving">确认</el-button>
       </template>
     </el-dialog>
   </div>
@@ -86,6 +86,7 @@ const tableData = ref<any[]>([])
 const total = ref(0)
 const query = reactive({ status: undefined as number | undefined, page: 1, size: 10 })
 const statusDialog = reactive({ visible: false, taskId: 0, newStatus: 1 })
+const saving = ref(false)
 
 const taskTypeStyleMap: Record<string, { color: string; bgColor: string; icon: any }> = {
   '代取快递': { color: '#E8734A', bgColor: '#FFF2ED', icon: Box },
@@ -123,10 +124,16 @@ function updateStatus(row: any) {
 }
 
 async function confirmStatus() {
-  await updateTaskStatus(statusDialog.taskId, statusDialog.newStatus)
-  ElMessage.success('状态已更新')
-  statusDialog.visible = false
-  fetchData()
+  if (saving.value) return
+  saving.value = true
+  try {
+    await updateTaskStatus(statusDialog.taskId, statusDialog.newStatus)
+    ElMessage.success('状态已更新')
+    statusDialog.visible = false
+    fetchData()
+  } finally {
+    saving.value = false
+  }
 }
 
 onMounted(fetchData)

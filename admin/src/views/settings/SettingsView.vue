@@ -135,7 +135,6 @@ async function saveItem(item: any) {
   try {
     await updateSettings({ items: [{ configKey: item.configKey, configValue: editValue.value }] })
     item.configValue = editValue.value
-    item.updatedAt = new Date().toISOString().replace('T', ' ')
     ElMessage.success('配置已更新')
     cancelEdit()
   } catch {

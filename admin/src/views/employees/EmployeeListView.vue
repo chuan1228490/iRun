@@ -111,7 +111,7 @@ function openCreate() {
 }
 
 function openEdit(row: any) {
-  Object.assign(formDialog, { visible: true, isEdit: true, id: row.id, username: row.username, name: row.name, password: '', phone: row.phone, sex: row.sex, idNumber: '' })
+  Object.assign(formDialog, { visible: true, isEdit: true, id: row.id, username: row.username, name: row.name, password: '', phone: row.phone, sex: row.sex, idNumber: row.idNumber || '' })
 }
 
 async function submitForm() {
