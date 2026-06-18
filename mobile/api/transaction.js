@@ -16,6 +16,11 @@ export function recharge(amount, payPassword) {
   return post('/user/transactions/recharge', { amount, payPassword })
 }
 
+/** 收支汇总（全量，不受分页限制） */
+export function getSummary() {
+  return get('/user/transactions/summary')
+}
+
 /** 提现（需支付密码校验） */
 export function withdraw(amount, payPassword) {
   return post('/user/transactions/withdraw', { amount, payPassword })

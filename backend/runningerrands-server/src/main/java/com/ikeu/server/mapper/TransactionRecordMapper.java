@@ -39,4 +39,15 @@ public interface TransactionRecordMapper extends BaseMapper<TransactionRecord> {
      * @return 每行含 user_id 和 total_income 的 Map 列表
      */
     List<Map<String, Object>> sumIncomeByUserIds(@Param("userIds") List<Long> userIds);
+
+    /**
+     * 查询用户全量流水汇总，返回包含总收入（total_income）和总支出（total_expense）的 Map。
+     *
+     * <p>数据库侧执行聚合查询（SUM + GROUP BY），仅返回聚合值，避免全字段拉取到内存再求和。
+     * 无记录时返回 null，由调用方处理零值兜底。
+     *
+     * @param userId 用户ID
+     * @return 包含 total_income 和 total_expense 的 Map；无记录时返回 null
+     */
+    Map<String, BigDecimal> sumSummaryByUserId(@Param("userId") Long userId);
 }
