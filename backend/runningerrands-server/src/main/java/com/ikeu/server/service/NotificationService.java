@@ -3,6 +3,8 @@ package com.ikeu.server.service;
 import com.ikeu.model.vo.NotificationVO;
 import com.ikeu.common.result.PageResult;
 
+import java.util.List;
+
 /**
  * 通知服务接口，提供通知发送、列表查询、已读标记、删除和过期清理等功能。
  * @author ikeu
@@ -21,6 +23,9 @@ public interface NotificationService {
 
     /** 将当前用户的所有通知标记为已读。 */
     void markAllAsRead(Long userId);
+
+    /** 批量标记指定ID的通知为已读。 */
+    void markBatchRead(Long userId, List<Long> ids);
 
     /** 删除指定通知，校验通知归属当前用户。 */
     void deleteNotification(Long userId, Long notificationId);

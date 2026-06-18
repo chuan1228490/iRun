@@ -10,6 +10,9 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.List;
+import java.util.Map;
+
 /**
  * 站内信通知接口，提供通知列表查询、单条/全部标记已读、删除通知等功能。
  * @author ikeu
@@ -74,6 +77,17 @@ public class NotificationController {
     public Result<Void> markAllRead() {
         Long userId = BaseContext.getCurrentId();
         notificationService.markAllAsRead(userId);
+        return Result.success();
+    }
+
+    /**
+     * 批量标记多条通知为已读。
+     */
+    @Operation(summary = "批量标记已读")
+    @PutMapping("/batch-read")
+    public Result<Void> markBatchRead(@RequestBody Map<String, List<Long>> body) {
+        Long userId = BaseContext.getCurrentId();
+        notificationService.markBatchRead(userId, body.get("ids"));
         return Result.success();
     }
 
