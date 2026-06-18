@@ -9,6 +9,7 @@ import com.ikeu.common.constant.StatusConstant;
 import com.ikeu.common.exception.BusinessException;
 import com.ikeu.common.exception.NotFoundException;
 import com.ikeu.common.exception.ForbiddenException;
+import com.ikeu.model.dto.OnTimeStatsDTO;
 import com.ikeu.model.dto.SetMaxOrdersDTO;
 import com.ikeu.model.entity.RunnerProfile;
 import com.ikeu.model.entity.User;
@@ -281,9 +282,9 @@ public class RunnerProfileServiceImpl extends ServiceImpl<RunnerProfileMapper, R
         BigDecimal totalEarnings = transactionRecordMapper.sumIncomeByUserId(runnerId);
 
         // 准时率：数据库侧 COUNT + CASE WHEN 聚合
-        Map<String, Object> onTimeStats = taskOrderMapper.countCompletedOnTime(runnerId);
-        long total = ((Number) onTimeStats.get("total")).longValue();
-        long onTime = ((Number) onTimeStats.get("on_time")).longValue();
+        OnTimeStatsDTO onTimeStats = taskOrderMapper.countCompletedOnTime(runnerId);
+        long total = onTimeStats.getTotal() != null ? onTimeStats.getTotal() : 0;
+        long onTime = onTimeStats.getOnTime() != null ? onTimeStats.getOnTime() : 0;
         double onTimeRate = total > 0 ? (double) onTime / total * 100 : 0;
 
         return RunnerPerformanceVO.builder()

@@ -218,8 +218,6 @@
 import { ref, computed } from 'vue'
 import { onLoad, onUnload } from '@dcloudio/uni-app'
 import { orderApi } from '@/api'
-import { TASK_TYPES, TASK_TYPE_META, isQueueWaitType } from '@/utils/constants.js'
-import { parseExpressPackagesFromSpecs } from '@/utils/campus-data.js'
 import { useTaskSpecs } from '@/utils/useTaskSpecs.js'
 import { useSubmitLock } from '@/utils/submit-guard'
 import UploadGrid from '@/components/upload-grid/upload-grid.vue'
@@ -247,7 +245,7 @@ const { lock: actionLock, unlock: actionUnlock, locked: actionLocked } = useSubm
 const uploadedPickupImages = ref([])
 const uploadedDeliverImages = ref([])
 
-const { taskSpecs, taskTypeCode, typeLabel, rewardText, typeIcon, typeIconColor, typeColor, isQueueWait, isPaperExpress, pickupSectionTitle, pickupAddressLabel, pickupCodeLabel, foodItems, serviceDuration, extraFee, productFeeText, productTags, bookCount, printSpecs, merchantTag, itemExpress } = useTaskSpecs(order)
+const { taskSpecs, taskTypeCode, typeLabel, rewardText, typeIcon, typeIconColor, typeColor, isQueueWait, isPaperExpress, pickupSectionTitle, pickupAddressLabel, pickupCodeLabel, foodItems, serviceDuration, extraFee, productFeeText, productTags, bookCount, printSpecs, merchantTag, itemExpress, displayDescription } = useTaskSpecs(order)
 
 const stepActive = computed(() => {
   const s = order.value.orderStatus
@@ -349,23 +347,6 @@ const deliveryAddressDetail = computed(() => {
   return order.value.deliveryAddress || ''
 })
 
-// 解析描述：代取快递显示包裹信息，取件码在取件信息区单独展示
-const displayDescription = computed(() => {
-  const desc = order.value.publicDesc || ''
-  const specs = taskSpecs.value
-  if (taskTypeCode.value === 1) {
-    const pkgSpecs = parseExpressPackagesFromSpecs(specs)
-    if (pkgSpecs) {
-      let text = `快递规格：${pkgSpecs.sizes}`
-      if (desc) text += `\n需求描述：${desc}`
-      return text
-    }
-  }
-  if (taskTypeCode.value === 4) {
-    return desc || '暂无描述'
-  }
-  return desc || '暂无描述'
-})
 
 const stepItems = computed(() => {
   if (isQueueWait.value) {

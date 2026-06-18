@@ -113,7 +113,8 @@ public final class MessageConstant {
     public static final String RUNNER_GO_OFFLINE = "您已离线";
     public static final String RUNNER_OFFLINE = "您已离线，请先上线";
     public static final String RUNNER_MAX_ORDERS = "当前接单已达上限";
-    public static final String RUNNER_LOW_CREDIT = "信用分不足，暂时无法接单";
+    public static final String RUNNER_LOW_CREDIT = "信用分不足，已暂停接单3天";
+    public static final String CREDIT_FROZEN_TOAST = "您的信用分不足，已暂停接单";
     public static final String RUNNER_IS_BANNED = "您已被禁止接单，请联系管理员";
     public static final String GENDER_RESTRICTION_NOT_MATCH = "任务对配送员性别有要求，您不符合条件";
     public static final String RUNNER_APPLY_AUDITING = "配送员申请正在审核中，请勿重复提交";

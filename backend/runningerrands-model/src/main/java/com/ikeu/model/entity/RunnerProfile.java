@@ -72,6 +72,10 @@ public class RunnerProfile implements Serializable {
     @TableField("is_banned")
     private Integer isBanned;
 
+    /** 禁止接单截止时间（信用分冻结3天后恢复） */
+    @TableField("ban_until")
+    private LocalDateTime banUntil;
+
     /** 创建时间 */
     @TableField(value = "created_at", fill = FieldFill.INSERT)
     private LocalDateTime createdAt;

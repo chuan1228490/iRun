@@ -746,24 +746,22 @@ function increaseProductQty(index) {
   productItems.value[index].qty++
 }
 
-async function onSubmit() {
-  // ===== 校验 =====
-
+function validateForm() {
   // 配送地址（图书馆还书/帮扔杂物/办事代排 不需要配送地址）
   if (!skipDelivery.value && !deliveryAddressId.value) {
     uni.showToast({ title: '请选择配送地址', icon: 'none' })
-    return
+    return false
   }
 
   // --- type=1 代取快递 ---
   if (taskType.value === 1) {
     if (totalPackageQty.value === 0) {
       uni.showToast({ title: '至少选1件快递', icon: 'none' })
-      return
+      return false
     }
     if (!pickupAddress.value) {
       uni.showToast({ title: '请选择取件驿站', icon: 'none' })
-      return
+      return false
     }
   }
 
@@ -771,12 +769,12 @@ async function onSubmit() {
   if (taskType.value === 2) {
     if (subType.value === 21 && !pickupAddress.value) {
       uni.showToast({ title: '请选择取餐餐厅', icon: 'none' })
-      return
+      return false
     }
     if (subType.value === 22) {
       if (!pickupAddress.value || (pickupAddress.value === '自定义' && !customPickupAddress.value)) {
         uni.showToast({ title: '请选择取餐地点', icon: 'none' })
-        return
+        return false
       }
     }
   }
@@ -786,39 +784,39 @@ async function onSubmit() {
     if (subType.value === 33) {
       if (!description.value) {
         uni.showToast({ title: '请填写物品名称', icon: 'none' })
-        return
+        return false
       }
       if (!pickupAddress.value) {
         uni.showToast({ title: '请填写取件地址', icon: 'none' })
-        return
+        return false
       }
     }
     if (subType.value === 32 && !pickupAddress.value) {
       uni.showToast({ title: '请填写取件地点', icon: 'none' })
-      return
+      return false
     }
     if (subType.value === 34 && !pickupAddress.value) {
       uni.showToast({ title: '请填写取件地点', icon: 'none' })
-      return
+      return false
     }
     if (subType.value === 35) {
       if (!description.value) {
         uni.showToast({ title: '请填写任务描述', icon: 'none' })
-        return
+        return false
       }
       if (!pickupAddress.value) {
         uni.showToast({ title: '请填写服务地点', icon: 'none' })
-        return
+        return false
       }
     }
     if (subType.value === null) {
       if (!description.value && !privateDescription.value) {
         uni.showToast({ title: '请填写任务描述', icon: 'none' })
-        return
+        return false
       }
       if (!pickupAddress.value) {
         uni.showToast({ title: '请填写取件地址', icon: 'none' })
-        return
+        return false
       }
     }
   }
@@ -828,13 +826,19 @@ async function onSubmit() {
     const validProducts = productItems.value.filter(p => p.name.trim())
     if (validProducts.length === 0) {
       uni.showToast({ title: '至少填1件商品', icon: 'none' })
-      return
+      return false
     }
     if (!pickupAddress.value) {
       uni.showToast({ title: '请填写购买地址', icon: 'none' })
-      return
+      return false
     }
   }
+
+  return true
+}
+
+async function onSubmit() {
+  if (!validateForm()) return
 
   // 弹出支付密码输入框（发布任务需付款）
   const pw = await promptPayPassword('支付小费')
@@ -1011,16 +1015,6 @@ async function onSubmit() {
 .addr-badge--deliver{background:var(--primary)}
 .route-warning{display:flex;align-items:center;gap:8rpx;margin-top:12rpx;padding:12rpx 16rpx;background:#fff7ed;border-radius:12rpx}
 .route-warning text{font-size:24rpx;color:#ad6200}
-
-.fee-row{display:flex;align-items:center;justify-content:space-between;padding:8rpx 0}
-.fee-row--total{margin-top:8rpx}
-.fee-label{font-size:28rpx;color:var(--text-primary)}
-.fee-value{font-size:28rpx;font-weight:600;color:var(--text-secondary)}
-.fee-total{font-size:38rpx;font-weight:700;color:var(--primary)}
-.fee-divider{height:1rpx;background:rgba(0,0,0,.04);margin:20rpx 0}
-.custom-tip-row{display:flex;align-items:center;margin-top:16rpx;background:var(--surface);border-radius:20rpx;padding:14rpx 24rpx}
-.custom-tip-unit{font-size:32rpx;font-weight:700;color:var(--primary);margin-right:8rpx}
-.custom-tip-input{flex:1;font-size:28rpx;color:var(--text-primary);background:transparent}
 
 .time-picker-row{display:flex;gap:16rpx}
 .form-select--half{flex:1}

@@ -149,8 +149,11 @@
             <text class="pub-name">{{ item.publisherNickname }}</text>
             <text class="pub-time">{{ item.timeText }}</text>
           </view>
-          <view class="accept-btn" :class="{ 'accept-btn--disabled': accepting }" @click.stop="onAccept(item)" v-if="item.canAccept && store.isCertifiedRunner">
+          <view class="accept-btn" :class="{ 'accept-btn--disabled': accepting }" @click.stop="onAccept(item)" v-if="item.canAccept && store.isCertifiedRunner && !store.isCreditFrozen">
             <text>{{ accepting ? '接单中…' : '接单' }}</text>
+          </view>
+          <view class="accept-btn accept-btn--frozen" @click.stop="onAcceptBlocked(item)" v-else-if="item.canAccept && store.isCreditFrozen">
+            <text>限制接单</text>
           </view>
           <view class="accept-btn accept-btn--lock" @click.stop="onAcceptBlocked(item)" v-else-if="item.canAccept && !store.isCertifiedRunner">
             <iconpark-icon name="locked-filled" size="14" color="#fff" />
@@ -423,7 +426,9 @@ function formatPublishTime(timeStr) {
 }
 
 function onAcceptBlocked(item) {
-  if (!store.isCertified) {
+  if (store.isCreditFrozen) {
+    uni.showToast({ title: '您的信用分不足，已暂停接单', icon: 'none', duration: 2500 })
+  } else if (!store.isCertified) {
     uni.navigateTo({ url: '/pages/certify/certify' })
   } else if (!store.isCertifiedRunner) {
     uni.navigateTo({ url: '/pages/rider-cert/rider-cert' })
@@ -579,6 +584,7 @@ function copyOrderNo(no) {
 .accept-btn{padding:14rpx 32rpx;background:var(--primary);border-radius:36rpx;box-shadow:var(--shadow-primary);transition:transform var(--duration-fast) var(--easing-out)}
 .accept-btn--disabled{background:var(--outline);pointer-events:none;box-shadow:none}
 .accept-btn--lock{background:var(--text-tertiary);display:flex;align-items:center;gap:6rpx;box-shadow:none}
+.accept-btn--frozen{background:#F59E0B;box-shadow:none}
 .accept-btn:active{transform:scale(.94)}
 .accept-btn text{font-size:26rpx;font-weight:600;color:#fff}
 

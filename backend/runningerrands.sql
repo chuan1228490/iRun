@@ -100,6 +100,29 @@ CREATE TABLE `runner_profile`
 
 ALTER TABLE `runner_profile`
     ADD COLUMN `is_banned` TINYINT DEFAULT 0 COMMENT '是否禁止接单：0-正常，1-禁止' AFTER `current_orders`;
+ALTER TABLE `runner_profile`
+    ADD COLUMN `ban_until` DATETIME DEFAULT NULL COMMENT '禁止接单截止时间' AFTER `is_banned`;
+
+
+
+# ========================================== credit_log表 ==========================================
+# credit_log表-信用分变动日志
+DROP TABLE IF EXISTS `credit_log`;
+CREATE TABLE `credit_log`
+(
+    `id`               BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+    `runner_id`        BIGINT UNSIGNED NOT NULL COMMENT '跑腿员 user_id',
+    `delta`            INT             NOT NULL COMMENT '信用分变动（正加负扣）',
+    `score_before`     INT             NOT NULL COMMENT '变动前分值',
+    `score_after`      INT             NOT NULL COMMENT '变动后分值',
+    `reason_type`      VARCHAR(32)     NOT NULL COMMENT '原因类型：TIMEOUT/COMPLAINT/MANUAL/REWARD/RECOVER',
+    `reason_detail`    VARCHAR(255)    DEFAULT '' COMMENT '原因描述',
+    `related_order_id` BIGINT UNSIGNED DEFAULT NULL COMMENT '关联订单ID',
+    `created_at`       DATETIME        DEFAULT CURRENT_TIMESTAMP,
+    PRIMARY KEY (`id`),
+    KEY `idx_runner_time` (`runner_id`, `created_at`)
+) ENGINE = InnoDB
+  DEFAULT CHARSET = utf8mb4 COMMENT ='信用分变动日志';
 
 
 

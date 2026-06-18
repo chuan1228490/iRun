@@ -130,9 +130,7 @@ public class AdminRunnerServiceImpl implements AdminRunnerService {
     public void toggleRunnerBan(Long profileId, boolean banned) {
         RunnerProfile profile = runnerProfileMapper.selectById(profileId);
         if (profile == null) throw new NotFoundException(MessageConstant.RUNNER_NOT_EXIST);
-        profile.setIsBanned(banned ? 1 : 0);
-        profile.setUpdatedAt(LocalDateTime.now());
-        runnerProfileMapper.updateById(profile);
+        runnerProfileMapper.toggleBan(profile.getUserId(), banned ? 1 : 0);
         log.info("管理员 {} 跑腿员 {} (profileId={})", banned ? "禁止" : "恢复", profile.getUserId(), profileId);
     }
 }

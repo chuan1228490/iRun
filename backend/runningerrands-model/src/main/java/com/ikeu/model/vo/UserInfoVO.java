@@ -73,4 +73,10 @@ public class UserInfoVO implements Serializable {
 
     @Schema(description = "最后登录时间")
     private LocalDateTime lastLoginTime;
+
+    @Schema(description = "信用分（仅在跑腿员认证后有效）")
+    private Integer creditScore;
+
+    @Schema(description = "禁止接单截止时间（信用分冻结）")
+    private LocalDateTime banUntil;
 }
