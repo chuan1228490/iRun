@@ -92,6 +92,7 @@ const menuItems: MenuItem[] = [
   { path: '/transactions', title: '资金流水', icon: 'Money' },
   { path: '/notifications', title: '消息管理', icon: 'Message' },
   { path: '/employees', title: '员工管理', icon: 'UserFilled', roles: [1] },
+  { path: '/settings', title: '系统设置', icon: 'Setting', roles: [1] },
   { path: '/logs', title: '操作日志', icon: 'Tickets', roles: [1] },
 ]
 

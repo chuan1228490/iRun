@@ -68,7 +68,7 @@
         class="mt-24"
         showIcon
         scrollable
-        text="🎉 代购物品新上线！前100单免配送费，快来体验吧～"
+        :text="announcement"
         backgroundColor="transparent"
         color="#FF6B4A"
       />
@@ -170,7 +170,7 @@
 import { ref } from 'vue'
 import { onShow } from '@dcloudio/uni-app'
 import { useStore } from '@/store/index.js'
-import { taskApi, notificationApi } from '@/api'
+import { taskApi, notificationApi, commonApi } from '@/api'
 import { requireCertified } from '@/utils/error'
 import CustomTabbar from '@/components/custom-tabbar/custom-tabbar.vue'
 import { showToast } from '@/utils/toast'
@@ -180,6 +180,7 @@ const sysInfo = uni.getSystemInfoSync()
 const scrollHeight = sysInfo.windowHeight - sysInfo.statusBarHeight - 44
 const searchValue = ref('')
 const unreadCount = ref(0)
+const announcement = ref('🎉 代购物品新上线！前100单免配送费，快来体验吧～')
 
 const services = [
   { typeValue: 1, title: '代取快递', desc: '驿站包裹极速达', iconName: 'express', color: 'blue' },
@@ -254,14 +255,23 @@ function goOrders() {
   uni.switchTab({ url: '/pages/orders/orders' })
 }
 
+async function loadAnnouncement() {
+  try {
+    const text = await commonApi.getAnnouncement()
+    if (text) announcement.value = text
+  } catch (e) { /* use default */ }
+}
+
 onShow(() => {
   if (store.isLoggedIn && !store.userInfo.ready) {
     store.fetchUserInfo().catch(() => {})
   }
   loadUnread()
+  loadAnnouncement()
 })
 
 loadUnread()
+loadAnnouncement()
 </script>
 
 <style scoped>

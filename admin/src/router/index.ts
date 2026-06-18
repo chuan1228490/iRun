@@ -94,6 +94,12 @@ const router = createRouter({
           meta: { title: '员工管理', icon: 'UserFilled', role: [1] }
         },
         {
+          path: 'settings',
+          name: 'Settings',
+          component: () => import('@/views/settings/SettingsView.vue'),
+          meta: { title: '系统设置', icon: 'Setting', role: [1] }
+        },
+        {
           path: 'logs',
           name: 'OperationLogs',
           component: () => import('@/views/logs/OperationLogView.vue'),
