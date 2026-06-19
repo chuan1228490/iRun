@@ -28,6 +28,11 @@ import java.util.stream.Collectors;
 @RequiredArgsConstructor
 public class AdminSystemConfigServiceImpl extends ServiceImpl<SystemConfigMapper, SystemConfig> implements AdminSystemConfigService {
 
+    /**
+     * 全量查询系统配置，按分组和配置键升序排列。
+     *
+     * @return 全部系统配置项 VO 列表
+     */
     @Override
     public List<SystemConfigVO> listAll() {
         // 按分组和配置键升序查询全部配置项
@@ -45,6 +50,11 @@ public class AdminSystemConfigServiceImpl extends ServiceImpl<SystemConfigMapper
                 .build()).collect(Collectors.toList());
     }
 
+    /**
+     * 批量更新系统配置，含去重合并、值类型校验（int/decimal/string）和事务性写入。
+     *
+     * @param dto 包含待更新配置项列表的 DTO，支持 {@code @Valid} 级联校验
+     */
     @Override
     @Transactional
     public void batchUpdate(SystemConfigBatchUpdateDTO dto) {

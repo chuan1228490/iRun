@@ -36,6 +36,13 @@ public class AdminAuthController {
     private static final int LOGIN_RATE_MAX = 10;   // 每 IP 每分钟最多 10 次登录尝试
     private static final int REFRESH_RATE_MAX = 10; // 每 IP 每分钟最多 10 次刷新
 
+    /**
+     * 管理员账号密码登录，含 IP 级速率限制（每 IP 每分钟最多 10 次）。
+     *
+     * @param dto     登录 DTO（用户名 + 密码）
+     * @param request HTTP 请求（用于提取客户端 IP）
+     * @return 登录成功后的双令牌 + 管理员信息
+     */
     @Operation(summary = "管理员登录")
     @PostMapping("/login")
     public Result<AdminLoginVO> login(@Valid @RequestBody AdminLoginDTO dto, HttpServletRequest request) {
@@ -44,6 +51,13 @@ public class AdminAuthController {
         return Result.success(adminAuthService.login(dto));
     }
 
+    /**
+     * 刷新管理端访问令牌（令牌轮换），含 IP 级速率限制。
+     *
+     * @param refreshToken 旧 refresh token（从 X-Refresh-Token 请求头获取）
+     * @param request      HTTP 请求（用于提取客户端 IP）
+     * @return 新的双令牌 + 管理员信息
+     */
     @Operation(summary = "刷新管理员访问令牌")
     @PostMapping("/refresh")
     public Result<AdminLoginVO> refresh(@RequestHeader("X-Refresh-Token") String refreshToken, HttpServletRequest request) {
@@ -60,12 +74,22 @@ public class AdminAuthController {
         return n > max;
     }
 
+    /**
+     * 从 ThreadLocal 获取当前管理员 ID，返回其基本信息（不含密码）。
+     *
+     * @return 当前管理员基本信息
+     */
     @Operation(summary = "获取当前管理员信息")
     @GetMapping("/info")
     public Result<AdminLoginVO> info() {
         return Result.success(adminAuthService.getAdminInfo());
     }
 
+    /**
+     * 管理员退出登录，通过模式匹配删除 Redis 中该管理员所有 refresh token。
+     *
+     * @return 操作结果
+     */
     @Operation(summary = "管理员退出登录")
     @PostMapping("/logout")
     public Result<Void> logout() {

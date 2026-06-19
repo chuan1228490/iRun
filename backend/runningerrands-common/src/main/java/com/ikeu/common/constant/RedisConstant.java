@@ -1,7 +1,11 @@
 package com.ikeu.common.constant;
 
 /**
- * Redis 键前缀常量
+ * Redis 键前缀与过期时间常量，统一管理认证令牌、缓存名称、分布式锁、
+ * 缓存穿透防护、速率限制和支付幂等等所有 Redis 键命名空间。
+ *
+ * @author ikeu
+ * @since 2025/05/21
  */
 public final class RedisConstant {
 

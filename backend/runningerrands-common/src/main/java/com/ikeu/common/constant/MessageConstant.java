@@ -1,7 +1,11 @@
 package com.ikeu.common.constant;
 
 /**
- * 消息提示常量类
+ * 统一消息提示常量，涵盖认证、用户、任务、订单、配送员、余额、评价、
+ * 支付密码、管理员、聊天、文件上传、系统配置和微信等所有业务域的提示文本。
+ *
+ * @author ikeu
+ * @since 2025/05/21
  */
 public final class MessageConstant {
 

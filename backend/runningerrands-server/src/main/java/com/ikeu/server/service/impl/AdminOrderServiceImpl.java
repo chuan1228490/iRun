@@ -53,7 +53,12 @@ public class AdminOrderServiceImpl implements AdminOrderService {
     private final RedissonClient redissonClient;
 
     /**
-     * 分页查询所有订单，关联任务表和用户表填充发布者/跑腿员信息，支持按状态筛选。
+     * 分页查询所有订单，关联任务表和用户表批量填充发布者/跑腿员信息，支持按状态筛选。
+     *
+     * @param status 订单状态（可选，null 表示全部）
+     * @param page   页码
+     * @param size   每页条数
+     * @return 分页订单列表
      */
     @Override
     public PageResult<OrderManageVO> listAllOrders(Integer status, int page, int size) {
@@ -104,6 +109,10 @@ public class AdminOrderServiceImpl implements AdminOrderService {
 
     /**
      * 查询订单详情（管理端），内含完整的任务信息、发布者和跑腿员信息、凭证图片等。
+     * 管理端可查看全部字段，不受手机号脱敏限制。
+     *
+     * @param orderId 订单 ID
+     * @return 完整订单详情 VO
      */
     @Override
     public OrderDetailVO getOrderDetail(Long orderId) {
@@ -149,8 +158,12 @@ public class AdminOrderServiceImpl implements AdminOrderService {
     }
 
     /**
-     * 强制更新订单状态（经 OrderStateMachine 校验），同步更新关联任务状态，
-     * 终态（已完成/已取消）自动触发资金结算或退款，清除相关缓存。
+     * 强制更新订单状态（经 OrderStateMachine 校验），分布式锁保护防并发覆盖。
+     * 同步更新关联任务状态，终态（已完成/已取消）自动触发资金结算或退款（含幂等保护），
+     * 完成后清除仪表盘和任务大厅缓存。
+     *
+     * @param orderId 订单 ID
+     * @param status  目标状态码（见 StatusConstant）
      */
     @Override
     @Transactional

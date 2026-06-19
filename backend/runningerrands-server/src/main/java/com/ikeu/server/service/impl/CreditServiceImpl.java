@@ -72,7 +72,12 @@ public class CreditServiceImpl implements CreditService {
     }
 
     /**
-     * 通用扣除跑腿员信用分。
+     * 因投诉、差评或管理员手动操作扣除跑腿员信用分，
+     * 内部调用 recordAndApply 写入 CreditLog 并触发 MySQL 原子更新（含冻结/解冻）。
+     *
+     * @param runnerId 跑腿员用户 ID
+     * @param penalty  扣分数值（正数，方法内部取负）
+     * @param reason   扣除原因描述文本
      */
     @Override
     @Transactional(propagation = Propagation.REQUIRES_NEW)
@@ -82,7 +87,12 @@ public class CreditServiceImpl implements CreditService {
     }
 
     /**
-     * 通用增加跑腿员信用分。
+     * 因好评或管理员手动操作增加跑腿员信用分，
+     * 内部调用 recordAndApply 写入 CreditLog 并触发 MySQL 原子更新。
+     *
+     * @param runnerId 跑腿员用户 ID
+     * @param bonus    加分值（正数）
+     * @param reason   加分原因描述文本
      */
     @Override
     @Transactional(propagation = Propagation.REQUIRES_NEW)
