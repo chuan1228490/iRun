@@ -19,15 +19,15 @@ export function removeAdminToken() {
   localStorage.removeItem(ADMIN_TOKEN_KEY)
 }
 
-function getRefreshToken(): string | null {
+export function getAdminRefreshToken(): string | null {
   return localStorage.getItem(ADMIN_REFRESH_KEY)
 }
 
-function setRefreshToken(token: string) {
+export function setAdminRefreshToken(token: string) {
   localStorage.setItem(ADMIN_REFRESH_KEY, token)
 }
 
-function removeRefreshToken() {
+export function removeAdminRefreshToken() {
   localStorage.removeItem(ADMIN_REFRESH_KEY)
 }
 
@@ -77,7 +77,7 @@ service.interceptors.response.use(
   },
   async (error) => {
     if (error.response?.status === 401) {
-      const refreshToken = getRefreshToken()
+      const refreshToken = getAdminRefreshToken()
       if (!refreshToken) {
         removeAdminToken()
         removeRefreshToken()
@@ -94,7 +94,7 @@ service.interceptors.response.use(
           })
           const { token, refreshToken: newRefresh, adminId, username, name, role } = res.data.data
           setAdminToken(token)
-          setRefreshToken(newRefresh)
+          setAdminRefreshToken(newRefresh)
           const authStore = useAuthStore()
           if (adminId) {
             authStore.adminInfo = { adminId, username, name, role }
@@ -108,7 +108,7 @@ service.interceptors.response.use(
           }
         } catch {
           removeAdminToken()
-          removeRefreshToken()
+          removeAdminRefreshToken()
           ElMessage.error('登录已过期，请重新登录')
           router.replace('/login')
           return Promise.reject(error)

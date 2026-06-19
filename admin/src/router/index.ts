@@ -46,6 +46,12 @@ const router = createRouter({
           meta: { title: '跑腿员管理', icon: 'Van' }
         },
         {
+          path: 'runners/:id',
+          name: 'RunnerDetail',
+          component: () => import('@/views/runners/RunnerDetailView.vue'),
+          meta: { title: '跑腿员详情', hidden: true }
+        },
+        {
           path: 'tasks',
           name: 'Tasks',
           component: () => import('@/views/tasks/TaskListView.vue'),
@@ -86,6 +92,12 @@ const router = createRouter({
           name: 'Employees',
           component: () => import('@/views/employees/EmployeeListView.vue'),
           meta: { title: '员工管理', icon: 'UserFilled', role: [1] }
+        },
+        {
+          path: 'settings',
+          name: 'Settings',
+          component: () => import('@/views/settings/SettingsView.vue'),
+          meta: { title: '系统设置', icon: 'Setting', role: [1] }
         },
         {
           path: 'logs',

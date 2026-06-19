@@ -6,6 +6,8 @@ import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.ikeu.common.result.PageResult;
 import com.ikeu.model.entity.TransactionRecord;
 import com.ikeu.model.entity.User;
+
+import java.util.Map;
 import com.ikeu.model.vo.TransactionVO;
 import com.ikeu.server.mapper.TransactionRecordMapper;
 import com.ikeu.server.mapper.UserMapper;
@@ -134,5 +136,25 @@ public class TransactionServiceImpl extends ServiceImpl<TransactionRecordMapper,
         }).collect(Collectors.toList());
 
         return new PageResult<>(p.getTotal(), records);
+    }
+
+    /**
+     * 查询用户全量流水汇总，委托 Mapper 执行聚合查询。
+     *
+     * <p>当 Mapper 返回 null 时（无流水记录），默认返回零值 Map。
+     * 非 null 结果确保 total_income 和 total_expense 键存在且不为空。
+     *
+     * @param userId 用户ID
+     * @return 用户流水汇总 Map，键为 total_income（总收入）和 total_expense（总支出）
+     */
+    @Override
+    public Map<String, BigDecimal> getSummary(Long userId) {
+        Map<String, BigDecimal> result = transactionRecordMapper.sumSummaryByUserId(userId);
+        if (result == null) {
+            return Map.of("total_income", BigDecimal.ZERO, "total_expense", BigDecimal.ZERO);
+        }
+        result.putIfAbsent("total_income", BigDecimal.ZERO);
+        result.putIfAbsent("total_expense", BigDecimal.ZERO);
+        return result;
     }
 }

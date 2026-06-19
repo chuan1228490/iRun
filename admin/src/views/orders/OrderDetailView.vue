@@ -3,18 +3,22 @@
     <el-page-header @back="$router.back()" title="返回" class="anim-header">
       <template #content>
         <span class="page-title">订单详情 — {{ detail.taskNo }}</span>
+        <span class="type-badge" :style="{ color: taskTypeConfig.color, background: taskTypeConfig.bgColor }">
+          <el-icon class="type-badge-icon"><component :is="taskTypeConfig.icon" /></el-icon>
+          {{ taskTypeConfig.label }}
+        </span>
       </template>
     </el-page-header>
 
     <div class="detail-blocks" v-loading="loading">
       <!-- 订单信息 -->
-      <el-card class="detail-block anim-block" style="--anim-order: 0">
+      <el-card class="detail-block anim-block type-accent" :style="{ '--anim-order': 0, '--type-color': taskTypeConfig.color, '--type-bg': taskTypeConfig.bgColor }">
         <template #header>
           <div class="card-header">
             <span class="card-title-text">订单信息</span>
-            <el-tag :type="statusTag(detail.orderStatus)" size="default">
+            <span class="status-tag" :style="{ color: orderStatusStyle(detail.orderStatus).color, background: orderStatusStyle(detail.orderStatus).bgColor }">
               {{ ORDER_STATUS[detail.orderStatus as keyof typeof ORDER_STATUS] }}
-            </el-tag>
+            </span>
           </div>
         </template>
         <el-descriptions :column="2" border>
@@ -34,14 +38,22 @@
               </div>
             </el-popover>
           </el-descriptions-item>
-          <el-descriptions-item label="任务大类">{{ detail.type || '-' }}</el-descriptions-item>
-          <el-descriptions-item label="任务小类">{{ detail.subType || '-' }}</el-descriptions-item>
+          <el-descriptions-item label="任务大类">
+            <span class="type-tag" :style="{ color: taskTypeConfig.color, background: taskTypeConfig.bgColor }">
+              <el-icon class="type-tag-icon"><component :is="taskTypeConfig.icon" /></el-icon>
+              {{ detail.type || '-' }}
+            </span>
+          </el-descriptions-item>
+          <el-descriptions-item label="任务小类">
+            <span v-if="detail.subType" class="type-subtag" :style="{ color: taskTypeConfig.color, borderColor: taskTypeConfig.color }">{{ detail.subType }}</span>
+            <span v-else>-</span>
+          </el-descriptions-item>
           <el-descriptions-item label="任务规格" :span="2">{{ taskSpecsDisplay }}</el-descriptions-item>
         </el-descriptions>
       </el-card>
 
       <!-- 取送信息 -->
-      <el-card class="detail-block anim-block" style="--anim-order: 1">
+      <el-card class="detail-block anim-block info-card" style="--anim-order: 1">
         <template #header>
           <span class="card-title-text">取送信息</span>
         </template>
@@ -57,22 +69,22 @@
       </el-card>
 
       <!-- 人员信息 -->
-      <el-card class="detail-block anim-block" style="--anim-order: 2">
+      <el-card class="detail-block anim-block info-card" style="--anim-order: 2">
         <template #header>
           <span class="card-title-text">人员信息</span>
         </template>
         <el-descriptions :column="2" border>
-          <el-descriptions-item label="发布者昵称" :span="2">{{ detail.publisherNickname || '-' }}</el-descriptions-item>
-          <el-descriptions-item label="跑腿员昵称" :span="2">{{ detail.runnerNickname || '-' }}</el-descriptions-item>
-          <el-descriptions-item label="发布者用户名" :span="2">{{ detail.publisherUsername || '-' }}</el-descriptions-item>
-          <el-descriptions-item label="跑腿员用户名" :span="2">{{ detail.runnerUsername || '-' }}</el-descriptions-item>
+          <el-descriptions-item label="发布者昵称">{{ detail.publisherNickname || '-' }}</el-descriptions-item>
+          <el-descriptions-item label="跑腿员昵称">{{ detail.runnerNickname || '-' }}</el-descriptions-item>
+          <el-descriptions-item label="发布者用户名">{{ detail.publisherUsername || '-' }}</el-descriptions-item>
+          <el-descriptions-item label="跑腿员用户名">{{ detail.runnerUsername || '-' }}</el-descriptions-item>
           <el-descriptions-item label="发布者手机">{{ detail.publisherPhone || '-' }}</el-descriptions-item>
           <el-descriptions-item label="跑腿员手机">{{ detail.runnerPhone || '-' }}</el-descriptions-item>
         </el-descriptions>
       </el-card>
 
       <!-- 时间记录 -->
-      <el-card class="detail-block anim-block" style="--anim-order: 3">
+      <el-card class="detail-block anim-block info-card" style="--anim-order: 3">
         <template #header>
           <span class="card-title-text">时间记录</span>
         </template>
@@ -142,7 +154,7 @@
 <script setup lang="ts">
 import { onMounted, reactive, ref, nextTick, computed } from 'vue'
 import { useRoute } from 'vue-router'
-import { Picture } from '@element-plus/icons-vue'
+import { Picture, Box, KnifeFork, Document, ShoppingCart, MoreFilled } from '@element-plus/icons-vue'
 import { getOrderDetail } from '@/api/orders'
 import { ORDER_STATUS } from '@/utils/constants'
 import { parseTaskSpecsForAdmin } from '@/utils/task-specs-parser'
@@ -152,9 +164,16 @@ const loading = ref(false)
 const entered = ref(false)
 const detail = reactive<any>({})
 
-function statusTag(s: number) {
-  const map: Record<number, string> = { 1: 'info', 2: 'warning', 3: '', 4: 'success', 5: 'danger' }
-  return map[s] ?? 'info'
+const orderStatusStyleMap: Record<number, { color: string; bgColor: string }> = {
+  1: { color: '#8492A6', bgColor: '#EFF2F7' },  // 待取货
+  2: { color: '#5B9BD5', bgColor: '#EFF5FB' },  // 配送中
+  3: { color: '#8B6BAE', bgColor: '#F6F1FA' },  // 待确认
+  4: { color: '#2EB89E', bgColor: '#EDFAF7' },  // 已完成
+  5: { color: '#E87474', bgColor: '#FEF0F0' },  // 已取消
+}
+
+function orderStatusStyle(s: number) {
+  return orderStatusStyleMap[s] ?? { color: '#8492A6', bgColor: '#EFF2F7' }
 }
 
 function formatReward(val: any) {
@@ -163,6 +182,17 @@ function formatReward(val: any) {
 }
 
 const taskSpecsDisplay = computed(() => parseTaskSpecsForAdmin(detail.taskSpecs))
+
+const taskTypeConfig = computed(() => {
+  const map: Record<string, { color: string; bgColor: string; icon: any; label: string }> = {
+    '代取快递': { color: '#E8734A', bgColor: '#FFF2ED', icon: Box, label: '代取快递' },
+    '代拿餐食': { color: '#2EB89E', bgColor: '#EDFAF7', icon: KnifeFork, label: '代拿餐食' },
+    '校内代办': { color: '#5B9BD5', bgColor: '#EFF5FB', icon: Document, label: '校内代办' },
+    '代购物品': { color: '#8B6BAE', bgColor: '#F6F1FA', icon: ShoppingCart, label: '代购物品' },
+    '通用代办': { color: '#C8925D', bgColor: '#FDF3EB', icon: MoreFilled, label: '通用代办' },
+  }
+  return map[detail.type] ?? { color: '#909399', bgColor: '#F5F5F5', icon: Document, label: detail.type || '未知' }
+})
 
 onMounted(async () => {
   loading.value = true
@@ -197,6 +227,74 @@ onMounted(async () => {
 .card-title-text {
   font-weight: 600;
   color: var(--text-primary);
+}
+
+/* ===== 任务类型色彩体系 ===== */
+.type-badge {
+  margin-left: 12px;
+  padding: 3px 12px;
+  border-radius: 20px;
+  font-size: 13px;
+  font-weight: 500;
+  vertical-align: middle;
+}
+
+.type-badge-icon {
+  margin-right: 4px;
+  vertical-align: middle;
+  font-size: 14px;
+}
+
+.type-tag {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px 10px;
+  border-radius: 12px;
+  font-size: 13px;
+  font-weight: 500;
+}
+
+.type-tag-icon {
+  margin-right: 3px;
+  font-size: 14px;
+}
+
+.type-subtag {
+  display: inline-block;
+  padding: 1px 9px;
+  border: 1px solid;
+  border-radius: 10px;
+  font-size: 12px;
+}
+
+/* 订单信息卡片 — 头部淡色底纹 + 左侧细强调线 */
+.type-accent :deep(.el-card__header) {
+  background: var(--type-bg);
+  border-bottom-color: var(--type-color);
+  border-bottom-width: 1px;
+  transition: background 0.3s ease;
+}
+
+.type-accent {
+  border-left: 3px solid var(--type-color);
+}
+
+/* ===== 普通信息卡片 ===== */
+.info-card {
+  border-left: 3px solid #E4E7ED;
+}
+
+.info-card :deep(.el-card__header) {
+  background: #FAFBFC;
+}
+
+/* ===== 状态标签浅色系 ===== */
+.status-tag {
+  display: inline-block;
+  padding: 2px 10px;
+  border-radius: 10px;
+  font-size: 13px;
+  font-weight: 500;
 }
 
 .reward {

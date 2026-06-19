@@ -15,15 +15,21 @@
 
       <el-table :data="tableData" v-loading="loading" stripe>
         <el-table-column prop="taskNo" label="任务编号" width="160" />
-        <el-table-column label="任务类型" width="120">
+        <el-table-column label="任务类型" width="130">
           <template #default="{ row }">
-            <span>{{ row.subType ? row.type + '/' + row.subType : row.type }}</span>
+            <span
+              class="task-type-label"
+              :style="{ color: taskTypeStyle(row.type).color, background: taskTypeStyle(row.type).bgColor }"
+            >
+              <el-icon class="task-type-label-icon"><component :is="taskTypeStyle(row.type).icon" /></el-icon>
+              {{ row.type }}
+            </span>
           </template>
         </el-table-column>
         <el-table-column prop="publicDesc" label="描述" min-width="200" show-overflow-tooltip />
         <el-table-column prop="publisherNickname" label="发布者" width="100" />
         <el-table-column label="报酬" width="100">
-          <template #default="{ row }">¥{{ Number(row.reward).toFixed(2) }}</template>
+          <template #default="{ row }"><span class="reward-inline">¥{{ Number(row.reward).toFixed(2) }}</span></template>
         </el-table-column>
         <el-table-column prop="pickupAddress" label="取件地址" width="140" show-overflow-tooltip />
         <el-table-column prop="deliveryAddress" label="送达地址" width="140" show-overflow-tooltip />
@@ -62,7 +68,7 @@
       </el-select>
       <template #footer>
         <el-button @click="statusDialog.visible = false">取消</el-button>
-        <el-button type="primary" @click="confirmStatus">确认</el-button>
+        <el-button type="primary" @click="confirmStatus" :disabled="saving">确认</el-button>
       </template>
     </el-dialog>
   </div>
@@ -71,6 +77,7 @@
 <script setup lang="ts">
 import { onMounted, reactive, ref } from 'vue'
 import { ElMessage } from 'element-plus'
+import { Box, KnifeFork, Document, ShoppingCart, MoreFilled } from '@element-plus/icons-vue'
 import { listTasks, updateTaskStatus } from '@/api/tasks'
 import { TASK_STATUS } from '@/utils/constants'
 
@@ -79,6 +86,19 @@ const tableData = ref<any[]>([])
 const total = ref(0)
 const query = reactive({ status: undefined as number | undefined, page: 1, size: 10 })
 const statusDialog = reactive({ visible: false, taskId: 0, newStatus: 1 })
+const saving = ref(false)
+
+const taskTypeStyleMap: Record<string, { color: string; bgColor: string; icon: any }> = {
+  '代取快递': { color: '#E8734A', bgColor: '#FFF2ED', icon: Box },
+  '代拿餐食': { color: '#2EB89E', bgColor: '#EDFAF7', icon: KnifeFork },
+  '校内代办': { color: '#5B9BD5', bgColor: '#EFF5FB', icon: Document },
+  '代购物品': { color: '#8B6BAE', bgColor: '#F6F1FA', icon: ShoppingCart },
+  '通用代办': { color: '#C8925D', bgColor: '#FDF3EB', icon: MoreFilled },
+}
+
+function taskTypeStyle(type: string) {
+  return taskTypeStyleMap[type] ?? { color: '#909399', bgColor: '#F5F5F5', icon: Document }
+}
 
 function statusTag(s: number) {
   const map: Record<number, string> = { 1: 'info', 2: '', 3: 'warning', 4: '', 5: 'success', 6: 'danger' }
@@ -104,10 +124,16 @@ function updateStatus(row: any) {
 }
 
 async function confirmStatus() {
-  await updateTaskStatus(statusDialog.taskId, statusDialog.newStatus)
-  ElMessage.success('状态已更新')
-  statusDialog.visible = false
-  fetchData()
+  if (saving.value) return
+  saving.value = true
+  try {
+    await updateTaskStatus(statusDialog.taskId, statusDialog.newStatus)
+    ElMessage.success('状态已更新')
+    statusDialog.visible = false
+    fetchData()
+  } finally {
+    saving.value = false
+  }
 }
 
 onMounted(fetchData)
@@ -119,4 +145,23 @@ onMounted(fetchData)
 .pagination { margin-top: 20px; display: flex; justify-content: center; }
 :deep(.el-table) { border-radius: var(--radius-sm); }
 :deep(.el-table th) { background: var(--neutral-surface); color: var(--text-secondary); font-weight: 600; }
+
+.task-type-label {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px 8px;
+  border-radius: 10px;
+  font-size: 12px;
+  font-weight: 500;
+}
+
+.task-type-label-icon {
+  margin-right: 2px;
+  font-size: 12px;
+}
+
+.reward-inline {
+  color: var(--brand-accent);
+  font-weight: 500;
+}
 </style>

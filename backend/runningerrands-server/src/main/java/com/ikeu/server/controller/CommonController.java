@@ -3,6 +3,9 @@ package com.ikeu.server.controller;
 import com.ikeu.common.constant.MessageConstant;
 import com.ikeu.common.result.Result;
 import com.ikeu.common.utils.AliOssUtil;
+import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.ikeu.model.entity.SystemConfig;
+import com.ikeu.server.mapper.SystemConfigMapper;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
@@ -21,16 +24,17 @@ import java.util.UUID;
 import java.util.concurrent.TimeUnit;
 
 /**
- * 通用接口，提供文件上传和获取默认头像等功能。
+ * 通用接口，提供文件上传、获取默认头像、平台公告等功能。
  * @author ikeu
  * @since 2025/05/21
  */
 @Slf4j
 @RestController
-@Tag(name = "通用接口", description = "文件上传、默认头像等通用接口")
+@Tag(name = "通用接口", description = "文件上传、默认头像、平台公告等通用接口")
 @RequiredArgsConstructor
 public class CommonController {
     private final AliOssUtil aliOssUtil;
+    private final SystemConfigMapper systemConfigMapper;
 
     private static final Set<String> ALLOWED_EXTENSIONS = Set.of(
             ".jpg", ".jpeg", ".png", ".gif", ".webp",
@@ -73,6 +77,19 @@ public class CommonController {
         }
 
         return Result.error(MessageConstant.UPLOAD_FAILED);
+    }
+
+    /**
+     * 获取平台公告文本，供用户端首页滚动展示。
+     * @return 公告文本，未配置时返回空字符串
+     */
+    @GetMapping("/common/announcement")
+    @Operation(summary = "获取平台公告")
+    public Result<String> getAnnouncement() {
+        SystemConfig config = systemConfigMapper.selectOne(
+                new LambdaQueryWrapper<SystemConfig>().eq(SystemConfig::getConfigKey, "platform.announcement"));
+        if (config == null) return Result.successData("");
+        return Result.successData(config.getConfigValue());
     }
 
     /**

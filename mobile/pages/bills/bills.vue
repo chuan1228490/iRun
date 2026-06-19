@@ -55,7 +55,7 @@
 </template>
 
 <script setup>
-import { ref, computed } from 'vue'
+import { ref } from 'vue'
 import { transactionApi } from '@/api'
 import { TRANSACTION_TYPES } from '@/utils/constants.js'
 
@@ -85,12 +85,16 @@ const categoryMap = {
   5: { category: 'express', iconType: 'refresh', iconColor: '#34d399' }
 }
 
-const totalExpense = computed(() => {
-  return list.value.filter(b => b.amount < 0).reduce((s, b) => s + Math.abs(b.amount), 0)
-})
-const totalIncome = computed(() => {
-  return list.value.filter(b => b.amount > 0).reduce((s, b) => s + b.amount, 0)
-})
+const totalIncome = ref(0)
+const totalExpense = ref(0)
+
+async function loadSummary() {
+  try {
+    const data = await transactionApi.getSummary()
+    totalIncome.value = data?.total_income || 0
+    totalExpense.value = data?.total_expense || 0
+  } catch (e) { console.error('loadSummary failed:', e) }
+}
 
 async function fetchList() {
   loading.value = true
@@ -129,6 +133,7 @@ function loadMore() {
 
 function onBack() { uni.navigateBack() }
 
+loadSummary()
 fetchList()
 </script>
 

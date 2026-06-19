@@ -46,8 +46,10 @@
         <el-table-column label="操作" min-width="180">
           <template #default="{ row }">
             <el-button type="primary" link @click="$router.push(`/users/${row.id}`)">详情</el-button>
-            <el-button v-if="row.status === 1" type="warning" link @click="toggleStatus(row, false)">封禁</el-button>
-            <el-button v-else type="success" link @click="toggleStatus(row, true)">解封</el-button>
+            <template v-if="authStore.adminInfo?.role === 1">
+              <el-button v-if="row.status === 1" type="warning" link @click="toggleStatus(row, false)">封禁</el-button>
+              <el-button v-else type="success" link @click="toggleStatus(row, true)">解封</el-button>
+            </template>
           </template>
         </el-table-column>
       </el-table>
@@ -65,8 +67,10 @@
 import { onMounted, reactive, ref } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { listUsers, toggleUserStatus } from '@/api/users'
+import { useAuthStore } from '@/stores/auth'
 
 const loading = ref(false)
+const authStore = useAuthStore()
 const tableData = ref<any[]>([])
 const total = ref(0)
 

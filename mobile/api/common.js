@@ -49,6 +49,28 @@ export function uploadFile(filePath) {
 }
 
 /**
+ * 获取平台公告文本
+ * @returns {Promise<string>}
+ */
+export function getAnnouncement() {
+  return new Promise((resolve) => {
+    uni.request({
+      url: SERVER_ORIGIN + '/api/common/announcement',
+      method: 'GET',
+      success(res) {
+        const body = res.data
+        if (body?.code === 1) {
+          resolve(body.data || '')
+        } else {
+          resolve('')
+        }
+      },
+      fail() { resolve('') }
+    })
+  })
+}
+
+/**
  * 多文件上传 (顺序上传)
  * @param {string[]} filePaths
  * @returns {Promise<string[]>}

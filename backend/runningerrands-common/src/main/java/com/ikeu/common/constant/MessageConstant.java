@@ -188,6 +188,10 @@ public final class MessageConstant {
     public static final String FILE_EMPTY = "文件不能为空";
     public static final String FILE_SIZE_EXCEED = "文件大小超出限制";
 
+    // ========== 系统配置相关 ==========
+    public static final String SYSTEM_CONFIG_NOT_EXIST = "系统配置不存在";
+    public static final String SYSTEM_CONFIG_UPDATE_SUCCESS = "系统配置更新成功";
+
     // ========== 微信相关 ==========
     public static final String WECHAT_SERVICE_UNAVAILABLE = "微信服务不可用，请稍后重试";
     public static final String WECHAT_LOGIN_FAILED = "微信登录失败";

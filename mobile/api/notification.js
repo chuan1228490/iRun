@@ -21,6 +21,11 @@ export function markAllRead() {
   return put('/notification/read-all')
 }
 
+/** 批量标记已读 */
+export function markBatchRead(ids) {
+  return put('/notification/batch-read', { ids })
+}
+
 /** 删除通知 */
 export function deleteNotification(notificationId) {
   return del(`/notification/${notificationId}`)

@@ -17,7 +17,9 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.web.bind.annotation.*;
 
+import java.math.BigDecimal;
 import java.time.LocalDateTime;
+import java.util.Map;
 
 /**
  * 用户收支明细与充值提现接口，提供流水查询、账户充值和余额提现功能。
@@ -34,16 +36,32 @@ public class UserTransactionController {
     private final PaymentService paymentService;
 
     /**
+     * 查询当前用户的收支汇总，包含总收入和总支出，不受分页限制。
+     *
+     * <p>从安全上下文中提取当前用户 ID，委托 {@link TransactionService#getSummary}
+     * 执行聚合查询，返回用户全部流水记录的收入与支出合计值。
+     *
+     * @return 包含 total_income 和 total_expense 的收支汇总
+     */
+    @RequireCertify
+    @Operation(summary = "查询收支汇总（全量，不受分页限制）")
+    @GetMapping("/summary")
+    public Result<Map<String, BigDecimal>> summary() {
+        Long userId = BaseContext.getCurrentId();
+        return Result.success(transactionService.getSummary(userId));
+    }
+
+    /**
      * 查询当前用户的收支明细，支持按类型和时间范围筛选。
      *
-     * <p>委托 {@link TransactionService#listUserTransactions} 构建条件构造器，
-     * 按 userId 精确匹配，可选按 type、时间区间筛选，按交易时间倒序分页返回 TransactionVO。
+     * <p>委托 {@link TransactionService#listUserTransactions} 按 userId 精确匹配，
+     * 可选按 type、时间区间筛选，按交易时间倒序分页返回 TransactionVO。
      *
      * @param type 流水类型（可选，1-支出 2-收入 3-充值 4-提现 5-退款）
      * @param start 开始日期（可选，格式 yyyy-MM-dd HH:mm:ss）
      * @param end 结束日期（可选，格式 yyyy-MM-dd HH:mm:ss）
-     * @param page 页码，默认1
-     * @param size 每页条数，默认10
+     * @param page 页码，默认 1
+     * @param size 每页条数，默认 10
      * @return 流水分页结果
      */
     @RequireCertify

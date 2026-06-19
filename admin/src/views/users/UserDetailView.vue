@@ -8,9 +8,9 @@
 
     <div class="detail-blocks" v-loading="loading">
       <!-- 基本信息 -->
-      <el-card class="detail-block anim-block" style="--anim-order: 0">
+      <el-card class="detail-block anim-block color-card" style="--anim-order: 0; --card-color: #5B9BD5; --card-bg: #EFF5FB">
         <template #header>
-          <span class="card-title-text">基本信息</span>
+          <span class="card-title-text"><el-icon class="card-title-icon"><InfoFilled /></el-icon>基本信息</span>
         </template>
         <el-descriptions v-if="user" :column="2" border>
           <el-descriptions-item label="ID">{{ user.id }}</el-descriptions-item>
@@ -30,20 +30,22 @@
       </el-card>
 
       <!-- 账户与认证 -->
-      <el-card class="detail-block anim-block" style="--anim-order: 1">
+      <el-card class="detail-block anim-block color-card" style="--anim-order: 1; --card-color: #2EB89E; --card-bg: #EDFAF7">
         <template #header>
-          <span class="card-title-text">账户与认证</span>
+          <span class="card-title-text"><el-icon class="card-title-icon"><Checked /></el-icon>账户与认证</span>
         </template>
         <el-descriptions v-if="user" :column="2" border>
-          <el-descriptions-item label="余额">{{ user.balance }}</el-descriptions-item>
+          <el-descriptions-item label="余额">
+            <span class="balance">¥{{ (user.balance ?? 0).toFixed(2) }}</span>
+          </el-descriptions-item>
           <el-descriptions-item label="认证状态">
-            <el-tag :type="certTag(user.isCertify)" size="small">{{ certLabel(user.isCertify) }}</el-tag>
+            <span class="status-tag" :style="{ color: certStyle(user.isCertify).color, background: certStyle(user.isCertify).bgColor }">{{ certStyle(user.isCertify).label }}</span>
           </el-descriptions-item>
           <el-descriptions-item label="跑腿员认证">
-            <el-tag :type="certTag(user.verifyStatus)" size="small">{{ certLabel(user.verifyStatus) }}</el-tag>
+            <span class="status-tag" :style="{ color: certStyle(user.verifyStatus).color, background: certStyle(user.verifyStatus).bgColor }">{{ certStyle(user.verifyStatus).label }}</span>
           </el-descriptions-item>
           <el-descriptions-item label="账户状态">
-            <el-tag :type="user.status === 1 ? 'success' : 'danger'" size="small">{{ user.status === 1 ? '正常' : '禁用' }}</el-tag>
+            <span class="status-tag" :style="{ color: accountStyle(user.status).color, background: accountStyle(user.status).bgColor }">{{ accountStyle(user.status).label }}</span>
           </el-descriptions-item>
           <el-descriptions-item label="最后登录">{{ user.lastLoginTime || '-' }}</el-descriptions-item>
           <el-descriptions-item label="注册时间">{{ user.createdAt }}</el-descriptions-item>
@@ -51,9 +53,9 @@
       </el-card>
 
       <!-- 认证材料 -->
-      <el-card v-if="user && (certifyImages.length || user.certifyRemark)" class="detail-block anim-block" style="--anim-order: 2">
+      <el-card v-if="user && (certifyImages.length || user.certifyRemark)" class="detail-block anim-block color-card" style="--anim-order: 2; --card-color: #C8925D; --card-bg: #FDF3EB">
         <template #header>
-          <span class="card-title-text">认证材料</span>
+          <span class="card-title-text"><el-icon class="card-title-icon"><DataBoard /></el-icon>认证材料</span>
         </template>
         <div v-if="certifyImages.length" class="certify-section">
           <div class="image-grid">
@@ -85,7 +87,7 @@
 <script setup lang="ts">
 import { onMounted, ref, computed, nextTick } from 'vue'
 import { useRoute } from 'vue-router'
-import { Picture } from '@element-plus/icons-vue'
+import { Picture, InfoFilled, Checked, DataBoard } from '@element-plus/icons-vue'
 import { getUserDetail } from '@/api/users'
 
 const route = useRoute()
@@ -99,13 +101,21 @@ const certifyImages = computed(() => {
   return user.value.certifyImg.split(',').map((u: string) => u.trim()).filter(Boolean)
 })
 
-function certLabel(s: number) {
-  const map: Record<number, string> = { 0: '未认证', 1: '审核中', 2: '已认证', 3: '认证驳回' }
-  return s != null ? map[s] ?? '-' : '-'
+const certStyleMap: Record<number, { color: string; bgColor: string; label: string }> = {
+  0: { color: '#8492A6', bgColor: '#EFF2F7', label: '未认证' },
+  1: { color: '#C8925D', bgColor: '#FDF3EB', label: '审核中' },
+  2: { color: '#2EB89E', bgColor: '#EDFAF7', label: '已认证' },
+  3: { color: '#E87474', bgColor: '#FEF0F0', label: '认证驳回' },
 }
-function certTag(s: number) {
-  const map: Record<number, string> = { 0: 'info', 1: 'warning', 2: 'success', 3: 'danger' }
-  return s != null ? map[s] ?? 'info' : 'info'
+
+function certStyle(s: number) {
+  return certStyleMap[s] ?? { color: '#8492A6', bgColor: '#EFF2F7', label: '-' }
+}
+
+function accountStyle(s: number) {
+  return s === 1
+    ? { color: '#2EB89E', bgColor: '#EDFAF7', label: '正常' }
+    : { color: '#E87474', bgColor: '#FEF0F0', label: '禁用' }
 }
 
 onMounted(async () => {
@@ -129,6 +139,39 @@ onMounted(async () => {
 .card-title-text {
   font-weight: 600;
   color: var(--text-primary);
+}
+
+/* ===== 独立配色卡片 ===== */
+.color-card {
+  border-left: 3px solid var(--card-color);
+}
+
+.color-card :deep(.el-card__header) {
+  background: var(--card-bg);
+  border-bottom-color: var(--card-color);
+  border-bottom-width: 1px;
+  transition: background 0.3s ease;
+}
+
+.card-title-icon {
+  margin-right: 6px;
+  font-size: 15px;
+  vertical-align: -2px;
+  color: var(--text-secondary);
+}
+
+.balance {
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--brand-accent);
+}
+
+.status-tag {
+  display: inline-block;
+  padding: 2px 10px;
+  border-radius: 10px;
+  font-size: 13px;
+  font-weight: 500;
 }
 
 .certify-section {

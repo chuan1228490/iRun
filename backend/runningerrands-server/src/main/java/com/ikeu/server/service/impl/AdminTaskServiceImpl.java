@@ -18,7 +18,8 @@ import com.ikeu.server.mapper.UserMapper;
 import com.ikeu.server.service.AdminTaskService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.cache.annotation.CacheEvict;
+import org.springframework.cache.CacheManager;
+import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -26,6 +27,7 @@ import java.time.LocalDateTime;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.stream.Collectors;
 
 /**
@@ -40,6 +42,8 @@ public class AdminTaskServiceImpl implements AdminTaskService {
 
     private final TaskMapper taskMapper;
     private final UserMapper userMapper;
+    private final CacheManager cacheManager;
+    private final StringRedisTemplate stringRedisTemplate;
 
     /**
      * 分页查询所有任务，关联发布者信息填充昵称/头像，支持按状态筛选。
@@ -104,18 +108,24 @@ public class AdminTaskServiceImpl implements AdminTaskService {
     }
 
     /**
-     * 管理员强制更新任务状态，经状态机校验后写入，清除仪表盘缓存。
+     * 管理员强制更新任务状态，经状态机校验后写入，清除仪表盘、任务大厅和详情缓存。
      */
     @Override
     @Transactional
-    @CacheEvict(value = RedisConstant.CACHE_DASHBOARD, allEntries = true)
     public void updateTaskStatus(Long taskId, Integer status) {
         Task task = taskMapper.selectById(taskId);
         if (task == null) throw new NotFoundException(MessageConstant.TASK_NOT_EXIST);
-        com.ikeu.common.enums.TaskStateMachine.validate(task.getStatus(), status, "任务");
+        Integer oldStatus = task.getStatus();
+        com.ikeu.common.enums.TaskStateMachine.validate(oldStatus, status, "任务");
         task.setStatus(status);
         task.setUpdatedAt(LocalDateTime.now());
         taskMapper.updateById(task);
-        log.info("管理员强制更新任务 {} 状态为 {} → {}", taskId, task.getStatus(), status);
+        log.info("管理员强制更新任务 {} 状态为 {} → {}", taskId, oldStatus, status);
+
+        Objects.requireNonNull(cacheManager.getCache(RedisConstant.CACHE_DASHBOARD)).clear();
+        Objects.requireNonNull(cacheManager.getCache(RedisConstant.CACHE_TASK_HALL)).clear();
+        Objects.requireNonNull(cacheManager.getCache(RedisConstant.CACHE_TASK_DETAIL)).clear();
+        var nullKeys = stringRedisTemplate.keys(RedisConstant.TASK_HALL_NULL_PREFIX + "*");
+        if (nullKeys != null && !nullKeys.isEmpty()) stringRedisTemplate.delete(nullKeys);
     }
 }
