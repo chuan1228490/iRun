@@ -10,15 +10,36 @@ import com.ikeu.model.vo.AdminLoginVO;
  */
 public interface AdminAuthService {
 
-    /** 管理员登录，校验用户名密码后生成双令牌。 */
+    /**
+     * 管理员登录，校验用户名密码后生成双令牌（access + refresh），
+     * 附带登录失败计数防暴力破解，refresh token 写入 Redis 支持轮换。
+     *
+     * @param dto 登录请求，包含用户名和密码
+     * @return 登录成功后的管理员信息及双令牌
+     */
     AdminLoginVO login(AdminLoginDTO dto);
 
-    /** 刷新管理员访问令牌（令牌轮换）。 */
+    /**
+     * 刷新管理员访问令牌（令牌轮换），旧 refresh token 立即失效，
+     * Redis 反查校验后颁发新令牌对。
+     *
+     * @param refreshToken 旧 refresh token
+     * @return 新的管理员信息及双令牌
+     */
     AdminLoginVO refreshAccessToken(String refreshToken);
 
-    /** 获取当前登录管理员信息（不含令牌）。 */
+    /**
+     * 获取当前登录管理员信息（不含令牌），内部从请求上下文提取 adminId。
+     *
+     * @return 当前管理员基本信息
+     */
     AdminLoginVO getAdminInfo();
 
-    /** 管理员退出登录，清除所有 refresh token。 */
+    /**
+     * 管理员退出登录，通配清除 Redis 中该管理员的所有 refresh token，
+     * 使所有终端同时失效。
+     *
+     * @param adminId 管理员 ID
+     */
     void logout(Long adminId);
 }

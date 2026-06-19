@@ -40,6 +40,16 @@ public class AdminEmployeeServiceImpl extends ServiceImpl<AdminMapper, Admin> im
 
     private final PasswordEncoder passwordEncoder;
 
+    /**
+     * 分页查询管理员员工列表，按创建时间降序排列。
+     *
+     * <p>返回所有管理员（含超管和普通管理员），按创建时间倒序排列，
+     * 转换为 {@link AdminListVO} 视图对象，不暴露密码等敏感字段。
+     *
+     * @param page 页码，从 1 开始
+     * @param size 每页条数
+     * @return 管理员员工分页列表
+     */
     @Override
     public PageResult<AdminListVO> listEmployees(int page, int size) {
         Page<Admin> p = page(new Page<>(page, size),
@@ -58,6 +68,13 @@ public class AdminEmployeeServiceImpl extends ServiceImpl<AdminMapper, Admin> im
         return new PageResult<>(p.getTotal(), records);
     }
 
+    /**
+     * 根据 ID 查询单个管理员员工详情。
+     *
+     * @param id 管理员 ID
+     * @return 管理员员工详情 VO
+     * @throws NotFoundException 管理员不存在时抛出
+     */
     @Override
     public AdminListVO getEmployee(Long id) {
         Admin a = getById(id);
@@ -69,6 +86,15 @@ public class AdminEmployeeServiceImpl extends ServiceImpl<AdminMapper, Admin> im
                 .createdAt(a.getCreatedAt()).build();
     }
 
+    /**
+     * 创建普通管理员员工。
+     *
+     * <p>校验用户名唯一性，强制设置角色为普通管理员（role=2），
+     * 禁止创建超级管理员。密码使用 BCrypt 加密存储。初始状态为启用。
+     *
+     * @param dto 创建参数，包含用户名、姓名、密码、手机号、性别、身份证号
+     * @throws BusinessException 用户名已存在或角色不是普通管理员时抛出
+     */
     @Override
     @Transactional
     public void createEmployee(AdminCreateDTO dto) {
@@ -94,6 +120,15 @@ public class AdminEmployeeServiceImpl extends ServiceImpl<AdminMapper, Admin> im
         log.info("管理员 {} 创建了普通管理员 {}", BaseContext.getCurrentId(), dto.getUsername());
     }
 
+    /**
+     * 更新管理员员工信息。
+     *
+     * <p>仅允许修改姓名、手机号和性别，角色保持不变（不可提升为超管）。
+     *
+     * @param id 管理员 ID
+     * @param dto 更新参数，包含姓名、手机号、性别
+     * @throws NotFoundException 管理员不存在时抛出
+     */
     @Override
     @Transactional
     public void updateEmployee(Long id, AdminUpdateDTO dto) {
@@ -107,6 +142,17 @@ public class AdminEmployeeServiceImpl extends ServiceImpl<AdminMapper, Admin> im
         updateById(admin);
     }
 
+    /**
+     * 启用或禁用管理员账号。
+     *
+     * <p>禁止禁用自己的账号（当前登录管理员 ID 与目标 ID 相同则抛出异常）。
+     * 此方法不校验是否为超管角色，由调用方 {@code @RequireRole} 注解确保仅超管可操作。
+     *
+     * @param id 管理员 ID
+     * @param enabled true 启用，false 禁用
+     * @throws NotFoundException 管理员不存在时抛出
+     * @throws BusinessException 试图禁用自己时抛出
+     */
     @Override
     @Transactional
     public void toggleStatus(Long id, Boolean enabled) {
@@ -122,6 +168,16 @@ public class AdminEmployeeServiceImpl extends ServiceImpl<AdminMapper, Admin> im
         updateById(admin);
     }
 
+    /**
+     * 重置管理员密码。
+     *
+     * <p>直接使用 BCrypt 加密新密码后更新。不校验新旧密码是否相同，
+     * 超管可以在员工忘记密码时直接重置。
+     *
+     * @param id 管理员 ID
+     * @param dto 重置参数，包含新密码
+     * @throws NotFoundException 管理员不存在时抛出
+     */
     @Override
     @Transactional
     public void resetPassword(Long id, AdminPasswordResetDTO dto) {
@@ -132,6 +188,16 @@ public class AdminEmployeeServiceImpl extends ServiceImpl<AdminMapper, Admin> im
         updateById(admin);
     }
 
+    /**
+     * 删除普通管理员员工。
+     *
+     * <p>禁止删除自己（当前登录管理员 ID 与目标 ID 相同则抛出异常）。
+     * 禁止删除超级管理员（role=1）。仅超管可通过此方法删除普通管理员。
+     *
+     * @param id 管理员 ID
+     * @throws NotFoundException 管理员不存在时抛出
+     * @throws BusinessException 试图删除自己或删除超管时抛出
+     */
     @Override
     @Transactional
     public void deleteEmployee(Long id) {

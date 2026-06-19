@@ -1,12 +1,12 @@
 <template>
   <view class="page">
-    <uni-nav-bar title="骑手主页" backgroundColor="#FAFAF8" :border="false" statusBar fixed leftIcon="left" @clickLeft="onBack" color="#1C1B1A" />
+    <uni-nav-bar title="跑腿员主页" backgroundColor="#FAFAF8" :border="false" statusBar fixed leftIcon="left" @clickLeft="onBack" color="#1C1B1A" />
 
     <scroll-view class="main-scroll" :style="{ height: scrollHeight + 'px' }" scroll-y enhanced :show-scrollbar="false">
       <view v-if="loading" class="loading-state"><text class="loading-text">加载中…</text></view>
 
       <template v-else>
-        <!-- 骑手信息卡片 -->
+        <!-- 跑腿员信息卡片 -->
         <view class="profile-card animate-scale-pop">
           <view class="profile-avatar-wrap">
             <image v-if="info.avatarUrl" class="profile-avatar" :src="normalizeUrl(info.avatarUrl)" mode="aspectFill" />
@@ -14,7 +14,7 @@
           </view>
           <view class="profile-info">
             <view class="profile-name-row">
-              <text class="profile-name">{{ info.nickname || '骑手' }}</text>
+              <text class="profile-name">{{ info.nickname || '跑腿员' }}</text>
               <text v-if="genderSymbol" class="profile-gender" :style="{ color: genderColor, background: genderBg }">{{ genderSymbol }}</text>
             </view>
             <text class="profile-stat">信用分 {{ info.creditScore || 100 }} · 接单 {{ info.totalOrders || 0 }} · 完成 {{ info.successOrders || 0 }}</text>

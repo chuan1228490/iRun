@@ -42,11 +42,11 @@
 
       <!-- ========== 配送员专属内容 ========== -->
       <template v-if="store.isCertifiedRunner">
-        <!-- 骑手功能菜单 -->
+        <!-- 跑腿功能菜单 -->
         <view class="func-list">
           <view class="func-item func-item--last" @click="onMenuItem('dashboard')">
-            <view class="func-icon func-icon--blue"><custom-icon name="my-rider" size="38" /></view>
-            <text class="func-name">我的骑手</text>
+            <view class="func-icon func-icon--blue"><custom-icon name="my-runner" size="38" /></view>
+            <text class="func-name">我的跑腿</text>
             <iconpark-icon name="right" size="16" color="#D4D2CC" />
           </view>
         </view>
@@ -67,7 +67,7 @@
           <text class="func-name">我的账单</text>
           <iconpark-icon name="right" size="16" color="#D4D2CC" />
         </view>
-        <view class="func-item" @click="onMenuItem('rider')" v-if="store.isCertified && !store.isCertifiedRunner">
+        <view class="func-item" @click="onMenuItem('runner')" v-if="store.isCertified && !store.isCertifiedRunner">
           <view class="func-icon func-icon--blue"><iconpark-icon name="deliveryTruck" size="22" color="#FF6B4A" /></view>
           <text class="func-name">申请成为配送员</text>
           <view class="func-status">
@@ -143,7 +143,7 @@ function goMessages() { uni.switchTab({ url: '/pages/message/message' }) }
 function onMenuItem(key) {
   const routes = {
     bills: '/pages/bills/bills',
-    rider: '/pages/rider-cert/rider-cert',
+    runner: '/pages/runner-cert/runner-cert',
     address: '/pages/address-list/address-list',
     privacy: '/pages/privacy-security/privacy-security',
     dashboard: '/pages/runner-dashboard/runner-dashboard',

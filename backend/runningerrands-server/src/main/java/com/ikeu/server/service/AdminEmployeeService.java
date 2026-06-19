@@ -15,24 +15,58 @@ import com.ikeu.model.vo.AdminListVO;
  */
 public interface AdminEmployeeService extends IService<Admin> {
 
-    /** 分页查询管理员员工列表，按创建时间倒序排列。 */
+    /**
+     * 分页查询管理员员工列表，按创建时间倒序排列。
+     *
+     * @param page 页码（从 1 开始）
+     * @param size 每页条数
+     * @return 管理员员工分页结果
+     */
     PageResult<AdminListVO> listEmployees(int page, int size);
 
-    /** 根据ID查询管理员员工详情。 */
+    /**
+     * 根据 ID 查询管理员员工详情。
+     *
+     * @param id 管理员员工 ID
+     * @return 管理员员工详情 VO
+     */
     AdminListVO getEmployee(Long id);
 
-    /** 创建普通管理员，强制 role=2。 */
+    /**
+     * 创建普通管理员，强制设置 role=2，禁止创建超级管理员。
+     *
+     * @param dto 管理员创建请求 DTO
+     */
     void createEmployee(AdminCreateDTO dto);
 
-    /** 修改管理员员工信息（姓名、手机号、性别）。 */
+    /**
+     * 修改管理员员工信息（姓名、手机号、性别）。
+     *
+     * @param id  管理员员工 ID
+     * @param dto 管理员信息更新 DTO
+     */
     void updateEmployee(Long id, AdminUpdateDTO dto);
 
-    /** 启用/停用管理员员工，不能停用自己的账号。 */
+    /**
+     * 启用或停用管理员员工，不能停用自己的账号。
+     *
+     * @param id      管理员员工 ID
+     * @param enabled true 启用，false 停用
+     */
     void toggleStatus(Long id, Boolean enabled);
 
-    /** 重置管理员员工密码。 */
+    /**
+     * 重置管理员员工密码。
+     *
+     * @param id  管理员员工 ID
+     * @param dto 密码重置请求 DTO（含新密码）
+     */
     void resetPassword(Long id, AdminPasswordResetDTO dto);
 
-    /** 删除管理员员工，禁止删除超级管理员。 */
+    /**
+     * 删除管理员员工。禁止删除超级管理员，禁止删除自己的账号。
+     *
+     * @param id 管理员员工 ID
+     */
     void deleteEmployee(Long id);
 }

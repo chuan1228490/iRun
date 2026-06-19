@@ -45,6 +45,14 @@ public class AdminAuthServiceImpl extends ServiceImpl<AdminMapper, Admin> implem
     /**
      * 管理员登录，校验失败计数（防暴力破解）→ 校验密码 → 校验状态，
      * 通过后生成双令牌（access+refresh），refresh token 写入 Redis 支持轮换。
+     *
+     * <p>失败计数使用 Redis INCR + EXPIRE 实现，5 次失败后锁定 300 秒；
+     * 校验成功清除失败计数。生成 JWT 双令牌后，refresh token 的 jti 存入 Redis
+     * 以实现令牌轮换和即时失效。
+     *
+     * @param dto 登录参数，包含用户名和密码
+     * @return 登录成功后的认证 VO，包含管理员信息、双令牌和过期时间
+     * @throws BusinessException 账号锁定、密码错误或账号已禁用时抛出
      */
     @Override
     @Transactional
@@ -94,6 +102,13 @@ public class AdminAuthServiceImpl extends ServiceImpl<AdminMapper, Admin> implem
 
     /**
      * 获取当前登录管理员信息（不含令牌），管理员不存在或已禁用则抛异常。
+     *
+     * <p>从 {@link BaseContext} 获取当前请求的管理员 ID，
+     * 查询数据库后返回基本信息（不含密码和令牌），
+     * 用于管理端前端展示当前登录用户信息。
+     *
+     * @return 管理员信息 VO，包含 ID、用户名、姓名、角色
+     * @throws UnauthorizedException 管理员不存在或已被禁用时抛出
      */
     @Override
     public AdminLoginVO getAdminInfo() {
@@ -113,6 +128,13 @@ public class AdminAuthServiceImpl extends ServiceImpl<AdminMapper, Admin> implem
     /**
      * 令牌轮换：解析 refresh token → 校验 type/jti → Redis 反查 →
      * 删除旧 token → 颁发新 token 对，旧 refresh token 立即失效。
+     *
+     * <p>支持 refresh token 一次性使用：校验通过后立即删除 Redis 中的旧记录，
+     * 再生成新的 access + refresh 令牌对。可有效防止 refresh token 泄露后的重放攻击。
+     *
+     * @param refreshToken 旧的刷新令牌字符串
+     * @return 新生成的认证 VO，含新的双令牌和过期时间
+     * @throws UnauthorizedException refresh token 无效、已过期或账号被禁用时抛出
      */
     @Override
     public AdminLoginVO refreshAccessToken(String refreshToken) {
@@ -166,6 +188,11 @@ public class AdminAuthServiceImpl extends ServiceImpl<AdminMapper, Admin> implem
     /**
      * 管理员退出，通过 {@code admin:refresh:token:{id}:*} 通配清除所有 token，
      * 使所有终端同时失效。
+     *
+     * <p>使用 Redis KEYS 通配匹配该管理员的所有 refresh token 记录并全部删除，
+     * 确保同一账号在其他终端的会话也立即失效。
+     *
+     * @param adminId 要退出的管理员 ID；为 null 时直接返回不执行任何操作
      */
     @Override
     public void logout(Long adminId) {

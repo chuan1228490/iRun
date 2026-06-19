@@ -35,7 +35,7 @@
       </view>
 
       <!-- 对方信息卡片 -->
-      <view class="contact-card animate-slide-right delay-2" v-if="otherParty.name" @click="goRiderProfile">
+      <view class="contact-card animate-slide-right delay-2" v-if="otherParty.name" @click="goRunnerProfile">
         <image v-if="otherParty.avatar" class="contact-avatar-img" :src="otherParty.avatar" mode="aspectFill" />
         <view v-else class="contact-avatar" :style="{ background: otherParty.avatarBg }">{{ otherParty.initial }}</view>
         <view class="contact-info">
@@ -538,10 +538,10 @@ function onCall() {
   }
 }
 
-function goRiderProfile() {
+function goRunnerProfile() {
   if (isRunner.value) return
   const rid = otherParty.value.id
-  if (rid) uni.navigateTo({ url: `/pages/rider-profile/rider-profile?runnerId=${rid}` })
+  if (rid) uni.navigateTo({ url: `/pages/runner-profile/runner-profile?runnerId=${rid}` })
 }
 
 function onReorder() {

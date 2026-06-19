@@ -431,7 +431,7 @@ function onAcceptBlocked(item) {
   } else if (!store.isCertified) {
     uni.navigateTo({ url: '/pages/certify/certify' })
   } else if (!store.isCertifiedRunner) {
-    uni.navigateTo({ url: '/pages/rider-cert/rider-cert' })
+    uni.navigateTo({ url: '/pages/runner-cert/runner-cert' })
   }
 }
 

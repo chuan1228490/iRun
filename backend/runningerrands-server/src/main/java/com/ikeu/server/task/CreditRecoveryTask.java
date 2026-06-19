@@ -32,6 +32,14 @@ public class CreditRecoveryTask {
     private final CreditLogMapper creditLogMapper;
     private final RedissonClient redissonClient;
 
+    /**
+     * 每5分钟扫描一次已冻结但冻结期满的跑腿员，原子恢复其信用分并解除冻结。
+     *
+     * <p>使用 Redisson 分布式锁防止集群并发执行，仅获取到锁的实例执行扫描。
+     * 查询 {@code is_banned = 1} 且 {@code ban_until &lt; now} 的跑腿员，
+     * 调用 SQL 层原子更新（WHERE 二次校验 + CASE WHEN 防覆盖），消除 TOCTOU 竞态。
+     * 恢复完成后写入信用分变更日志（CreditLog）。若并发恢复或已被手动解冻则跳过该条记录。
+     */
     @Scheduled(cron = "0 */5 * * * ?")
     public void recoverExpiredFreezes() {
         RLock lock = redissonClient.getLock(RedisConstant.CREDIT_RECOVERY_LOCK_KEY);

@@ -1,6 +1,6 @@
 <template>
   <view class="page">
-    <uni-nav-bar title="我的骑手" backgroundColor="#FAFAF8" :border="false" statusBar fixed leftIcon="left" @clickLeft="onBack" color="#1C1B1A" />
+    <uni-nav-bar title="我的跑腿" backgroundColor="#FAFAF8" :border="false" statusBar fixed leftIcon="left" @clickLeft="onBack" color="#1C1B1A" />
 
     <scroll-view class="main-scroll" :style="{ height: scrollHeight + 'px' }" scroll-y enhanced :show-scrollbar="false">
       <view v-if="loading" class="loading-state"><text class="loading-text">加载中…</text></view>
@@ -93,7 +93,7 @@
             <view class="menu-icon menu-icon--cert">
               <iconpark-icon name="medal" size="20" color="#FF6B4A" />
             </view>
-            <text class="menu-label">骑手认证</text>
+            <text class="menu-label">跑腿员认证</text>
             <iconpark-icon name="right" size="16" color="#D4D2CC" />
           </view>
         </view>
@@ -211,7 +211,7 @@ async function saveMaxOrders() {
 }
 
 function goReviews() { uni.navigateTo({ url: '/pages/runner-reviews/runner-reviews' }) }
-function goCert() { uni.navigateTo({ url: '/pages/rider-cert/rider-cert' }) }
+function goCert() { uni.navigateTo({ url: '/pages/runner-cert/runner-cert' }) }
 function onBack() { uni.navigateBack() }
 </script>
 

@@ -8,6 +8,8 @@ import com.ikeu.common.constant.MessageConstant;
 import com.ikeu.common.constant.RedisConstant;
 import com.ikeu.common.constant.StatusConstant;
 import com.ikeu.common.enums.OrderStateMachine;
+import com.ikeu.common.enums.TaskStateMachine;
+import com.ikeu.common.exception.BusinessException;
 import com.ikeu.common.exception.NotFoundException;
 import com.ikeu.common.result.PageResult;
 import com.ikeu.model.entity.Task;
@@ -26,6 +28,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.redisson.api.RLock;
 import org.redisson.api.RedissonClient;
 import org.springframework.cache.annotation.CacheEvict;
+import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -51,6 +54,7 @@ public class AdminOrderServiceImpl implements AdminOrderService {
     private final PaymentService paymentService;
     private final RunnerProfileMapper runnerProfileMapper;
     private final RedissonClient redissonClient;
+    private final StringRedisTemplate stringRedisTemplate;
 
     /**
      * 分页查询所有订单，关联任务表和用户表批量填充发布者/跑腿员信息，支持按状态筛选。
@@ -159,8 +163,9 @@ public class AdminOrderServiceImpl implements AdminOrderService {
 
     /**
      * 强制更新订单状态（经 OrderStateMachine 校验），分布式锁保护防并发覆盖。
-     * 同步更新关联任务状态，终态（已完成/已取消）自动触发资金结算或退款（含幂等保护），
-     * 完成后清除仪表盘和任务大厅缓存。
+     * 同步更新关联任务状态（经 TaskStateMachine 校验），
+     * 终态（已完成/已取消）自动触发资金结算或退款（含幂等保护），
+     * 完成后清除仪表盘、任务大厅缓存（含空结果标记）。
      *
      * @param orderId 订单 ID
      * @param status  目标状态码（见 StatusConstant）
@@ -169,15 +174,20 @@ public class AdminOrderServiceImpl implements AdminOrderService {
     @Transactional
     @CacheEvict(value = {RedisConstant.CACHE_DASHBOARD, RedisConstant.CACHE_TASK_HALL}, allEntries = true)
     public void updateOrderStatus(Long orderId, Integer status) {
-        RLock lock = redissonClient.getLock(RedisConstant.ORDER_LOCK_KEY + orderId);
+        // 先查订单获取 taskId，再以 taskId 加锁，与用户端及定时任务共用同一把锁
+        TaskOrder order = taskOrderMapper.selectById(orderId);
+        if (order == null) throw new NotFoundException(MessageConstant.ORDER_NOT_EXIST);
+        Long taskId = order.getTaskId();
+
+        RLock lock = redissonClient.getLock(RedisConstant.ORDER_LOCK_KEY + taskId);
         try {
             if (!lock.tryLock(RedisConstant.LOCK_WAIT_TIME, RedisConstant.LOCK_EXPIRE, TimeUnit.SECONDS)) {
-                throw new RuntimeException(MessageConstant.SYSTEM_BUSY);
+                throw new BusinessException(MessageConstant.SYSTEM_BUSY);
             }
-            // 锁内重查状态，防止并发覆盖
-            TaskOrder order = taskOrderMapper.selectById(orderId);
+            // 锁内重查，消除 TOCTOU
+            order = taskOrderMapper.selectById(orderId);
             if (order == null) throw new NotFoundException(MessageConstant.ORDER_NOT_EXIST);
-            Task task = taskMapper.selectById(order.getTaskId());
+            Task task = taskMapper.selectById(taskId);
 
             OrderStateMachine.validate(order.getStatus(), status, "订单");
 
@@ -190,6 +200,8 @@ public class AdminOrderServiceImpl implements AdminOrderService {
             if (task != null) {
                 Integer taskStatus = mapOrderStatusToTaskStatus(status);
                 if (taskStatus != null) {
+                    // 经 TaskStateMachine 校验后再更新，防止映射表变更导致非法转换
+                    TaskStateMachine.validate(task.getStatus(), taskStatus, "任务");
                     task.setStatus(taskStatus);
                     task.setUpdatedAt(now);
                     taskMapper.updateById(task);
@@ -197,7 +209,7 @@ public class AdminOrderServiceImpl implements AdminOrderService {
 
                 // 终态触发资金结算，paymentService 内已有幂等保护
                 if (status.equals(StatusConstant.ORDER_COMPLETED)) {
-                    if (paymentService.payToRunner(order.getRunnerId(), order.getTaskId(), task.getReward())) {
+                    if (paymentService.payToRunner(order.getRunnerId(), taskId, task.getReward())) {
                         runnerProfileMapper.incrementCompletedStats(order.getRunnerId());
                     }
                 } else if (status.equals(StatusConstant.ORDER_CANCELLED)) {
@@ -208,12 +220,16 @@ public class AdminOrderServiceImpl implements AdminOrderService {
             log.info("管理员强制更新订单 {} 状态为 {} → {}", orderId, order.getStatus(), status);
         } catch (InterruptedException e) {
             Thread.currentThread().interrupt();
-            throw new RuntimeException(MessageConstant.ERROR);
+            throw new BusinessException(MessageConstant.ERROR);
         } finally {
             if (lock.isHeldByCurrentThread()) {
                 lock.unlock();
             }
         }
+
+        // 清除空结果缓存，防止因状态变更产生的新数据被旧空结果屏蔽
+        var nullKeys = stringRedisTemplate.keys(RedisConstant.TASK_HALL_NULL_PREFIX + "*");
+        if (nullKeys != null && !nullKeys.isEmpty()) stringRedisTemplate.delete(nullKeys);
     }
 
     /** 订单状态 → 任务状态映射表，保证 admin 强制更新时任务表同步。 */
@@ -223,6 +239,7 @@ public class AdminOrderServiceImpl implements AdminOrderService {
         if (orderStatus.equals(StatusConstant.ORDER_WAIT_CONFIRM)) return StatusConstant.TASK_WAIT_CONFIRM;
         if (orderStatus.equals(StatusConstant.ORDER_COMPLETED)) return StatusConstant.TASK_COMPLETED;
         if (orderStatus.equals(StatusConstant.ORDER_CANCELLED)) return StatusConstant.TASK_CANCELLED;
+        log.warn("无法识别的订单状态 {}，跳过任务表同步", orderStatus);
         return null;
     }
 }

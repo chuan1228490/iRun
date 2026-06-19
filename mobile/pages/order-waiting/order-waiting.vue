@@ -23,7 +23,7 @@
       <!-- ========== 发布者 / 接单方视图 ========== -->
       <template v-if="isAcceptedRunner || isOwnerPublisher">
         <!-- 跑腿员信息（已接单后可见） -->
-        <view class="contact-card animate-slide-right delay-1" v-if="runnerInfo.name" @click="goRiderProfile(runnerInfo.id)">
+        <view class="contact-card animate-slide-right delay-1" v-if="runnerInfo.name" @click="goRunnerProfile(runnerInfo.id)">
           <image v-if="runnerInfo.avatar" class="contact-avatar-img" :src="runnerInfo.avatar" mode="aspectFill" />
           <view v-else class="contact-avatar" :style="{ background: runnerInfo.avatarBg }">{{ runnerInfo.initial }}</view>
           <view class="contact-info">
@@ -563,7 +563,7 @@ function previewImage(url) {
   }
 }
 
-function goRiderProfile(runnerId) { uni.navigateTo({ url: `/pages/rider-profile/rider-profile?runnerId=${runnerId}` }) }
+function goRunnerProfile(runnerId) { uni.navigateTo({ url: `/pages/runner-profile/runner-profile?runnerId=${runnerId}` }) }
 function onBack() { uni.navigateBack() }
 </script>
 

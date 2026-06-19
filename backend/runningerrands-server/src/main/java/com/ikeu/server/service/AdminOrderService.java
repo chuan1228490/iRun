@@ -14,9 +14,21 @@ public interface AdminOrderService {
     /** 分页查询所有订单列表，支持按状态筛选。 */
     PageResult<OrderManageVO> listAllOrders(Integer status, int page, int size);
 
-    /** 根据订单ID查询订单详情。 */
+    /**
+     * 根据订单 ID 查询订单详情（管理端），含完整任务信息、发布者和跑腿员信息及凭证图片，
+     * 管理端可查看全部字段，不受手机号脱敏限制。
+     *
+     * @param orderId 订单 ID
+     * @return 完整订单详情 VO
+     */
     OrderDetailVO getOrderDetail(Long orderId);
 
-    /** 强制更新订单状态（状态机校验）。 */
+    /**
+     * 强制更新订单状态（经 OrderStateMachine 校验），分布式锁防并发覆盖，
+     * 同步更新关联任务状态，终态自动触发资金结算或退款并清除相关缓存。
+     *
+     * @param orderId 订单 ID
+     * @param status  目标状态码（见 StatusConstant）
+     */
     void updateOrderStatus(Long orderId, Integer status);
 }

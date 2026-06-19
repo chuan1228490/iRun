@@ -62,31 +62,55 @@
       />
     </el-card>
 
-    <el-dialog v-model="statusDialog.visible" title="修改任务状态" width="400px">
-      <el-select v-model="statusDialog.newStatus" placeholder="选择状态" style="width:100%">
-        <el-option v-for="(label, key) in TASK_STATUS" :key="key" :label="label" :value="Number(key)" />
-      </el-select>
+    <el-dialog v-model="statusDialog.visible" title="修改任务状态" width="420px">
+      <div class="status-change-info">
+        <span class="status-from" :style="{ color: statusStyle(statusDialog.currentStatus).color, background: statusStyle(statusDialog.currentStatus).bgColor }">
+          {{ TASK_STATUS[statusDialog.currentStatus as keyof typeof TASK_STATUS] }}
+        </span>
+        <el-icon class="status-arrow"><Right /></el-icon>
+        <el-select v-model="statusDialog.newStatus" placeholder="选择目标状态" style="width:180px">
+          <el-option
+            v-for="s in validNextStatuses"
+            :key="s"
+            :label="TASK_STATUS[s as keyof typeof TASK_STATUS]"
+            :value="s"
+          >
+            <span class="status-option" :style="{ color: statusStyle(s).color }">
+              {{ TASK_STATUS[s as keyof typeof TASK_STATUS] }}
+            </span>
+          </el-option>
+        </el-select>
+      </div>
+      <div v-if="validNextStatuses.length === 0" class="status-no-next">
+        <el-icon><WarningFilled /></el-icon>
+        <span>当前状态为终态，无法变更</span>
+      </div>
       <template #footer>
         <el-button @click="statusDialog.visible = false">取消</el-button>
-        <el-button type="primary" @click="confirmStatus" :disabled="saving">确认</el-button>
+        <el-button type="primary" @click="confirmStatus" :disabled="saving || validNextStatuses.length === 0">确认</el-button>
       </template>
     </el-dialog>
   </div>
 </template>
 
 <script setup lang="ts">
-import { onMounted, reactive, ref } from 'vue'
+import { computed, onMounted, reactive, ref } from 'vue'
 import { ElMessage } from 'element-plus'
-import { Box, KnifeFork, Document, ShoppingCart, MoreFilled } from '@element-plus/icons-vue'
+import { Box, KnifeFork, Document, ShoppingCart, MoreFilled, Right, WarningFilled } from '@element-plus/icons-vue'
 import { listTasks, updateTaskStatus } from '@/api/tasks'
-import { TASK_STATUS } from '@/utils/constants'
+import { TASK_STATUS, TASK_STATE_MACHINE } from '@/utils/constants'
 
 const loading = ref(false)
 const tableData = ref<any[]>([])
 const total = ref(0)
 const query = reactive({ status: undefined as number | undefined, page: 1, size: 10 })
-const statusDialog = reactive({ visible: false, taskId: 0, newStatus: 1 })
+const statusDialog = reactive({ visible: false, taskId: 0, currentStatus: 1, newStatus: 1 })
 const saving = ref(false)
+
+/** 当前任务状态可转移到的合法目标状态列表 */
+const validNextStatuses = computed(() => {
+  return TASK_STATE_MACHINE[statusDialog.currentStatus] ?? []
+})
 
 const taskTypeStyleMap: Record<string, { color: string; bgColor: string; icon: any }> = {
   '代取快递': { color: '#E8734A', bgColor: '#FFF2ED', icon: Box },
@@ -117,9 +141,23 @@ async function fetchData() {
 function search() { query.page = 1; fetchData() }
 function reset() { query.status = undefined; search() }
 
+const statusStyleMap: Record<number, { color: string; bgColor: string }> = {
+  1: { color: '#8492A6', bgColor: '#EFF2F7' },
+  2: { color: '#C8925D', bgColor: '#FDF3EB' },
+  3: { color: '#5B9BD5', bgColor: '#EFF5FB' },
+  4: { color: '#8B6BAE', bgColor: '#F6F1FA' },
+  5: { color: '#2EB89E', bgColor: '#EDFAF7' },
+  6: { color: '#E87474', bgColor: '#FEF0F0' },
+}
+
+function statusStyle(s: number) {
+  return statusStyleMap[s] ?? { color: '#8492A6', bgColor: '#EFF2F7' }
+}
+
 function updateStatus(row: any) {
   statusDialog.taskId = row.taskId
-  statusDialog.newStatus = row.status
+  statusDialog.currentStatus = row.status
+  statusDialog.newStatus = TASK_STATE_MACHINE[row.status]?.[0] ?? row.status
   statusDialog.visible = true
 }
 
@@ -163,5 +201,44 @@ onMounted(fetchData)
 .reward-inline {
   color: var(--brand-accent);
   font-weight: 500;
+}
+
+/* ===== 状态修改对话框 ===== */
+.status-change-info {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  padding: 8px 0 4px;
+}
+
+.status-from {
+  display: inline-block;
+  padding: 4px 14px;
+  border-radius: 12px;
+  font-size: 14px;
+  font-weight: 500;
+}
+
+.status-arrow {
+  color: var(--text-placeholder);
+  font-size: 18px;
+}
+
+.status-option {
+  font-weight: 500;
+}
+
+.status-no-next {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 12px;
+  margin-top: 8px;
+  color: var(--text-secondary);
+  font-size: 13px;
+  background: var(--neutral-surface);
+  border-radius: var(--radius-sm);
 }
 </style>

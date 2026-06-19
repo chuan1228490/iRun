@@ -27,8 +27,9 @@ public final class RedisConstant {
     public static final long LOGIN_LOCK_SECONDS = 300;                              // 登录锁定时间-5分钟
     public static final int LOGIN_MAX_FAIL_COUNT = 5;                               // 登录最大失败次数
 
-    // ========== 订单相关锁 ==========
-    public static final String ORDER_LOCK_KEY = "order:accept:";               // Redis分布式锁LockKey
+    // ========== 订单/任务操作锁 ==========
+    // 所有订单&任务状态变更统一加锁 key，保证管理员、用户端、定时任务互斥
+    public static final String ORDER_LOCK_KEY = "order:lock:";
     public static final String ORDER_DELAY_REMINDED = "order:delay:reminded:"; // 配送延迟已提醒标记
 
     // ========== 定时任务锁 ==========
