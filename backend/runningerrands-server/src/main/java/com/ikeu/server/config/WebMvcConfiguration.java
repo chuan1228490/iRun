@@ -3,12 +3,14 @@ package com.ikeu.server.config;
 import com.ikeu.common.json.JacksonObjectMapper;
 import com.ikeu.server.interceptor.JwtTokenAdminInterceptor;
 import com.ikeu.server.interceptor.JwtTokenUserInterceptor;
-import com.ikeu.server.service.impl.TaskOrderServiceImpl;
 import io.swagger.v3.oas.models.OpenAPI;
 import io.swagger.v3.oas.models.info.Info;
+import jakarta.servlet.*;
+import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springdoc.core.models.GroupedOpenApi;
+import org.springframework.boot.web.servlet.FilterRegistrationBean;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.CacheControl;
@@ -171,5 +173,24 @@ public class WebMvcConfiguration implements WebMvcConfigurer {
         MappingJackson2HttpMessageConverter converter = new MappingJackson2HttpMessageConverter();
         converter.setObjectMapper(new JacksonObjectMapper());
         converters.add(converter);
+    }
+
+    /** 注入安全响应头：CSP, HSTS, X-Frame-Options, X-Content-Type-Options */
+    @Bean
+    public FilterRegistrationBean<Filter> securityHeadersFilter() {
+        FilterRegistrationBean<Filter> bean = new FilterRegistrationBean<>();
+        bean.setFilter((request, response, chain) -> {
+            HttpServletResponse res = (HttpServletResponse) response;
+            res.setHeader("X-Content-Type-Options", "nosniff");
+            res.setHeader("X-Frame-Options", "DENY");
+            res.setHeader("Strict-Transport-Security", "max-age=31536000; includeSubDomains");
+            res.setHeader("Content-Security-Policy",
+                    "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval'; " +
+                    "style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; " +
+                    "font-src 'self'; connect-src 'self' https: wss:;");
+            chain.doFilter(request, response);
+        });
+        bean.setOrder(1);
+        return bean;
     }
 }

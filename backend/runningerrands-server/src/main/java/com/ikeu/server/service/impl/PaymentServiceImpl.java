@@ -158,10 +158,7 @@ public class PaymentServiceImpl implements PaymentService {
     }
 
     /**
-     * 用户充值，使用5秒窗口幂等防止短时间重复提交。
-     *
-     * <p>校验金额 > 0 → 幂等校验（key=RECHARGE:user:{userId}:{timestamp/5000}）→
-     * SELECT FOR UPDATE → 增加余额并记录充值流水。
+     * 用户充值，使用1秒窗口幂等 + SELECT FOR UPDATE 防止重复提交。
      *
      * @param userId 用户ID
      * @param amount 充值金额
@@ -172,7 +169,7 @@ public class PaymentServiceImpl implements PaymentService {
         if (amount == null || amount.compareTo(BigDecimal.ZERO) <= 0) {
             throw new BusinessException(MessageConstant.AMOUNT_MUST_GREATER_THAN_ZERO);
         }
-        if (!checkIdempotent(RECHARGE_USER_KEY_PREFIX + userId + ":" + (System.currentTimeMillis() / 5000))) return;
+        if (!checkIdempotent(RECHARGE_USER_KEY_PREFIX + userId + ":" + (System.currentTimeMillis() / 1000))) return;
 
         User user = userMapper.selectByIdForUpdate(userId);
         if (user == null) throw new NotFoundException(MessageConstant.USER_NOT_EXIST);
@@ -187,10 +184,7 @@ public class PaymentServiceImpl implements PaymentService {
     }
 
     /**
-     * 用户提现，使用5秒窗口幂等，校验余额充足。
-     *
-     * <p>校验金额 > 0 → 幂等校验 → SELECT FOR UPDATE → 余额充足检查 →
-     * 扣减余额并记录提现流水。
+     * 用户提现，使用1秒窗口幂等 + SELECT FOR UPDATE，校验余额充足。
      *
      * @param userId 用户ID
      * @param amount 提现金额
@@ -201,7 +195,7 @@ public class PaymentServiceImpl implements PaymentService {
         if (amount == null || amount.compareTo(BigDecimal.ZERO) <= 0) {
             throw new BusinessException(MessageConstant.AMOUNT_MUST_GREATER_THAN_ZERO);
         }
-        if (!checkIdempotent(WITHDRAW_USER_KEY_PREFIX + userId + ":" + (System.currentTimeMillis() / 5000))) return;
+        if (!checkIdempotent(WITHDRAW_USER_KEY_PREFIX + userId + ":" + (System.currentTimeMillis() / 1000))) return;
 
         User user = userMapper.selectByIdForUpdate(userId);
         if (user == null) throw new NotFoundException(MessageConstant.USER_NOT_EXIST);

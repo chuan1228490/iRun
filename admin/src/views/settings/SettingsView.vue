@@ -64,7 +64,7 @@
 <script setup lang="ts">
 import { onMounted, ref, computed, nextTick } from 'vue'
 import { ElMessage } from 'element-plus'
-import { Setting, Document, Van, Money } from '@element-plus/icons-vue'
+import { Setting, Document, Van, Money, UploadFilled } from '@element-plus/icons-vue'
 import { getSettings, updateSettings } from '@/api/settings'
 
 const loading = ref(false)
@@ -78,6 +78,7 @@ const groupMeta: Record<string, any> = {
   '订单规则': { color: '#2EB89E', bgColor: '#EDFAF7', icon: Document, order: 2 },
   '跑腿限制': { color: '#C8925D', bgColor: '#FDF3EB', icon: Van, order: 3 },
   '费率设置': { color: '#8B6BAE', bgColor: '#F6F1FA', icon: Money, order: 4 },
+  '上传限制': { color: '#E8734A', bgColor: '#FFF2ED', icon: UploadFilled, order: 5 },
 }
 
 const lastUpdated = computed(() => {

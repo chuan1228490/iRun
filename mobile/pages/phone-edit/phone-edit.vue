@@ -31,6 +31,7 @@
 <script setup>
 import { ref } from 'vue'
 import { useStore } from '@/store/index.js'
+import { useSmsCooldown } from '@/utils/useSmsCooldown'
 import { userApi } from '@/api'
 
 const store = useStore()
@@ -39,7 +40,7 @@ const scrollHeight = sysInfo.windowHeight - sysInfo.statusBarHeight - 44
 
 const newPhone = ref('')
 const code = ref('')
-const countdown = ref(0)
+const { countdown, startCooldown } = useSmsCooldown()
 const saving = ref(false)
 
 async function onSendCode() {
@@ -51,11 +52,7 @@ async function onSendCode() {
   try {
     await userApi.sendCode(newPhone.value, 'change_phone')
     uni.showToast({ title: '验证码已发送', icon: 'success' })
-    countdown.value = 60
-    const timer = setInterval(() => {
-      countdown.value--
-      if (countdown.value <= 0) clearInterval(timer)
-    }, 1000)
+    startCooldown()
   } catch (e) { /* handled */ }
 }
 

@@ -24,6 +24,18 @@ public final class CreditConstant {
     /** 提前完成加分 */
     public static final int REWARD_EARLY = 5;
 
+    /** 超时 0-30min 扣分 */
+    public static final int PENALTY_TIMEOUT_30 = -2;
+    /** 超时 30-60min 扣分 */
+    public static final int PENALTY_TIMEOUT_60 = -5;
+    /** 超时 60min+ 扣分 */
+    public static final int PENALTY_TIMEOUT_OVER60 = -10;
+
+    /** 好评加分 */
+    public static final int REWARD_GOOD_REVIEW = 2;
+    /** 差评扣分 */
+    public static final int PENALTY_BAD_REVIEW = -5;
+
     /** 信用变动原因类型 */
     public static final class ReasonType {
         private ReasonType() {}
@@ -32,5 +44,16 @@ public final class CreditConstant {
         public static final String MANUAL = "MANUAL";
         public static final String REWARD = "REWARD";
         public static final String RECOVER = "RECOVER";
+    }
+
+    /** 信用变动原因详情 */
+    public static final class ReasonDetail {
+        private ReasonDetail() {}
+        public static final String EARLY = "提前完成";
+        public static final String ON_TIME = "按时完成";
+        public static final String TIMEOUT_PREFIX = "配送超时";
+        public static final String GOOD_REVIEW = "好评";
+        public static final String BAD_REVIEW = "差评";
+        public static final String RECOVER_FROM_FREEZE = "冻结期满，自动恢复";
     }
 }

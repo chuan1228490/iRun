@@ -1,19 +1,25 @@
 package com.ikeu.server.controller.user;
 
-import com.ikeu.common.context.BaseContext;
 import com.ikeu.common.constant.MessageConstant;
+import com.ikeu.common.constant.RedisConstant;
+import com.ikeu.common.context.BaseContext;
+import com.ikeu.common.exception.BusinessException;
 import com.ikeu.common.result.Result;
 import com.ikeu.model.dto.*;
 import com.ikeu.model.vo.CertifyStatusVO;
 import com.ikeu.model.vo.UserInfoVO;
 import com.ikeu.model.vo.UserLoginVO;
 import com.ikeu.server.service.UserService;
+import com.ikeu.server.util.WebUtil;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.web.bind.annotation.*;
 
 import jakarta.validation.Valid;
+import java.util.concurrent.TimeUnit;
 
 /**
  * 用户端核心接口，提供注册、登录、个人信息管理、密码管理、实名认证和账户注销等功能。
@@ -27,19 +33,22 @@ import jakarta.validation.Valid;
 public class UserController {
 
     private final UserService userService;
+    private final StringRedisTemplate stringRedisTemplate;
 
-    /**
-     * 发送短信验证码到用户手机。
-     *
-     * <p>委托 {@link UserService#sendCode} 生成6位随机数字验证码，
-     * 调用短信服务发送到目标手机号，并将验证码存入 Redis 设置5分钟有效期。
-     *
-     * @param sendCodeDTO 发送验证码DTO（手机号）
-     * @return 操作结果
-     */
+    private static final int SMS_RATE_LIMIT_MAX = 5; // 每IP每分钟最多5条
+
     @Operation(summary = "发送短信验证码")
     @PostMapping("/send")
-    public Result<Void> sendCode(@Valid @RequestBody SendCodeDTO sendCodeDTO) {
+    public Result<Void> sendCode(@Valid @RequestBody SendCodeDTO sendCodeDTO, HttpServletRequest request) {
+        // IP 级别速率限制，防短信配额恶意消耗
+        String ip = WebUtil.getClientIp(request);
+        String rateKey = RedisConstant.USER_SMS_RATE_KEY + ip;
+        Long count = stringRedisTemplate.opsForValue().increment(rateKey);
+        if (count == 1) stringRedisTemplate.expire(rateKey, 60, TimeUnit.SECONDS);
+        if (count > SMS_RATE_LIMIT_MAX) {
+            throw new BusinessException(MessageConstant.SMS_RATE_LIMITED);
+        }
+
         userService.sendCode(sendCodeDTO);
         return Result.success(MessageConstant.CODE_SEND_SUCCESS);
     }
@@ -121,10 +130,21 @@ public class UserController {
      * @param refreshToken 刷新令牌（从 X-Refresh-Token 请求头获取）
      * @return 新的双令牌对和过期时间
      */
+    private static final int REFRESH_RATE_MAX = 10; // 每 IP 每分钟最多刷新 10 次
+
     @Operation(summary = "刷新访问令牌")
     @PostMapping("/refresh")
-    public Result<UserLoginVO> refresh(@RequestHeader("X-Refresh-Token") String refreshToken) {
+    public Result<UserLoginVO> refresh(@RequestHeader("X-Refresh-Token") String refreshToken, HttpServletRequest request) {
+        if (isRefreshRateLimited(request)) throw new BusinessException(MessageConstant.SYSTEM_BUSY);
         return Result.success(userService.refreshAccessToken(refreshToken));
+    }
+
+    private boolean isRefreshRateLimited(HttpServletRequest request) {
+        String ip = WebUtil.getClientIp(request);
+        String key = RedisConstant.USER_REFRESH_RATE_KEY + ip;
+        Long n = stringRedisTemplate.opsForValue().increment(key);
+        if (n == 1) stringRedisTemplate.expire(key, 60, TimeUnit.SECONDS);
+        return n > REFRESH_RATE_MAX;
     }
 
     /**

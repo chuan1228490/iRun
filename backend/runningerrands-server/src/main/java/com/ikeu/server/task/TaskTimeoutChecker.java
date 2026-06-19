@@ -12,6 +12,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.redisson.api.RLock;
 import org.redisson.api.RedissonClient;
+import org.springframework.cache.CacheManager;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
@@ -35,6 +36,7 @@ public class TaskTimeoutChecker {
     private final PaymentService paymentService;
     private final NotificationService notificationService;
     private final RedissonClient redissonClient;
+    private final CacheManager cacheManager;
 
     /**
      * 每分钟检查超时无人接单的任务，自动取消并退款给发布者。
@@ -53,6 +55,7 @@ public class TaskTimeoutChecker {
     @Transactional
     public void cancelTimeoutTasks() {
         RLock lock = redissonClient.getLock(RedisConstant.TASK_TIMEOUT_LOCK_KEY);
+        boolean processed = false;
         try {
             if (!lock.tryLock(0, 30, TimeUnit.SECONDS)) {
                 return;
@@ -92,6 +95,7 @@ public class TaskTimeoutChecker {
                             current.getId()
                     );
                     log.info("任务 {} 超时无人接单（expire_time={}），已自动取消并退款", current.getId(), current.getExpireTime());
+                    processed = true;
                 } catch (InterruptedException e) {
                     Thread.currentThread().interrupt();
                 } catch (Exception e) {
@@ -108,6 +112,17 @@ public class TaskTimeoutChecker {
             if (lock.isHeldByCurrentThread()) {
                 lock.unlock();
             }
+        }
+        if (processed) evictCaches();
+    }
+
+    private void evictCaches() {
+        try {
+            Objects.requireNonNull(cacheManager.getCache(RedisConstant.CACHE_TASK_HALL)).clear();
+            Objects.requireNonNull(cacheManager.getCache(RedisConstant.CACHE_TASK_DETAIL)).clear();
+            Objects.requireNonNull(cacheManager.getCache(RedisConstant.CACHE_DASHBOARD)).clear();
+        } catch (Exception e) {
+            log.error("清除缓存失败", e);
         }
     }
 }

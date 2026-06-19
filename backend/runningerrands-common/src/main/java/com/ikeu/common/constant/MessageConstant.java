@@ -37,10 +37,12 @@ public final class MessageConstant {
     public static final String INVALID_CREDENTIALS = "用户名或密码错误";
     public static final String LOGIN_FAIL_LOCKED_USER = "登录失败次数过多，请5分钟后再试";
     public static final String INVALID_LOGIN_TYPE = "无效的登录方式";
+    public static final String WECHAT_USER_NO_PASSWORD = "微信注册用户请使用验证码或微信一键登录";
     public static final String USER_DISABLED = "账号已被禁用";
     public static final String CODE_SEND_SUCCESS = "短信验证码发送成功";
     public static final String CODE_SEND_FAILED = "短信验证码发送失败，请稍后重试";
     public static final String CODE_ERROR = "验证码错误或已过期";
+    public static final String SMS_RATE_LIMITED = "短信发送频率过高，请稍后再试";
     public static final String LOGOUT_SUCCESS = "退出登录成功";
     public static final String ACCOUNT_DELETED = "账户已注销";
     public static final String PHONE_ALREADY_BIND_TO_OTHER = "该手机号已被其他用户绑定";
@@ -186,7 +188,10 @@ public final class MessageConstant {
     public static final String UPLOAD_SUCCESS = "上传成功";
     public static final String UPLOAD_FAILED = "上传失败";
     public static final String FILE_EMPTY = "文件不能为空";
-    public static final String FILE_SIZE_EXCEED = "文件大小超出限制";
+    public static final String FILE_SIZE_EXCEED = "文件大小不能超过 5MB";
+    public static final String FILE_TYPE_NOT_SUPPORTED = "不支持的文件类型";
+    public static final String UPLOAD_LIMIT_EXCEEDED = "今日上传次数已达上限";
+    public static final String CONFIG_VALUE_TYPE_UNKNOWN = "未知的配置值类型";
 
     // ========== 系统配置相关 ==========
     public static final String SYSTEM_CONFIG_NOT_EXIST = "系统配置不存在";

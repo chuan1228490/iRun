@@ -8,6 +8,13 @@
       }
     },
     {
+      "path": "pages/account-login/account-login",
+      "style": {
+        "navigationStyle": "custom",
+        "navigationBarTitleText": "账户登录"
+      }
+    },
+    {
       "path": "pages/index/index",
       "style": {
         "navigationStyle": "custom",

@@ -14,12 +14,14 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.redisson.api.RLock;
 import org.redisson.api.RedissonClient;
+import org.springframework.cache.CacheManager;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Objects;
 import java.util.concurrent.TimeUnit;
 
 /**
@@ -38,6 +40,7 @@ public class OrderAutoCompleteChecker {
     private final PaymentService paymentService;
     private final NotificationService notificationService;
     private final RedissonClient redissonClient;
+    private final CacheManager cacheManager;
 
     /**
      * 每分钟检查超时未确认的订单，自动完成并支付跑腿员报酬。
@@ -59,6 +62,7 @@ public class OrderAutoCompleteChecker {
     @Transactional
     public void autoCompleteOrders() {
         RLock lock = redissonClient.getLock(RedisConstant.ORDER_AUTO_COMPLETE_LOCK_KEY);
+        boolean processed = false;
         try {
             if (!lock.tryLock(0, 30, TimeUnit.SECONDS)) {
                 return;
@@ -111,6 +115,7 @@ public class OrderAutoCompleteChecker {
                             "您配送的任务 " + task.getTaskNo() + " 已自动确认完成", order.getId());
 
                     log.info("订单 {} 24h自动结算完成，报酬 {} 支付给跑腿员 {}", order.getId(), task.getReward(), order.getRunnerId());
+                    processed = true;
                 } catch (InterruptedException e) {
                     Thread.currentThread().interrupt();
                 } catch (Exception e) {
@@ -127,6 +132,18 @@ public class OrderAutoCompleteChecker {
             if (lock.isHeldByCurrentThread()) {
                 lock.unlock();
             }
+        }
+        if (processed) evictCaches();
+    }
+
+    private void evictCaches() {
+        try {
+            Objects.requireNonNull(cacheManager.getCache(RedisConstant.CACHE_DASHBOARD)).clear();
+            Objects.requireNonNull(cacheManager.getCache(RedisConstant.CACHE_LEADERBOARD)).clear();
+            Objects.requireNonNull(cacheManager.getCache(RedisConstant.CACHE_TASK_HALL)).clear();
+            Objects.requireNonNull(cacheManager.getCache(RedisConstant.CACHE_TASK_DETAIL)).clear();
+        } catch (Exception e) {
+            log.error("清除缓存失败", e);
         }
     }
 }

@@ -35,6 +35,7 @@ import java.math.BigDecimal;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
+import java.util.UUID;
 import java.util.concurrent.TimeUnit;
 import java.time.LocalDateTime;
 
@@ -60,8 +61,6 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements Us
     private final WeChatAuthUtil weChatAuthUtil;
     private final PasswordEncoder passwordEncoder;
 
-    /** 默认初始密码 */
-    private static final String DEFAULT_RAW_PASSWORD = "123456";
     /** 默认头像路径（Spring Boot 静态资源，context-path=/api，对应 static/imgs/default_avatar.jpg） */
     private static final String DEFAULT_AVATAR_URL = "/api/imgs/default_avatar.jpg";
     /** 合法的短信验证码操作类型 */
@@ -220,7 +219,17 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements Us
             if (user == null) {
                 user = lambdaQuery().eq(User::getPhone, account).one();
             }
-            if (user == null || !passwordEncoder.matches(userLoginDTO.getPassword(), user.getPassword())) {
+            if (user == null) {
+                // 记录失败次数（账号不存在）
+                redisTemplate.opsForValue().increment(failKey);
+                redisTemplate.expire(failKey, RedisConstant.LOGIN_LOCK_SECONDS, TimeUnit.SECONDS);
+                throw new UnauthorizedException(MessageConstant.INVALID_CREDENTIALS);
+            }
+            // 微信注册用户（registerType=2）禁止密码登录，仅允许验证码或微信OAuth登录
+            if (user.getRegisterType() != null && user.getRegisterType() == 2) {
+                throw new UnauthorizedException(MessageConstant.WECHAT_USER_NO_PASSWORD);
+            }
+            if (!passwordEncoder.matches(userLoginDTO.getPassword(), user.getPassword())) {
                 // 记录失败次数
                 redisTemplate.opsForValue().increment(failKey);
                 redisTemplate.expire(failKey, RedisConstant.LOGIN_LOCK_SECONDS, TimeUnit.SECONDS);
@@ -293,7 +302,7 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements Us
                     .avatarUrl(DEFAULT_AVATAR_URL)
                     .openid(openid)
                     .unionid(session.getStr("unionid"))
-                    .password(passwordEncoder.encode(DEFAULT_RAW_PASSWORD))
+                    .password(passwordEncoder.encode(UUID.randomUUID().toString()))
                     .balance(BigDecimal.ZERO)
                     .status(StatusConstant.ENABLE)
                     .isCertify(StatusConstant.NO)

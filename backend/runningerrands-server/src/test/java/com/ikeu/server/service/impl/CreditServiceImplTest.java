@@ -80,7 +80,7 @@ class CreditServiceImplTest {
         creditService.processCreditOnComplete(1L);
 
         verify(creditLogMapper, never()).insert(any());
-        verify(runnerProfileMapper, never()).updateCreditScoreAndFreeze(anyLong(), anyInt(), anyInt(), any());
+        verify(runnerProfileMapper, never()).updateCreditScoreAndFreeze(anyLong(), anyInt(), anyInt(), anyInt());
     }
 
     // ========== processCreditOnComplete — 各时段 ==========
@@ -113,7 +113,7 @@ class CreditServiceImplTest {
 
         verify(runnerProfileMapper).updateCreditScoreAndFreeze(
                 eq(100L), eq(CreditConstant.REWARD_EARLY),
-                eq(CreditConstant.CREDIT_FREEZE_THRESHOLD), isNull());
+                eq(CreditConstant.CREDIT_FREEZE_THRESHOLD), eq(CreditConstant.CREDIT_FREEZE_DAYS));
     }
 
     @Test
@@ -254,7 +254,7 @@ class CreditServiceImplTest {
         assertNull(creditLog.getRelatedOrderId());
 
         verify(runnerProfileMapper).updateCreditScoreAndFreeze(
-                eq(100L), eq(-10), eq(CreditConstant.CREDIT_FREEZE_THRESHOLD), isNull());
+                eq(100L), eq(-10), eq(CreditConstant.CREDIT_FREEZE_THRESHOLD), eq(CreditConstant.CREDIT_FREEZE_DAYS));
     }
 
     // ========== addCredit ==========
@@ -313,9 +313,9 @@ class CreditServiceImplTest {
         assertEquals(65, creditLog.getScoreBefore());
         assertEquals(55, creditLog.getScoreAfter());
 
-        // banUntil should be non-null (freeze triggered because 55 < 60)
+        // freezeDays passed to SQL; freeze logic now computed atomically in DB
         verify(runnerProfileMapper).updateCreditScoreAndFreeze(
-                eq(100L), eq(-10), eq(CreditConstant.CREDIT_FREEZE_THRESHOLD), notNull());
+                eq(100L), eq(-10), eq(CreditConstant.CREDIT_FREEZE_THRESHOLD), eq(CreditConstant.CREDIT_FREEZE_DAYS));
     }
 
     @Test
@@ -337,9 +337,9 @@ class CreditServiceImplTest {
         assertEquals(55, creditLog.getScoreBefore());
         assertEquals(65, creditLog.getScoreAfter());
 
-        // banUntil should be null (score >= 60 -> unfreeze)
+        // freeze logic now computed atomically in SQL
         verify(runnerProfileMapper).updateCreditScoreAndFreeze(
-                eq(100L), eq(10), eq(CreditConstant.CREDIT_FREEZE_THRESHOLD), isNull());
+                eq(100L), eq(10), eq(CreditConstant.CREDIT_FREEZE_THRESHOLD), eq(CreditConstant.CREDIT_FREEZE_DAYS));
     }
 
     // ========== 分数下限 ==========

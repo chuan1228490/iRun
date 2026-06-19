@@ -25,7 +25,7 @@
           </view>
           <iconpark-icon name="right" size="16" color="#D4D2CC" />
         </view>
-        <view class="menu-item" @click="onNavigate('/pages/pay-password-edit/pay-password-edit?mode=login')">
+        <view class="menu-item" v-if="!isWechatUser" @click="onNavigate('/pages/pay-password-edit/pay-password-edit?mode=login')">
           <view class="menu-icon menu-icon--purple"><iconpark-icon name="keyEdit" size="20" color="#8b5cf6" /></view>
           <view class="menu-body">
             <text class="menu-label">修改登录密码</text>
@@ -53,6 +53,8 @@ import { userApi } from '@/api'
 const store = useStore()
 const sysInfo = uni.getSystemInfoSync()
 const scrollHeight = sysInfo.windowHeight - sysInfo.statusBarHeight - 44
+
+const isWechatUser = computed(() => store.userInfo?.registerType === 2)
 
 const hasPayPassword = ref(store.hasPayPassword)
 const checkingPayStatus = ref(true)

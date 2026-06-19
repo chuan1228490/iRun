@@ -71,7 +71,7 @@ public class AdminSystemConfigServiceImpl extends ServiceImpl<SystemConfigMapper
             String key = entry.getKey();
             String value = entry.getValue();
             SystemConfig config = configMap.get(key);
-            if (config == null) throw new BusinessException("配置项 [" + key + "] 不存在");
+            if (config == null) throw new BusinessException(MessageConstant.SYSTEM_CONFIG_NOT_EXIST + " [" + key + "]");
 
             validateValueType(config.getValueType(), value, key);
             config.setConfigValue(value);
@@ -95,7 +95,7 @@ public class AdminSystemConfigServiceImpl extends ServiceImpl<SystemConfigMapper
                 case "string" -> {}
                 case "int" -> Long.parseLong(value);
                 case "decimal" -> new java.math.BigDecimal(value);
-                default -> throw new BusinessException("未知的配置值类型 [" + valueType + "]，配置项: " + configKey);
+                default -> throw new BusinessException(MessageConstant.CONFIG_VALUE_TYPE_UNKNOWN + " [" + valueType + "]");
             }
         } catch (NumberFormatException e) {
             throw new BusinessException("配置项 [" + configKey + "] 需要 " + valueType + " 类型的值，当前值: " + value);

@@ -15,6 +15,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.redisson.api.RLock;
 import org.redisson.api.RedissonClient;
+import org.springframework.cache.CacheManager;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
@@ -42,6 +43,7 @@ public class OrderTimeoutChecker {
     private final NotificationService notificationService;
     private final RedissonClient redissonClient;
     private final StringRedisTemplate stringRedisTemplate;
+    private final CacheManager cacheManager;
 
     /**
      * 每30秒检查超时订单，分两阶段处理。
@@ -68,6 +70,7 @@ public class OrderTimeoutChecker {
     @Transactional
     public void cancelTimeoutOrders() {
         RLock lock = redissonClient.getLock(RedisConstant.ORDER_TIMEOUT_LOCK_KEY);
+        boolean processed = false;
         try {
             if (!lock.tryLock(0, 30, TimeUnit.SECONDS)) {
                 return;
@@ -114,6 +117,7 @@ public class OrderTimeoutChecker {
 
                     runnerProfileService.decrementCurrentOrders(order.getRunnerId());
                     log.info("订单 {} 超时未取货，已自动取消并退款", order.getId());
+                    processed = true;
                 } catch (Exception e) {
                     log.error("处理超时未取货订单 {} 失败", order.getId(), e);
                 }
@@ -157,6 +161,17 @@ public class OrderTimeoutChecker {
             if (lock.isHeldByCurrentThread()) {
                 lock.unlock();
             }
+        }
+        if (processed) evictCaches();
+    }
+
+    private void evictCaches() {
+        try {
+            Objects.requireNonNull(cacheManager.getCache(RedisConstant.CACHE_TASK_HALL)).clear();
+            Objects.requireNonNull(cacheManager.getCache(RedisConstant.CACHE_TASK_DETAIL)).clear();
+            Objects.requireNonNull(cacheManager.getCache(RedisConstant.CACHE_DASHBOARD)).clear();
+        } catch (Exception e) {
+            log.error("清除缓存失败", e);
         }
     }
 }

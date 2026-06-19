@@ -231,9 +231,10 @@ function onTouchMove(e, id) {
   if (Math.abs(dx) > Math.abs(dy) && dx < -30) swipedId.value = id
   else if (dx > 30) swipedId.value = null
 }
+let swipeTimer = null
 function onTouchEnd(id) {
-  // Auto-close swipe if tapped very briefly (no intentional swipe)
-  setTimeout(() => { if (swipedId.value === id) swipedId.value = null }, 4000)
+  if (swipeTimer) clearTimeout(swipeTimer)
+  swipeTimer = setTimeout(() => { if (swipedId.value === id) swipedId.value = null }, 4000)
 }
 function closeSwipe() { swipedId.value = null }
 

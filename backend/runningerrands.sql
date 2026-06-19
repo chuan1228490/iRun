@@ -9,7 +9,7 @@ CREATE TABLE `user`
 (
     `id`              BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
     `username`        VARCHAR(32)     NOT NULL UNIQUE COMMENT '用户名',
-    `password`        VARCHAR(128)    NOT NULL DEFAULT '123456' COMMENT '密码',
+    `password`        VARCHAR(128)    NOT NULL COMMENT '密码（BCrypt 加密存储）',
     `pay_password`    VARCHAR(128)             DEFAULT NULL COMMENT '支付密码',
     `nickname`        VARCHAR(64)              DEFAULT '' COMMENT '用户昵称',
     `avatar_url`      VARCHAR(512)             DEFAULT '' COMMENT '头像URL',
@@ -443,7 +443,8 @@ VALUES ('platform.hotline', '400-000-0000', '基础设置', 'string', '平台客
        ('order.min_withdrawal', '10.00', '订单规则', 'decimal', '用户最低提现金额（元）'),
        ('runner.max_concurrent', '5', '跑腿限制', 'int', '跑腿员最大同时接单数'),
        ('runner.min_credit_score', '60', '跑腿限制', 'int', '跑腿员最低接单信用分'),
-       ('platform.fee_rate', '5.00', '费率设置', 'decimal', '平台服务费抽成比例（%）');
+       ('platform.fee_rate', '5.00', '费率设置', 'decimal', '平台服务费抽成比例（%）'),
+       ('upload.max_daily', '20', '上传限制', 'int', '每用户每日最大上传文件次数');
 
 
 

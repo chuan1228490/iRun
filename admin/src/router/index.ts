@@ -1,5 +1,6 @@
 import { createRouter, createWebHistory } from 'vue-router'
 import { getAdminToken } from '@/utils/request'
+import { useAuthStore } from '@/stores/auth'
 
 const router = createRouter({
   history: createWebHistory('/api/'),
@@ -123,6 +124,16 @@ router.beforeEach((to, _from, next) => {
   } else if (to.path === '/login' && getAdminToken()) {
     next('/dashboard')
   } else {
+    // 路由级角色校验：meta.role 声明的路由仅限对应角色访问
+    const requiredRoles = to.meta.role as number[] | undefined
+    if (requiredRoles && requiredRoles.length > 0) {
+      const authStore = useAuthStore()
+      const userRole = authStore.adminInfo?.role
+      if (userRole === undefined || !requiredRoles.includes(userRole)) {
+        next('/dashboard')
+        return
+      }
+    }
     next()
   }
 })

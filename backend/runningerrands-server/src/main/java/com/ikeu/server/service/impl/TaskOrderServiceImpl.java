@@ -421,20 +421,42 @@ public class TaskOrderServiceImpl extends ServiceImpl<TaskOrderMapper, TaskOrder
         if (!order.getRunnerId().equals(runnerId)) {
             throw new ForbiddenException(MessageConstant.OPERATION_NOT_ALLOWED);
         }
-        OrderStateMachine.validate(order.getStatus(), StatusConstant.ORDER_WAIT_CONFIRM, "Order");
-        order.setDeliverProofImgs(proof.getImageUrls() != null ? JSONUtil.toJsonStr(proof.getImageUrls()) : null);
-        order.setDeliverTime(LocalDateTime.now());
-        order.setStatus(StatusConstant.ORDER_WAIT_CONFIRM);
-        updateById(order);
 
-        Task task = taskMapper.selectById(order.getTaskId());
-        if (task != null) {
-            TaskStateMachine.validate(task.getStatus(), StatusConstant.TASK_WAIT_CONFIRM, "Task");
-            task.setStatus(StatusConstant.TASK_WAIT_CONFIRM);
-            task.setUpdatedAt(LocalDateTime.now());
-            taskMapper.updateById(task);
+        // 分布式锁防止并发重复送达
+        String lockKey = RedisConstant.ORDER_LOCK_KEY + order.getTaskId();
+        RLock lock = redissonClient.getLock(lockKey);
+        try {
+            if (!lock.tryLock(RedisConstant.LOCK_WAIT_TIME, RedisConstant.LOCK_EXPIRE, TimeUnit.SECONDS)) {
+                throw new BusinessException(MessageConstant.SYSTEM_BUSY);
+            }
+            // 锁内重查状态
+            order = getById(orderId);
+            if (order == null || !Objects.equals(order.getStatus(), StatusConstant.ORDER_DELIVERING)) {
+                throw new BusinessException(MessageConstant.ORDER_STATUS_CHANGED);
+            }
+
+            OrderStateMachine.validate(order.getStatus(), StatusConstant.ORDER_WAIT_CONFIRM, "Order");
+            order.setDeliverProofImgs(proof.getImageUrls() != null ? JSONUtil.toJsonStr(proof.getImageUrls()) : null);
+            order.setDeliverTime(LocalDateTime.now());
+            order.setStatus(StatusConstant.ORDER_WAIT_CONFIRM);
+            updateById(order);
+
+            Task task = taskMapper.selectById(order.getTaskId());
+            if (task != null) {
+                TaskStateMachine.validate(task.getStatus(), StatusConstant.TASK_WAIT_CONFIRM, "Task");
+                task.setStatus(StatusConstant.TASK_WAIT_CONFIRM);
+                task.setUpdatedAt(LocalDateTime.now());
+                taskMapper.updateById(task);
+            }
+            log.info("订单 {} 已送达，凭证：{}", orderId, proof.getImageUrls());
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            throw new BusinessException(MessageConstant.ERROR);
+        } finally {
+            if (lock.isHeldByCurrentThread()) {
+                lock.unlock();
+            }
         }
-        log.info("订单 {} 已送达，凭证：{}", orderId, proof.getImageUrls());
     }
 
     /**
@@ -577,9 +599,31 @@ public class TaskOrderServiceImpl extends ServiceImpl<TaskOrderMapper, TaskOrder
         vo.setOwnerPublisher(currentUserId.equals(task.getPublisherId()));
         vo.setOwnerRunner(currentUserId.equals(order.getRunnerId()));
 
+        // 对非参与方脱敏联系信息
+        if (!vo.isOwnerPublisher() && !vo.isOwnerRunner()) {
+            String contactName = vo.getContactName();
+            if (contactName != null && !contactName.isEmpty()) {
+                vo.setContactName(contactName.length() == 1
+                        ? contactName + "*"
+                        : contactName.charAt(0) + "*".repeat(contactName.length() - 1));
+            }
+            String contactPhone = vo.getContactPhone();
+            if (contactPhone != null && contactPhone.length() > 4) {
+                vo.setContactPhone("*".repeat(contactPhone.length() - 4)
+                        + contactPhone.substring(contactPhone.length() - 4));
+            }
+            vo.setPublisherPhone(maskPhone(vo.getPublisherPhone()));
+            vo.setRunnerPhone(maskPhone(vo.getRunnerPhone()));
+        }
+
         vo.setCancelReason(order.getCancelReason());
 
         return vo;
+    }
+
+    private String maskPhone(String phone) {
+        if (phone == null || phone.length() <= 4) return phone;
+        return "*".repeat(phone.length() - 4) + phone.substring(phone.length() - 4);
     }
 
     /**
