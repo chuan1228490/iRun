@@ -28,6 +28,11 @@ import java.util.stream.Collectors;
 @RequiredArgsConstructor
 public class AdminSystemConfigServiceImpl extends ServiceImpl<SystemConfigMapper, SystemConfig> implements AdminSystemConfigService {
 
+    /**
+     * 全量查询系统配置，按分组和配置键升序排列。
+     *
+     * @return 全部系统配置项 VO 列表
+     */
     @Override
     public List<SystemConfigVO> listAll() {
         // 按分组和配置键升序查询全部配置项
@@ -45,6 +50,11 @@ public class AdminSystemConfigServiceImpl extends ServiceImpl<SystemConfigMapper
                 .build()).collect(Collectors.toList());
     }
 
+    /**
+     * 批量更新系统配置，含去重合并、值类型校验（int/decimal/string）和事务性写入。
+     *
+     * @param dto 包含待更新配置项列表的 DTO，支持 {@code @Valid} 级联校验
+     */
     @Override
     @Transactional
     public void batchUpdate(SystemConfigBatchUpdateDTO dto) {
@@ -71,7 +81,7 @@ public class AdminSystemConfigServiceImpl extends ServiceImpl<SystemConfigMapper
             String key = entry.getKey();
             String value = entry.getValue();
             SystemConfig config = configMap.get(key);
-            if (config == null) throw new BusinessException("配置项 [" + key + "] 不存在");
+            if (config == null) throw new BusinessException(MessageConstant.SYSTEM_CONFIG_NOT_EXIST + " [" + key + "]");
 
             validateValueType(config.getValueType(), value, key);
             config.setConfigValue(value);
@@ -95,7 +105,7 @@ public class AdminSystemConfigServiceImpl extends ServiceImpl<SystemConfigMapper
                 case "string" -> {}
                 case "int" -> Long.parseLong(value);
                 case "decimal" -> new java.math.BigDecimal(value);
-                default -> throw new BusinessException("未知的配置值类型 [" + valueType + "]，配置项: " + configKey);
+                default -> throw new BusinessException(MessageConstant.CONFIG_VALUE_TYPE_UNKNOWN + " [" + valueType + "]");
             }
         } catch (NumberFormatException e) {
             throw new BusinessException("配置项 [" + configKey + "] 需要 " + valueType + " 类型的值，当前值: " + value);

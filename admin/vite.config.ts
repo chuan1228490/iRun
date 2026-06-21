@@ -1,41 +1,58 @@
-import { defineConfig } from 'vite'
+import { defineConfig, type Plugin } from 'vite'
 import vue from '@vitejs/plugin-vue'
 import { resolve } from 'path'
 
-export default defineConfig(({ mode }) => {
-  // 开发环境 vs 测试环境
-  const isDev = mode === 'development' || !mode
-  const proxyTarget = isDev
-    ? 'http://localhost:8080'
-    : 'https://sedative-squishy-worry.ngrok-free.dev'
-
+function securityPlugin(): Plugin {
   return {
-    base: '/api/',
-    plugins: [vue()],
-    resolve: {
-      alias: {
-        '@': resolve(__dirname, 'src')
-      }
+    name: 'security-headers',
+    transformIndexHtml(html, ctx) {
+      // 生产构建时注入 CSP meta，开发环境不注入（避免阻断 Vite HMR）
+      if (ctx.server) return html
+      const csp = [
+        "default-src 'self'",
+        "script-src 'self'",
+        "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
+        "font-src 'self' https://fonts.gstatic.com",
+        "img-src 'self' data: blob:",
+        "connect-src 'self'",
+        "frame-ancestors 'none'",
+        "base-uri 'self'",
+        "form-action 'self'",
+      ].join('; ')
+      return html.replace('<!-- __CSP_META__ -->',
+        `<meta http-equiv="Content-Security-Policy" content="${csp}">`)
     },
-    server: {
-      port: 3001,
-      proxy: {
-        // 代理后端 API，其余由 Vite 提供 HMR
-        // /api/user/ (单数+斜杠) 精确匹配移动端 API，不会拦截 /api/users/ (SPA 路由)
-        '^/api/(admin|user/|common|ws)': {
-          target: proxyTarget,
-          changeOrigin: true,
-          configure: (proxy) => {
-            proxy.on('proxyReq', (proxyReq, req) => {
-              proxyReq.setHeader('ngrok-skip-browser-warning', 'true')
-              proxyReq.setHeader('User-Agent', 'runningerrands-admin/1.0')
-              const ip = req.socket.remoteAddress
-              if (ip) {
-                proxyReq.setHeader('X-Forwarded-For', ip)
-                proxyReq.setHeader('X-Real-IP', ip)
-              }
-            })
-          }
+  }
+}
+
+export default defineConfig({
+  base: '/api/',
+  plugins: [vue(), securityPlugin()],
+  resolve: {
+    alias: {
+      '@': resolve(__dirname, 'src')
+    }
+  },
+  server: {
+    port: 3001,
+    headers: {
+      'X-Content-Type-Options': 'nosniff',
+      'X-Frame-Options': 'DENY',
+      'Referrer-Policy': 'strict-origin-when-cross-origin',
+      'Permissions-Policy': 'camera=(), microphone=(), geolocation=()',
+    },
+    proxy: {
+      '^/api/(admin|user/|common|ws)': {
+        target: 'http://localhost:8080',
+        changeOrigin: true,
+        configure: (proxy) => {
+          proxy.on('proxyReq', (proxyReq, req) => {
+            const ip = req.socket.remoteAddress
+            if (ip) {
+              proxyReq.setHeader('X-Forwarded-For', ip)
+              proxyReq.setHeader('X-Real-IP', ip)
+            }
+          })
         }
       }
     }

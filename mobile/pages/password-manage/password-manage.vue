@@ -63,9 +63,9 @@
               <input class="field-input" name="password" v-model="newLoginPassword" placeholder="请输入新密码" />
             </view>
           </view>
-          <view class="form-hint">
+          <view class="form-hint" v-if="isWechatUser">
             <iconpark-icon name="info" size="16" color="#F59E0B" />
-            <text>如果您是小程序一键注册登录用户，默认初始密码是 123456，请及时修改</text>
+            <text>您是微信注册用户，请通过下方"忘记密码"修改您的登录密码</text>
           </view>
           <view class="save-btn" :class="{ 'save-btn--disabled': saving }" @click="onChangeLoginPassword"><text>{{ saving ? '修改中…' : '确定修改' }}</text></view>
           <text class="forgot-link" @click="goForgot('login')">忘记密码？</text>
@@ -82,8 +82,8 @@
               <text class="field-label">短信验证码</text>
               <view class="code-row">
                 <input class="field-input code-input" name="number" type="number" v-model="forgotCode" placeholder="请输入验证码" maxlength="6" />
-                <view class="code-send-btn" :class="{ 'code-send-btn--counting': counting }" @click="onSendCode">
-                  <text>{{ counting ? countdown + 's' : '获取验证码' }}</text>
+                <view class="code-send-btn" :class="{ 'code-send-btn--counting': countdown > 0 }" @click="onSendCode">
+                  <text>{{ countdown > 0 ? countdown + 's' : '获取验证码' }}</text>
                 </view>
               </view>
             </view>
@@ -123,6 +123,7 @@
 import { ref, computed } from 'vue'
 import { onLoad } from '@dcloudio/uni-app'
 import { useStore } from '@/store/index.js'
+import { useSmsCooldown } from '@/utils/useSmsCooldown'
 import { userApi } from '@/api'
 import { useSubmitLock } from '@/utils/submit-guard'
 
@@ -156,8 +157,9 @@ const forgotPayPassword = ref('')
 const forgotPayPasswordConfirm = ref('')
 
 // 短信验证码
-const counting = ref(false)
-const countdown = ref(60)
+const { countdown, startCooldown } = useSmsCooldown()
+
+const isWechatUser = computed(() => store.userInfo?.registerType === 2)
 
 const navTitle = computed(() => {
   if (mode.value === 'login') return '修改登录密码'
@@ -199,7 +201,7 @@ function goForgot(target) {
 }
 
 async function onSendCode() {
-  if (counting.value) return
+  if (countdown.value > 0) return
   const phone = mode.value === 'forgot' ? forgotPhone.value : store.userInfo?.phone
   if (!phone || !/^1[3-9]\d{9}$/.test(phone)) {
     uni.showToast({ title: '请输入正确的手机号', icon: 'none' })
@@ -210,15 +212,7 @@ async function onSendCode() {
       ? (forgotTarget.value === 'pay' ? 'reset_pay_password' : 'reset_password')
       : 'reset_password'
     await userApi.sendCode(phone, operation)
-    counting.value = true
-    countdown.value = 60
-    const timer = setInterval(() => {
-      countdown.value--
-      if (countdown.value <= 0) {
-        clearInterval(timer)
-        counting.value = false
-      }
-    }, 1000)
+    startCooldown()
   } catch (e) { /* handled */ }
 }
 
@@ -286,6 +280,11 @@ async function onChangePayPassword() {
 }
 
 async function onChangeLoginPassword() {
+  // 微信注册用户没有原始密码，引导使用"忘记密码"流程
+  if (isWechatUser.value) {
+    uni.showToast({ title: '微信用户请通过下方"忘记密码"修改', icon: 'none', duration: 2500 })
+    return
+  }
   if (!oldLoginPassword.value || !newLoginPassword.value) {
     uni.showToast({ title: '请填写完整', icon: 'none' })
     return

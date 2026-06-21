@@ -14,17 +14,16 @@ import java.util.Set;
 public enum TaskStateMachine {
     WAITING(StatusConstant.TASK_WAITING, setOf(
             StatusConstant.TASK_ACCEPTED,
-            StatusConstant.TASK_DELIVERING,
             StatusConstant.TASK_CANCELLED
     )),
     ACCEPTED(StatusConstant.TASK_ACCEPTED, setOf(
             StatusConstant.TASK_DELIVERING,
-            StatusConstant.TASK_WAITING,
+            StatusConstant.TASK_COMPLETED,
             StatusConstant.TASK_CANCELLED
     )),
     DELIVERING(StatusConstant.TASK_DELIVERING, setOf(
             StatusConstant.TASK_WAIT_CONFIRM,
-            StatusConstant.TASK_WAITING,
+            StatusConstant.TASK_COMPLETED,
             StatusConstant.TASK_CANCELLED
     )),
     WAIT_CONFIRM(StatusConstant.TASK_WAIT_CONFIRM, setOf(

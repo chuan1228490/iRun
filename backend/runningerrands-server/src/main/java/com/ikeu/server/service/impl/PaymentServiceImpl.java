@@ -158,13 +158,16 @@ public class PaymentServiceImpl implements PaymentService {
     }
 
     /**
-     * 用户充值，使用5秒窗口幂等防止短时间重复提交。
+     * 用户充值，使用1秒窗口幂等 + SELECT FOR UPDATE 防止重复提交。
      *
-     * <p>校验金额 > 0 → 幂等校验（key=RECHARGE:user:{userId}:{timestamp/5000}）→
-     * SELECT FOR UPDATE → 增加余额并记录充值流水。
+     * <p>幂等键格式为 {@code RECHARGE:user:{userId}:{unixTimestampSecond}}，
+     * 利用当前秒级时间戳作为窗口，同一秒内的重复请求会被数据库唯一约束拦截。
+     * 通过 SELECT FOR UPDATE 行锁读取用户余额，避免并发充值导致数据不一致。
      *
-     * @param userId 用户ID
-     * @param amount 充值金额
+     * @param userId 用户 ID
+     * @param amount 充值金额，必须大于 0
+     * @throws BusinessException 金额不合法时抛出
+     * @throws NotFoundException 用户不存在时抛出
      */
     @Override
     @Transactional
@@ -172,7 +175,7 @@ public class PaymentServiceImpl implements PaymentService {
         if (amount == null || amount.compareTo(BigDecimal.ZERO) <= 0) {
             throw new BusinessException(MessageConstant.AMOUNT_MUST_GREATER_THAN_ZERO);
         }
-        if (!checkIdempotent(RECHARGE_USER_KEY_PREFIX + userId + ":" + (System.currentTimeMillis() / 5000))) return;
+        if (!checkIdempotent(RECHARGE_USER_KEY_PREFIX + userId + ":" + (System.currentTimeMillis() / 1000))) return;
 
         User user = userMapper.selectByIdForUpdate(userId);
         if (user == null) throw new NotFoundException(MessageConstant.USER_NOT_EXIST);
@@ -187,13 +190,16 @@ public class PaymentServiceImpl implements PaymentService {
     }
 
     /**
-     * 用户提现，使用5秒窗口幂等，校验余额充足。
+     * 用户提现，使用1秒窗口幂等 + SELECT FOR UPDATE，校验余额充足。
      *
-     * <p>校验金额 > 0 → 幂等校验 → SELECT FOR UPDATE → 余额充足检查 →
-     * 扣减余额并记录提现流水。
+     * <p>幂等键格式为 {@code WITHDRAW:user:{userId}:{unixTimestampSecond}}，
+     * 利用当前秒级时间戳作为窗口防止重复提交。通过 SELECT FOR UPDATE 行锁读取用户余额，
+     * 校验余额充足后扣减并记录提现流水。
      *
-     * @param userId 用户ID
-     * @param amount 提现金额
+     * @param userId 用户 ID
+     * @param amount 提现金额，必须大于 0
+     * @throws BusinessException 金额不合法或余额不足时抛出
+     * @throws NotFoundException 用户不存在时抛出
      */
     @Override
     @Transactional
@@ -201,7 +207,7 @@ public class PaymentServiceImpl implements PaymentService {
         if (amount == null || amount.compareTo(BigDecimal.ZERO) <= 0) {
             throw new BusinessException(MessageConstant.AMOUNT_MUST_GREATER_THAN_ZERO);
         }
-        if (!checkIdempotent(WITHDRAW_USER_KEY_PREFIX + userId + ":" + (System.currentTimeMillis() / 5000))) return;
+        if (!checkIdempotent(WITHDRAW_USER_KEY_PREFIX + userId + ":" + (System.currentTimeMillis() / 1000))) return;
 
         User user = userMapper.selectByIdForUpdate(userId);
         if (user == null) throw new NotFoundException(MessageConstant.USER_NOT_EXIST);
@@ -222,10 +228,12 @@ public class PaymentServiceImpl implements PaymentService {
      * 验证支付密码。
      *
      * <p>校验支付密码非空 → 用户存在 → 已设置支付密码 → BCrypt 密码匹配。
-     * 任一条件不满足抛出对应的业务异常。
+     * 任一条件不满足抛出对应的业务异常。此为只读校验，不修改任何数据。
      *
-     * @param userId 用户ID
+     * @param userId 用户 ID
      * @param rawPassword 原始支付密码（明文）
+     * @throws BusinessException 密码为空、未设置支付密码或密码错误时抛出
+     * @throws NotFoundException 用户不存在时抛出
      */
     @Override
     public void verifyPayPassword(Long userId, String rawPassword) {

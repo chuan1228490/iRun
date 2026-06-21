@@ -8,6 +8,13 @@
       }
     },
     {
+      "path": "pages/account-login/account-login",
+      "style": {
+        "navigationStyle": "custom",
+        "navigationBarTitleText": "账户登录"
+      }
+    },
+    {
       "path": "pages/index/index",
       "style": {
         "navigationStyle": "custom",
@@ -50,7 +57,7 @@
       }
     },
     {
-      "path": "pages/userprofile/userprofile",
+      "path": "pages/user-profile/user-profile",
       "style": {
         "navigationStyle": "custom",
         "navigationBarTitleText": "我的"
@@ -148,10 +155,10 @@
       }
     },
     {
-      "path": "pages/rider-cert/rider-cert",
+      "path": "pages/runner-cert/runner-cert",
       "style": {
         "navigationStyle": "custom",
-        "navigationBarTitleText": "骑手认证"
+        "navigationBarTitleText": "跑腿员认证"
       }
     },
     {
@@ -169,10 +176,10 @@
       }
     },
     {
-      "path": "pages/pay-password-edit/pay-password-edit",
+      "path": "pages/password-manage/password-manage",
       "style": {
         "navigationStyle": "custom",
-        "navigationBarTitleText": "修改支付密码"
+        "navigationBarTitleText": "密码管理"
       }
     },
 
@@ -212,10 +219,10 @@
       }
     },
     {
-      "path": "pages/rider-profile/rider-profile",
+      "path": "pages/runner-profile/runner-profile",
       "style": {
         "navigationStyle": "custom",
-        "navigationBarTitleText": "骑手主页"
+        "navigationBarTitleText": "跑腿员主页"
       }
     },
     {
@@ -251,7 +258,7 @@
       { "pagePath": "pages/task-hall/task-hall", "text": "大厅" },
       { "pagePath": "pages/orders/orders", "text": "订单" },
       { "pagePath": "pages/message/message", "text": "消息" },
-      { "pagePath": "pages/userprofile/userprofile", "text": "我的" }
+      { "pagePath": "pages/user-profile/user-profile", "text": "我的" }
     ]
   }
 }

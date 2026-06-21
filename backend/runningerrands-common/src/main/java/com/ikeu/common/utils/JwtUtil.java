@@ -5,7 +5,9 @@ import com.ikeu.common.properties.JwtProperties;
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.security.Keys;
+import jakarta.annotation.PostConstruct;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 
 import javax.crypto.SecretKey;
@@ -32,11 +34,38 @@ import java.util.UUID;
  * <h3>管理端与用户端隔离</h3>
  * 管理端和用户端使用完全独立的签名密钥和 TTL 配置，防止越权。
  */
+@Slf4j
 @Component
 @RequiredArgsConstructor
 public class JwtUtil {
 
     private final JwtProperties jwtProperties;
+
+    private static final int MIN_KEY_BYTES = 32; // HMAC-SHA256 requires >= 256 bits
+
+    /** 启动时校验 JWT 密钥已配置且满足最小长度，防止空密钥导致运行时 WeakKeyException。 */
+    @PostConstruct
+    public void validateKeys() {
+        String adminKey = jwtProperties.getAdminSecretKey();
+        if (adminKey == null || adminKey.isBlank()) {
+            throw new IllegalStateException(
+                    "JWT admin secret key is empty. Set RUNNING_ERRANDS_JWT_ADMIN_SECRET environment variable.");
+        }
+        if (adminKey.getBytes(StandardCharsets.UTF_8).length < MIN_KEY_BYTES) {
+            throw new IllegalStateException(
+                    "JWT admin secret key is too short (min " + MIN_KEY_BYTES + " bytes for HS256).");
+        }
+        String userKey = jwtProperties.getUserSecretKey();
+        if (userKey == null || userKey.isBlank()) {
+            throw new IllegalStateException(
+                    "JWT user secret key is empty. Set RUNNING_ERRANDS_JWT_USER_SECRET environment variable.");
+        }
+        if (userKey.getBytes(StandardCharsets.UTF_8).length < MIN_KEY_BYTES) {
+            throw new IllegalStateException(
+                    "JWT user secret key is too short (min " + MIN_KEY_BYTES + " bytes for HS256).");
+        }
+        log.info("JWT secret keys validated successfully");
+    }
 
     // ========== 密钥获取 ==========
 

@@ -3,12 +3,14 @@ package com.ikeu.server.config;
 import com.ikeu.common.json.JacksonObjectMapper;
 import com.ikeu.server.interceptor.JwtTokenAdminInterceptor;
 import com.ikeu.server.interceptor.JwtTokenUserInterceptor;
-import com.ikeu.server.service.impl.TaskOrderServiceImpl;
 import io.swagger.v3.oas.models.OpenAPI;
 import io.swagger.v3.oas.models.info.Info;
+import jakarta.servlet.*;
+import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springdoc.core.models.GroupedOpenApi;
+import org.springframework.boot.web.servlet.FilterRegistrationBean;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.CacheControl;
@@ -171,5 +173,40 @@ public class WebMvcConfiguration implements WebMvcConfigurer {
         MappingJackson2HttpMessageConverter converter = new MappingJackson2HttpMessageConverter();
         converter.setObjectMapper(new JacksonObjectMapper());
         converters.add(converter);
+    }
+
+    /**
+     * 注入安全响应头：HSTS、CSP、X-Frame-Options、X-Content-Type-Options、Referrer-Policy、Permissions-Policy。
+     *
+     * <p>CSP 策略与 admin/index.html 内 &lt;meta&gt; 标签保持一致，浏览器取两者最严格交集。
+     * style-src 需要 'unsafe-inline' 以兼容 Vue 3 / Element Plus 运行时内联样式；
+     * connect-src 需要 wss: 以兼容微信小程序 STOMP over WebSocket。
+     *
+     * <p>注意：HSTS 理想位置在反向代理 / CDN 层（Nginx、Cloudflare 等），
+     * 应用层设置作为纵深防御兜底，生产部署时应确认边缘层已正确配置。
+     */
+    @Bean
+    public FilterRegistrationBean<Filter> securityHeadersFilter() {
+        FilterRegistrationBean<Filter> bean = new FilterRegistrationBean<>();
+        bean.setFilter((request, response, chain) -> {
+            HttpServletResponse res = (HttpServletResponse) response;
+            // HSTS: 理想配置点在反向代理层，此处作为防御纵深兜底
+            res.setHeader("Strict-Transport-Security", "max-age=31536000; includeSubDomains");
+            res.setHeader("X-Content-Type-Options", "nosniff");
+            res.setHeader("X-Frame-Options", "DENY");
+            res.setHeader("Referrer-Policy", "strict-origin-when-cross-origin");
+            res.setHeader("Permissions-Policy", "camera=(), microphone=(), geolocation=()");
+            // CSP 仅对 HTML 响应有实际效果（JSON 响应被浏览器忽略），
+            // 统一设置以避免遗漏 SPA fallback 场景
+            res.setHeader("Content-Security-Policy",
+                    "default-src 'self'; script-src 'self'; " +
+                    "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; " +
+                    "font-src 'self' https://fonts.gstatic.com; " +
+                    "img-src 'self' data: blob:; connect-src 'self' wss:; " +
+                    "frame-ancestors 'none'; base-uri 'self'; form-action 'self'");
+            chain.doFilter(request, response);
+        });
+        bean.setOrder(1);
+        return bean;
     }
 }

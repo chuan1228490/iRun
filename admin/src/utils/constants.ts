@@ -50,6 +50,21 @@ export const TASK_STATUS: Record<number, string> = {
   6: '已取消'
 }
 
+/**
+ * 任务状态机合法转移表，与后端 TaskStateMachine 保持一致。
+ * - 待接单不允许直接跳到配送中（必须先接单创建订单）
+ * - 已接单/配送中不允许回退待接单（订单已存在/物品已在手中）
+ * - 管理员中止任务请用"已取消"
+ */
+export const TASK_STATE_MACHINE: Record<number, number[]> = {
+  1: [2, 6],         // 待接单 → 已接单 / 已取消
+  2: [3, 5, 6],      // 已接单 → 配送中 / 已完成 / 已取消
+  3: [4, 5, 6],      // 配送中 → 待确认 / 已完成 / 已取消
+  4: [5],            // 待确认 → 已完成
+  5: [],             // 已完成 终态
+  6: [],             // 已取消 终态
+}
+
 export const ORDER_STATUS: Record<number, string> = {
   1: '待取货',
   2: '配送中',

@@ -224,7 +224,7 @@ function goHall() {
 }
 
 function onBack() {
-  uni.navigateBack({ delta: 1, fail: () => uni.switchTab({ url: '/pages/userprofile/userprofile' }) })
+  uni.navigateBack({ delta: 1, fail: () => uni.switchTab({ url: '/pages/user-profile/user-profile' }) })
 }
 </script>
 

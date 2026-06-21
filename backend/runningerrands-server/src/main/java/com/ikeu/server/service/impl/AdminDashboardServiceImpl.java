@@ -45,7 +45,12 @@ public class AdminDashboardServiceImpl implements AdminDashboardService {
 
     /**
      * 统计卡片摘要：用户/任务/订单总数、认证/在线跑腿员数、今日新增/完成量、今日交易额。
-     * 缓存 3 分钟，写操作通过 {@code @CacheEvict(allEntries = true)} 清除。
+     *
+     * <p>全部从数据库 COUNT 或 SUM 查询，今日维度以当天 00:00 为起始；已完成订单的
+     * 交易额汇总自 {@code taskMapper.sumRewardByStatusSince()}。结果缓存 3 分钟，
+     * 涉及写操作（订单/任务/用户/跑腿员变更）通过 {@code @CacheEvict(allEntries = true)} 清除。
+     *
+     * @return 仪表盘统计摘要 VO，含 10 项统计指标
      */
     @Override
     @Cacheable(value = RedisConstant.CACHE_DASHBOARD, key = "'summary'")
@@ -81,6 +86,11 @@ public class AdminDashboardServiceImpl implements AdminDashboardService {
 
     /**
      * 近 7 天新增用户趋势，逐日统计 {@code created_at} 落入当天的用户数，补零填充无数据日期。
+     *
+     * <p>从当天往前推 6 天共 7 天，每一天独立 COUNT；无新增的日期返回 0。
+     * 日期格式为 "MM-dd"。结果单独缓存 3 分钟。
+     *
+     * @return 包含 7 个日期-数量点的趋势列表
      */
     @Override
     @Cacheable(value = RedisConstant.CACHE_DASHBOARD, key = "'userTrend'")
@@ -103,6 +113,11 @@ public class AdminDashboardServiceImpl implements AdminDashboardService {
 
     /**
      * 近 7 天收入趋势，调用 {@code taskMapper.sumRewardPerDay()} 聚合已完成任务报酬，补零填充。
+     *
+     * <p>从当天往前推 6 天共 7 天，按日分组 SUM {@code reward}；无收入的日期返回 0。
+     * 日期格式为 "MM-dd"。结果单独缓存 3 分钟。
+     *
+     * @return 包含 7 个日期-金额点的趋势列表
      */
     @Override
     @Cacheable(value = RedisConstant.CACHE_DASHBOARD, key = "'revenueTrend'")
@@ -130,6 +145,11 @@ public class AdminDashboardServiceImpl implements AdminDashboardService {
 
     /**
      * 任务分类占比，调用 {@code taskMapper.countTasksByType()} 按类型分组统计。
+     *
+     * <p>统计所有任务（不区分状态）按 {@code type} 字段分组 COUNT，
+     * 用于管理端饼图展示任务分布情况。结果单独缓存 3 分钟。
+     *
+     * @return 任务类型-数量列表，每项包含分类名称和数量
      */
     @Override
     @Cacheable(value = RedisConstant.CACHE_DASHBOARD, key = "'taskCategories'")
@@ -144,6 +164,12 @@ public class AdminDashboardServiceImpl implements AdminDashboardService {
 
     /**
      * 订单状态分布，遍历 1~5 状态值统计各状态未删除订单数。
+     *
+     * <p>固化的状态标签依次为：待取货、配送中、待确认、已完成、已取消。
+     * 仅统计 {@code is_deleted = 0} 的有效订单，用于管理端饼图展示。
+     * 结果单独缓存 3 分钟。
+     *
+     * @return 订单状态-数量列表，每项包含状态名称和数量
      */
     @Override
     @Cacheable(value = RedisConstant.CACHE_DASHBOARD, key = "'orderStatusDistribution'")

@@ -263,15 +263,12 @@ async function loadAnnouncement() {
 }
 
 onShow(() => {
-  if (store.isLoggedIn && !store.userInfo.ready) {
+  if (store.isLoggedIn && !store.ready) {
     store.fetchUserInfo().catch(() => {})
   }
   loadUnread()
   loadAnnouncement()
 })
-
-loadUnread()
-loadAnnouncement()
 </script>
 
 <style scoped>

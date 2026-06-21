@@ -8,7 +8,10 @@ import com.ikeu.model.vo.SystemConfigVO;
 import java.util.List;
 
 /**
- * 管理端系统配置服务接口
+ * 管理端系统配置服务接口，提供系统配置项的全量查询和批量更新功能。
+ *
+ * <p>配置项按分组（configGroup）和配置键（configKey）组织，支持 string/int/decimal 三种值类型校验。
+ * 批量更新时自动去重合并，后值覆盖前值。
  * @author ikeu
  * @since 2026/06/18
  */

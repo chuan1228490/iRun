@@ -11,12 +11,29 @@ import com.ikeu.model.vo.TaskListVO;
  */
 public interface AdminTaskService {
 
-    /** 分页查询所有任务列表，支持按状态筛选。 */
+    /**
+     * 分页查询所有任务列表，支持按任务状态筛选。
+     *
+     * @param status 任务状态（null 表示查询全部状态）
+     * @param page   页码（从 1 开始）
+     * @param size   每页条数
+     * @return 任务列表分页结果
+     */
     PageResult<TaskListVO> listAllTasks(Integer status, int page, int size);
 
-    /** 获取任务详情。 */
+    /**
+     * 获取任务详情（管理端），含发布者信息和图片列表。
+     *
+     * @param taskId 任务 ID
+     * @return 任务详情 VO
+     */
     TaskDetailVO getTaskDetail(Long taskId);
 
-    /** 管理员强制更新任务状态。 */
+    /**
+     * 管理员强制更新任务状态，经状态机校验后执行变更。
+     *
+     * @param taskId 任务 ID
+     * @param status 目标任务状态值
+     */
     void updateTaskStatus(Long taskId, Integer status);
 }

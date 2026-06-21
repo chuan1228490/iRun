@@ -31,7 +31,7 @@ const list = [
   { pagePath: '/pages/task-hall/task-hall', text: '大厅', icon: 'hall' },
   { pagePath: '/pages/orders/orders', text: '订单', icon: 'orders' },
   { pagePath: '/pages/message/message', text: '消息', icon: 'message' },
-  { pagePath: '/pages/userprofile/userprofile', text: '我的', icon: 'profile' }
+  { pagePath: '/pages/user-profile/user-profile', text: '我的', icon: 'profile' }
 ]
 
 function switchTab(index, pagePath) {

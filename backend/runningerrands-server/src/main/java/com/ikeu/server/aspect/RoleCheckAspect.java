@@ -28,6 +28,17 @@ public class RoleCheckAspect {
 
     private final AdminMapper adminMapper;
 
+    /**
+     * 前置通知：在标注 {@link RequireRole @RequireRole} 的方法执行前校验当前管理员的角色权限。
+     *
+     * <p>从 {@link BaseContext} 获取当前登录管理员 ID，查询数据库获取其角色值，
+     * 与注解中指定的角色数组逐一匹配。若当前角色不在允许范围内，抛出 {@link ForbiddenException}。
+     * 若管理员未登录或账号不存在，同样抛出 {@link ForbiddenException}。
+     *
+     * @param joinPoint   切入点，用于记录被拦截的方法签名日志
+     * @param requireRole 方法上标注的 {@link RequireRole} 注解实例，包含允许的角色值列表
+     * @throws ForbiddenException 当管理员未登录、账号不存在或角色无权限时抛出
+     */
     @Before("@annotation(requireRole)")
     public void checkRole(JoinPoint joinPoint, RequireRole requireRole) {
         Long adminId = BaseContext.getCurrentId();

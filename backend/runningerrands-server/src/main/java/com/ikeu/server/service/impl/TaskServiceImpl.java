@@ -99,7 +99,7 @@ public class TaskServiceImpl extends ServiceImpl<TaskMapper, Task> implements Ta
      */
     private TaskListVO convertToTaskListVO(Task task, Map<Long, User> publisherMap) {
         TaskListVO taskListVO = BeanUtil.copyProperties(task, TaskListVO.class,
-                "imageUrls", "publishTime");
+                "imageUrls", "publishTime", "contactName", "contactPhone");
         taskListVO.setTaskId(task.getId());
         taskListVO.setPublishTime(task.getCreatedAt());
 

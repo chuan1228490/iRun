@@ -14,10 +14,12 @@ import java.util.Set;
 public enum OrderStateMachine {
     WAIT_PICKUP(StatusConstant.ORDER_WAIT_PICKUP, setOf(
             StatusConstant.ORDER_DELIVERING,
+            StatusConstant.ORDER_COMPLETED,
             StatusConstant.ORDER_CANCELLED
     )),
     DELIVERING(StatusConstant.ORDER_DELIVERING, setOf(
             StatusConstant.ORDER_WAIT_CONFIRM,
+            StatusConstant.ORDER_COMPLETED,
             StatusConstant.ORDER_CANCELLED
     )),
     WAIT_CONFIRM(StatusConstant.ORDER_WAIT_CONFIRM, setOf(

@@ -28,7 +28,7 @@
         <lombok>1.18.34</lombok>
 <!--        <mybatis.spring>2.2.0</mybatis.spring>-->
         <mybatis.plus>3.5.5</mybatis.plus>
-        <fastjson>1.2.76</fastjson>
+        <fastjson>1.2.83</fastjson>
         <commons.lang>2.6</commons.lang>
         <hutool>5.8.40</hutool>
 <!--        <pagehelper>1.3.0</pagehelper>-->

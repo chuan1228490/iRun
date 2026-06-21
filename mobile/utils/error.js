@@ -163,7 +163,7 @@ export function guideToSetPayPassword() {
     confirmText: '去设置',
     success: (res) => {
       if (res.confirm) {
-        uni.navigateTo({ url: '/pages/pay-password-edit/pay-password-edit?mode=set' })
+        uni.navigateTo({ url: '/pages/password-manage/password-manage?mode=set' })
       }
     }
   })

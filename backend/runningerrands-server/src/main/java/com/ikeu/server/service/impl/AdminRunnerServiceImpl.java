@@ -44,6 +44,16 @@ public class AdminRunnerServiceImpl implements AdminRunnerService {
 
     /**
      * 分页查询跑腿员列表，JOIN 用户表填充昵称/手机号，批量查询累计收入。
+     *
+     * <p>支持按审核状态过滤和关键字模糊搜索。通过自定义 Mapper 方法实现分页 JOIN 查询，
+     * 再根据返回的 userId 集合批量查询用户信息和累计收入（transaction_record SUM 聚合），
+     * 减少数据库查询次数。
+     *
+     * @param verifyStatus 审核状态过滤（可为 null 表示不限制）
+     * @param keyword 关键字搜索（可模糊匹配昵称/手机号，为空不限制）
+     * @param page 页码，从 1 开始
+     * @param size 每页条数
+     * @return 分页结果，每项包含跑腿员档案信息、用户昵称/手机号和累计收入
      */
     @Override
     public PageResult<RunnerManageVO> listRunners(Integer verifyStatus, String keyword, int page, int size) {
@@ -80,6 +90,13 @@ public class AdminRunnerServiceImpl implements AdminRunnerService {
 
     /**
      * 查询跑腿员详情，含用户信息和 DB 侧 SUM 聚合的累计收入。
+     *
+     * <p>根据跑腿员档案 ID 查询档案、关联的用户信息，以及通过 DB SUM 聚合的
+     * 总收入金额。跑腿员档案不存在时抛出异常。
+     *
+     * @param profileId 跑腿员档案 ID
+     * @return 跑腿员详情 VO，含档案信息、用户信息、平均评分和累计收入
+     * @throws NotFoundException 跑腿员档案不存在时抛出
      */
     @Override
     public RunnerManageVO getRunnerDetail(Long profileId) {
@@ -102,7 +119,17 @@ public class AdminRunnerServiceImpl implements AdminRunnerService {
     }
 
     /**
-     * 审核跑腿员认证，仅“审核中”状态可操作，操作后清除仪表盘缓存。
+     * 审核跑腿员认证，仅”审核中”状态可操作，操作后清除仪表盘缓存。
+     *
+     * <p>校验跑腿员档案存在且当前审核状态为”审核中”，避免重复审核。
+     * 审核通过或拒绝后更新 verifyStatus 和审核备注，同时通过 {@code @CacheEvict}
+     * 清除仪表盘缓存，确保首页统计数据及时刷新。
+     *
+     * @param runnerProfileId 跑腿员档案 ID
+     * @param verifyStatus 审核结果状态（通过/拒绝）
+     * @param remark 审核备注，为空时自动设为空字符串
+     * @throws NotFoundException 跑腿员档案不存在时抛出
+     * @throws BusinessException 当前状态不是”审核中”时抛出
      */
     @Override
     @Transactional
@@ -123,6 +150,14 @@ public class AdminRunnerServiceImpl implements AdminRunnerService {
 
     /**
      * 禁止/恢复跑腿员接单，操作后清除仪表盘缓存。
+     *
+     * <p>根据 profileId 查询跑腿员档案，调用 {@code runnerProfileMapper.toggleBan()}
+     * 更新用户表或档案表的封禁标记。禁止后跑腿员无法在任务大厅接单，
+     * 恢复后即可正常接单。操作后清除仪表盘缓存。
+     *
+     * @param profileId 跑腿员档案 ID
+     * @param banned true 表示禁止接单，false 表示恢复接单
+     * @throws NotFoundException 跑腿员档案不存在时抛出
      */
     @Override
     @Transactional

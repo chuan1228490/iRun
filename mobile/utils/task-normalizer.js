@@ -101,7 +101,7 @@ export function normalizeTaskCard(raw, opts = {}) {
     card.extraFee = parseExtraFeeFromSpecs(specs)
   }
 
-  // 骑手视图需要联系人信息
+  // 跑腿员视图需要联系人信息
   if (opts.role === 'runner') {
     card.contactName = (raw.contactName && raw.contactName !== 'null') ? raw.contactName : ''
     card.contactPhone = (raw.contactPhone && raw.contactPhone !== 'null') ? raw.contactPhone : ''

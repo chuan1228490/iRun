@@ -51,28 +51,33 @@ public class CreditServiceImpl implements CreditService {
 
         if (now.isBefore(order.getExpectFinishTime())) {
             recordAndApply(runnerId, CreditConstant.REWARD_EARLY,
-                    CreditConstant.ReasonType.REWARD, "提前完成", orderId);
+                    CreditConstant.ReasonType.REWARD, CreditConstant.ReasonDetail.EARLY, orderId);
             return;
         }
 
         long minutesLate = Duration.between(order.getExpectFinishTime(), now).toMinutes();
         if (minutesLate <= 0) {
             recordAndApply(runnerId, CreditConstant.REWARD_ON_TIME,
-                    CreditConstant.ReasonType.REWARD, "按时完成", orderId);
+                    CreditConstant.ReasonType.REWARD, CreditConstant.ReasonDetail.ON_TIME, orderId);
         } else if (minutesLate <= 30) {
-            recordAndApply(runnerId, -2, CreditConstant.ReasonType.TIMEOUT,
-                    "配送超时" + minutesLate + "分钟", orderId);
+            recordAndApply(runnerId, CreditConstant.PENALTY_TIMEOUT_30, CreditConstant.ReasonType.TIMEOUT,
+                    CreditConstant.ReasonDetail.TIMEOUT_PREFIX + minutesLate + "分钟", orderId);
         } else if (minutesLate <= 60) {
-            recordAndApply(runnerId, -5, CreditConstant.ReasonType.TIMEOUT,
-                    "配送超时" + minutesLate + "分钟", orderId);
+            recordAndApply(runnerId, CreditConstant.PENALTY_TIMEOUT_60, CreditConstant.ReasonType.TIMEOUT,
+                    CreditConstant.ReasonDetail.TIMEOUT_PREFIX + minutesLate + "分钟", orderId);
         } else {
-            recordAndApply(runnerId, -10, CreditConstant.ReasonType.TIMEOUT,
-                    "配送超时" + minutesLate + "分钟", orderId);
+            recordAndApply(runnerId, CreditConstant.PENALTY_TIMEOUT_OVER60, CreditConstant.ReasonType.TIMEOUT,
+                    CreditConstant.ReasonDetail.TIMEOUT_PREFIX + minutesLate + "分钟", orderId);
         }
     }
 
     /**
-     * 通用扣除跑腿员信用分。
+     * 因投诉、差评或管理员手动操作扣除跑腿员信用分，
+     * 内部调用 recordAndApply 写入 CreditLog 并触发 MySQL 原子更新（含冻结/解冻）。
+     *
+     * @param runnerId 跑腿员用户 ID
+     * @param penalty  扣分数值（正数，方法内部取负）
+     * @param reason   扣除原因描述文本
      */
     @Override
     @Transactional(propagation = Propagation.REQUIRES_NEW)
@@ -82,7 +87,12 @@ public class CreditServiceImpl implements CreditService {
     }
 
     /**
-     * 通用增加跑腿员信用分。
+     * 因好评或管理员手动操作增加跑腿员信用分，
+     * 内部调用 recordAndApply 写入 CreditLog 并触发 MySQL 原子更新。
+     *
+     * @param runnerId 跑腿员用户 ID
+     * @param bonus    加分值（正数）
+     * @param reason   加分原因描述文本
      */
     @Override
     @Transactional(propagation = Propagation.REQUIRES_NEW)
@@ -94,8 +104,7 @@ public class CreditServiceImpl implements CreditService {
     /**
      * 核心方法：查询当前信用分 → 写入变动日志 → 原子更新 + 冻结/解冻。
      *
-     * <p>冻结规则：新信用分 < 60 时，设 is_banned=1 + ban_until=now+3天；
-     * 回到 60 以上时，清除 is_banned 和 ban_until。
+     * <p>冻结/解冻逻辑已移入 SQL（updateCreditScoreAndFreeze），消除 TOCTOU 竞态。
      */
     private void recordAndApply(Long runnerId, int delta, String reasonType, String reasonDetail, Long orderId) {
         RunnerProfile profile = runnerProfileMapper.selectOne(
@@ -119,25 +128,20 @@ public class CreditServiceImpl implements CreditService {
                 .build();
         creditLogMapper.insert(creditLog);
 
-        LocalDateTime banUntil = null;
-        if (scoreAfter < CreditConstant.CREDIT_FREEZE_THRESHOLD) {
-            boolean alreadyFrozen = profile.getIsBanned() != null && profile.getIsBanned() == 1
-                    && profile.getBanUntil() != null && profile.getBanUntil().isAfter(LocalDateTime.now());
-            if (alreadyFrozen) {
-                // 已在冻结期内，后续扣分不重置 3 天计时
-                banUntil = profile.getBanUntil();
-            } else {
-                banUntil = LocalDateTime.now().plusDays(CreditConstant.CREDIT_FREEZE_DAYS);
-                log.warn("跑腿员 {} 信用分降至 {}（<60），冻结接单至 {}", runnerId, scoreAfter, banUntil);
-            }
-        } else if (scoreAfter >= CreditConstant.CREDIT_FREEZE_THRESHOLD
-                && profile.getIsBanned() != null && profile.getIsBanned() == 1
-                && profile.getBanUntil() != null) {
-            log.info("跑腿员 {} 信用分恢复至 {}（≥60），解除冻结", runnerId, scoreAfter);
-        }
-
         runnerProfileMapper.updateCreditScoreAndFreeze(runnerId, delta,
-                CreditConstant.CREDIT_FREEZE_THRESHOLD, banUntil);
+                CreditConstant.CREDIT_FREEZE_THRESHOLD, CreditConstant.CREDIT_FREEZE_DAYS);
+
+        // 重查最终状态用于日志（SQL 内已原子完成冻结/解冻，此处仅为可观测性）
+        RunnerProfile after = runnerProfileMapper.selectOne(
+                new LambdaQueryWrapper<RunnerProfile>().eq(RunnerProfile::getUserId, runnerId));
+        if (after != null) {
+            if (after.getIsBanned() == 1 && after.getBanUntil() != null && after.getBanUntil().isAfter(LocalDateTime.now())) {
+                log.warn("跑腿员 {} 信用分冻结（当前分 {}），解封时间 {}", runnerId, after.getCreditScore(), after.getBanUntil());
+            } else if (after.getCreditScore() != null && after.getCreditScore() >= CreditConstant.CREDIT_FREEZE_THRESHOLD
+                    && scoreBefore < CreditConstant.CREDIT_FREEZE_THRESHOLD) {
+                log.info("跑腿员 {} 信用分解除冻结（当前分 {}）", runnerId, after.getCreditScore());
+            }
+        }
 
         log.info("跑腿员 {} 信用分变更: {} → {} ({}: {})", runnerId, scoreBefore, scoreAfter, reasonType, reasonDetail);
     }
